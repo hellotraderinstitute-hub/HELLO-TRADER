@@ -1,0 +1,93 @@
+@import "tailwindcss";
+
+:root {
+  --bg-midnight: #0B0E14;
+  --bg-card: #161B22;
+  --bg-card-hover: #1E2631;
+  --cyber-cyan: #00D4FF;
+  --neon-green: #00FF41;
+  --neon-red: #FF3131;
+  --text-primary: #E1E2EB;
+  --text-secondary: #859398;
+  --border-glass: rgba(255, 255, 255, 0.08);
+}
+
+body {
+  background-color: #0B0E14;
+  color: #E1E2EB;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  overflow-x: hidden;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0B0E14;
+}
+::-webkit-scrollbar-thumb {
+  background: #1E2631;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #00D4FF;
+}
+
+/* Glassmorphism utility */
+.glass-panel {
+  background: rgba(22, 27, 34, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+.glass-panel-glow {
+  background: rgba(22, 27, 34, 0.85);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(0, 212, 255, 0.25);
+  box-shadow: 0 0 15px rgba(0, 212, 255, 0.15);
+}
+
+/* Glow effects */
+.glow-cyan {
+  box-shadow: 0 0 12px rgba(0, 212, 255, 0.4);
+}
+.glow-green {
+  box-shadow: 0 0 12px rgba(0, 255, 65, 0.4);
+}
+.glow-red {
+  box-shadow: 0 0 12px rgba(255, 49, 49, 0.4);
+}
+
+/* Pulse animation for live price updates */
+@keyframes flashGreen {
+  0% { background-color: rgba(0, 255, 65, 0.3); }
+  100% { background-color: transparent; }
+}
+@keyframes flashRed {
+  0% { background-color: rgba(255, 49, 49, 0.3); }
+  100% { background-color: transparent; }
+}
+
+.flash-up {
+  animation: flashGreen 0.6s ease-out;
+}
+.flash-down {
+  animation: flashRed 0.6s ease-out;
+}
+
+/* Ticker tape infinite scroll */
+@keyframes ticker {
+  0% { transform: translate3d(0, 0, 0); }
+  100% { transform: translate3d(-50%, 0, 0); }
+}
+
+.animate-ticker {
+  animation: ticker 40s linear infinite;
+}
+.animate-ticker:hover {
+  animation-play-state: paused;
+}

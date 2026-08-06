@@ -1,0 +1,147 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite" // Kept as SQLite for dev, but schema is 100% PG-compatible
+  url      = env("DATABASE_URL")
+}
+
+model SystemSettings {
+  id                String  @id @default("CONFIG")
+  trialDays         Int     @default(4)
+  monthlyCost       Float   @default(900)
+  tokenPrice        Float   @default(1)
+  welcomeBonus      Float   @default(0)
+  referralReward    Float   @default(0)
+  autoRenewal       Boolean @default(true)
+  minWithdrawal     Float   @default(500)
+  maxWithdrawal     Float   @default(100000)
+  membershipDuration Int    @default(30)
+  paperBalance      Float   @default(5000000)
+}
+
+model User {
+  id             String    @id @default(uuid())
+  studentId      String    @unique // HT0786
+  name           String
+  email          String    @unique
+  phone          String    @unique
+  password       String
+  role           String    @default("USER") // USER or ADMIN
+  referralCode   String    @unique
+  referredBy     String?
+  status         String    @default("ACTIVE") // ACTIVE, LOCKED
+  trialStartedAt DateTime  @default(now())
+  createdAt      DateTime  @default(now())
+  
+  wallets          Wallet[]
+  trades           Trade[]
+  memberships      Membership[]
+  paymentRequests  PaymentRequest[]
+  ledger           Ledger[]
+  referralsMade    Referral[]  @relation("Referrer")
+  referredByLink   Referral?   @relation("Referred")
+  bonusClaims      ReferralBonusClaim[]
+}
+
+model Wallet {
+  id             String    @id @default(uuid())
+  userId         String
+  user           User      @relation(fields: [userId], references: [id])
+  type           String    // PAPER, TOKEN, REFERRAL
+  // No balance column. Computed directly from Ledger.
+}
+
+model Ledger {
+  id             String    @id @default(uuid())
+  userId         String
+  user           User      @relation(fields: [userId], references: [id])
+  walletType     String    // PAPER, TOKEN, REFERRAL
+  amount         Float     // Absolute value
+  type           String    // CREDIT, DEBIT
+  reason         String    // RECHARGE, MEMBERSHIP, REFERRAL, BONUS, ADJUSTMENT
+  timestamp      DateTime  @default(now())
+}
+
+model Membership {
+  id             String    @id @default(uuid())
+  userId         String
+  user           User      @relation(fields: [userId], references: [id])
+  status         String    @default("ACTIVE") // ACTIVE, EXPIRED
+  autoRenew      Boolean   @default(false)
+  startedAt      DateTime  @default(now())
+  expiresAt      DateTime
+}
+
+model PaymentRequest {
+  id             String    @id @default(uuid())
+  userId         String
+  user           User      @relation(fields: [userId], references: [id])
+  amount         Float
+  method         String    // UPI, QR_CODE, BANK
+  utr            String?   @unique
+  screenshotUrl  String?
+  actualAmount   Float?
+  bonusApplied   Float?
+  reason         String?
+  adminId        String?
+  status         String    @default("PENDING") // PENDING, APPROVED, REJECTED
+  timestamp      DateTime  @default(now())
+}
+
+model BonusRule {
+  id             String    @id @default(uuid())
+  minAmount      Float     @unique
+  bonusPercent   Float
+}
+
+model Trade {
+  id             String    @id @default(uuid())
+  userId         String
+  user           User      @relation(fields: [userId], references: [id])
+  symbol         String
+  productType    String    // INTRADAY, DELIVERY
+  orderType      String    // BUY, SELL
+  quantity       Int
+  entryPrice     Float
+  exitPrice      Float?
+  status         String    // OPEN, CLOSED
+  pnl            Float?
+  openedAt       DateTime  @default(now())
+  closedAt       DateTime?
+}
+
+model SignupRequest {
+  id             String    @id @default(uuid())
+  name           String
+  email          String
+  phone          String
+  referralCode   String?
+  ipAddress      String?
+  status         String    @default("PENDING") // PENDING, APPROVED, REJECTED
+  createdAt      DateTime  @default(now())
+}
+
+model Referral {
+  id                String    @id @default(uuid())
+  referrerId        String
+  referrer          User      @relation("Referrer", fields: [referrerId], references: [id])
+  referredId        String?   @unique
+  referred          User?     @relation("Referred", fields: [referredId], references: [id])
+  signupEmail       String?
+  status            String    @default("PENDING") // PENDING, SUCCESS, REJECTED, INVALID
+  ipAddress         String?
+  bonusClaimed      Boolean   @default(false)
+  createdAt         DateTime  @default(now())
+  successAt         DateTime?
+}
+
+model ReferralBonusClaim {
+  id             String   @id @default(uuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id])
+  rewardType     String   // FREE_MEMBERSHIP, CASH_600
+  referralIds    String   // comma separated ids
+  claimedAt      DateTime @default(now())
+}
