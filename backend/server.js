@@ -316,8 +316,8 @@ app.get('/api/health', (req, res) => {
 });
 
 const PORT = process.env.PORT || 4000;
-server.listen(PORT, () => {
-  console.log(`Production Backend running on port ${PORT}`);
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`Production Backend running on 0.0.0.0:${PORT}`);
 
   // Run non-blocking credential encryption migration
   try {
