@@ -319,24 +319,26 @@ const PORT = process.env.PORT || 4000;
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`Production Backend running on 0.0.0.0:${PORT}`);
 
-  // Run non-blocking credential encryption migration
-  try {
-    const { runCredentialMigration } = require('./migrate_credentials');
-    runCredentialMigration().catch(err => console.error('[Server] Credential migration error:', err.message));
-  } catch (migErr) {
-    console.error('[Server] Failed to launch credential migration:', migErr.message);
-  }
-
-  try {
-    const mode = process.env.JUSTDIAL_INGESTION_MODE || 'OAUTH2';
-    if (mode === 'IMAP') {
-      const { startJustdialImapWorker } = require('./services/justdialImapWorker');
-      startJustdialImapWorker();
-    } else {
-      const { startJustdialGmailOAuthWorker } = require('./services/justdialGmailOAuthWorker');
-      startJustdialGmailOAuthWorker();
+  // Defer non-critical background processes so Express server listens and responds instantly
+  setTimeout(() => {
+    try {
+      const { runCredentialMigration } = require('./migrate_credentials');
+      runCredentialMigration().catch(err => console.error('[Server] Credential migration error:', err.message));
+    } catch (migErr) {
+      console.error('[Server] Failed to launch credential migration:', migErr.message);
     }
-  } catch (workerErr) {
-    console.error('[Server] Failed to initialize Justdial ingestion worker:', workerErr.message);
-  }
+
+    try {
+      const mode = process.env.JUSTDIAL_INGESTION_MODE || 'OAUTH2';
+      if (mode === 'IMAP') {
+        const { startJustdialImapWorker } = require('./services/justdialImapWorker');
+        startJustdialImapWorker();
+      } else {
+        const { startJustdialGmailOAuthWorker } = require('./services/justdialGmailOAuthWorker');
+        startJustdialGmailOAuthWorker();
+      }
+    } catch (workerErr) {
+      console.error('[Server] Failed to initialize Justdial ingestion worker:', workerErr.message);
+    }
+  }, 3000);
 });
