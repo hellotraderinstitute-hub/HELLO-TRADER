@@ -46,7 +46,7 @@ async function processAiLabQuery({ userId, userQuery, activeMode, conversationHi
       const quarterly = stockTools.getQuarterlyResults(detectedStock);
       const technicals = stockTools.getTechnicalContext(detectedStock);
       const smc = stockTools.getSMCContext(detectedStock);
-      const news = await stockTools.getNews(detectedStock);
+      const news = stockTools.getNews(detectedStock);
       const corporate = stockTools.getCorporateActions(detectedStock);
       const ownership = stockTools.getOwnership(detectedStock);
       const peers = stockTools.getPeerComparison(detectedStock);
