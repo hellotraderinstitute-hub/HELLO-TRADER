@@ -5,7 +5,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://hello-trader-backend.onrender.com/api/:path*"
+      "destination": "https://hello-trader.onrender.com/api/:path*"
     }
   ]
 }
