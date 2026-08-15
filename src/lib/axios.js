@@ -1,15 +1,14 @@
 import axios from 'axios';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || (
-  typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
-    ? 'https://hello-trader.onrender.com/api'
-    : '/api'
-);
+// Always use relative /api so Vercel server-side rewrites proxy calls to Render.
+// This ensures cold-start buffering is handled by Vercel, preventing 15s timeout failures.
+// vercel.json: { source: '/api/:path*', destination: 'https://hello-trader.onrender.com/api/:path*' }
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
 
 const apiClient = axios.create({
   baseURL: API_URL,
   withCredentials: true,
-  timeout: 15000,
+  timeout: 60000, // 60s — accommodates Render free-tier cold start (~50s) + request processing
 });
 
 export let globalServerStatus = true;
