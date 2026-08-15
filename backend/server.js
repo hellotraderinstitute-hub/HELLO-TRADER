@@ -92,27 +92,27 @@ app.get('/api/smde/snapshot', (req, res) => {
 });
 
 // Auto-start DhanStreamer if keys are configured
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+// Defer heavy database initialization & candle bootstrapping until after server.listen
+function initializeBackgroundServices() {
+  const { PrismaClient } = require('@prisma/client');
+  const prisma = new PrismaClient();
 
-prisma.systemSettings.findUnique({ where: { id: 'CONFIG' } })
-  .then(settings => {
-    if (settings && settings.dhanClientId && settings.dhanAccessToken) {
-      console.log('[Server] Auto-starting Dhan WebSocket Stream...');
-      dhanStreamer.start(settings.dhanClientId, settings.dhanAccessToken);
-    }
-    // Auto-bootstrap Market Engine OHLC Candles
-    marketDataEngine.bootstrapHistoricalCandles()
-      .catch(err => console.error('[Server] Failed to bootstrap historical candles:', err.message));
+  prisma.systemSettings.findUnique({ where: { id: 'CONFIG' } })
+    .then(settings => {
+      if (settings && settings.dhanClientId && settings.dhanAccessToken) {
+        console.log('[Server] Auto-starting Dhan WebSocket Stream...');
+        dhanStreamer.start(settings.dhanClientId, settings.dhanAccessToken);
+      }
+      marketDataEngine.bootstrapHistoricalCandles()
+        .catch(err => console.error('[Server] Failed to bootstrap historical candles:', err.message));
 
-    // ── Auto-start Copy Trading Master Pollers ─────────────────────────────
-    // Starts broker polling for all masters that had pollingEnabled=true before restart
-    const masterOrderPoller = require('./services/masterOrderPoller');
-    masterOrderPoller.startAll(io).catch(err =>
-      console.error('[Server] Failed to start master pollers:', err.message)
-    );
-  })
-  .catch(err => console.error('[Server] Failed to fetch settings for Dhan stream:', err.message));
+      const masterOrderPoller = require('./services/masterOrderPoller');
+      masterOrderPoller.startAll(io).catch(err =>
+        console.error('[Server] Failed to start master pollers:', err.message)
+      );
+    })
+    .catch(err => console.error('[Server] Failed to fetch settings for Dhan stream:', err.message));
+}
 
 
 require('./scheduler');
@@ -321,6 +321,12 @@ server.listen(PORT, '0.0.0.0', () => {
 
   // Defer non-critical background processes so Express server listens and responds instantly
   setTimeout(() => {
+    try {
+      initializeBackgroundServices();
+    } catch (bgErr) {
+      console.error('[Server] Background services init error:', bgErr.message);
+    }
+
     try {
       const { runCredentialMigration } = require('./migrate_credentials');
       runCredentialMigration().catch(err => console.error('[Server] Credential migration error:', err.message));
