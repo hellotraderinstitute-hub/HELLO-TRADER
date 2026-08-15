@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: hello-trader-backend
+    env: node
+    region: singapore
+    plan: free
+    buildCommand: cd backend && npm install && npx prisma generate --schema=prisma/schema.prisma
+    startCommand: cd backend && node server.js
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: JWT_SECRET
+        value: super_secret_dev_key
+      - key: BROKER_ENCRYPTION_KEY
+        value: hello_trader_aes256_prod_secret_2026
