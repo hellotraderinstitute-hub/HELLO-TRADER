@@ -1,34 +1,73 @@
 import axios from 'axios';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || (
+  typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
+    ? 'https://hello-trader.onrender.com/api'
+    : '/api'
+);
 
 const apiClient = axios.create({
   baseURL: API_URL,
   withCredentials: true,
+  timeout: 15000,
 });
 
-// Interceptor for handling 401s
+export let globalServerStatus = true;
+
+// Request Interceptor: Attach Authorization Bearer token from localStorage
+apiClient.interceptors.request.use(
+  (config) => {
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
+      if (token && !config.headers.Authorization) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// Response Interceptor for handling retries, timeouts, and 401s
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    globalServerStatus = true;
+    return response;
+  },
   async (error) => {
     const originalRequest = error.config;
+    if (!originalRequest) return Promise.reject(error);
 
-    // If error is 401 and we haven't already retried
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      // Prevent infinite loop if the refresh endpoint itself returns 401
-      if (originalRequest.url === '/auth/refresh') {
-        return Promise.reject(error);
-      }
+    const isNetworkOrTimeoutError = !error.response || error.code === 'ECONNABORTED';
+    if (isNetworkOrTimeoutError) {
+      globalServerStatus = false;
+    } else if (error.response?.status >= 500) {
+      globalServerStatus = false;
+    } else {
+      globalServerStatus = true;
+    }
 
-      originalRequest._retry = true;
+    originalRequest._retryCount = originalRequest._retryCount || 0;
+    const maxRetries = 2;
 
+    if (isNetworkOrTimeoutError && originalRequest._retryCount < maxRetries) {
+      originalRequest._retryCount += 1;
+      const delay = Math.pow(2, originalRequest._retryCount - 1) * 1000;
+      await new Promise(resolve => setTimeout(resolve, delay));
+      return apiClient(originalRequest);
+    }
+
+    const isAuthRoute = originalRequest.url?.includes('/auth/');
+    if (error.response?.status === 401 && !originalRequest._authRetried && !isAuthRoute) {
+      originalRequest._authRetried = true;
       try {
         await apiClient.post('/auth/refresh');
-        // If successful, retry original request
         return apiClient(originalRequest);
       } catch (refreshError) {
-        // If refresh fails, user must log in again
-        return Promise.reject(refreshError);
+        if (error.response?.data?.error === 'No refresh token' || refreshError.response?.data?.error === 'No refresh token') {
+          error.response.data.error = 'Session expired. Please log in again.';
+        }
+        return Promise.reject(error);
       }
     }
 
