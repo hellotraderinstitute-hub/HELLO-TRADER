@@ -1,0 +1,483 @@
+/**
+ * algo.js — Algo Trading Backend Routes
+ *
+ * COMPLIANCE:
+ *   - Explicit consent required before any broker is activated
+ *   - Passwords are never stored
+ *   - All credentials encrypted with AES-256
+ *   - Audit log written for every action
+ *   - Risk controls enforced
+ *   - Kill switch supported
+ *
+ * Routes:
+ *   GET    /api/algo/brokers            - List supported brokers + their required fields
+ *   POST   /api/algo/connect            - Connect a broker (with consent)
+ *   GET    /api/algo/connections        - List user's connections
+ *   DELETE /api/algo/connections/:id    - Remove connection
+ *   POST   /api/algo/connections/:id/test  - Test connection live
+ *   PUT    /api/algo/connections/:id/risk  - Update risk controls
+ *   POST   /api/algo/connections/:id/kill  - Toggle kill switch
+ *   GET    /api/algo/positions          - Live positions
+ *   GET    /api/algo/logs               - Webhook execution logs
+ *   GET    /api/algo/audit              - Audit logs for user
+ *   POST   /api/algo/kill-all           - Emergency stop all connections
+ */
+
+const express = require('express');
+const router = express.Router();
+const { PrismaClient } = require('@prisma/client');
+const { randomUUID: uuidv4 } = require('crypto');
+const { BrokerGateway } = require('../services/brokerGateway/BrokerGateway');
+const { AuditLogger, CATEGORIES } = require('../services/auditLogger');
+const { N } = require('../services/notifier');
+
+const prisma = new PrismaClient();
+
+// ─── CONSENT TEXT (versioned) ────────────────────────────────
+const CONSENT_TEXT_V1 = [
+  'I authorize Hello Trader to send orders to my connected broker account based on my selected automation settings.',
+  'I understand that trading involves significant market risk. Past performance does not guarantee future results.',
+  'I acknowledge that Hello Trader does not guarantee any returns or profits.',
+  'I remain fully responsible for my own trading decisions and all outcomes.',
+  'I confirm that I will not hold Hello Trader liable for any losses arising from automated trading.',
+  'I understand I can disconnect my broker and disable all automation at any time using the Kill Switch.',
+  'I confirm that the API credentials I am providing belong to my own broker account.',
+].join(' | ');
+
+// ─── GET /brokers ─────────────────────────────────────────────
+router.get('/brokers', (req, res) => {
+  res.json({ success: true, brokers: BrokerGateway.getSupportedBrokers() });
+});
+
+// ─── POST /connect ────────────────────────────────────────────
+router.post('/connect', async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Authentication required' });
+    }
+
+    const {
+      broker, displayName,
+      apiKey, apiSecret, clientId, accessToken,
+      totpSecret, vendorCode, redirectUri, imei,
+      // Risk controls
+      maxOpenTrades, maxDailyLoss, maxPositionSize,
+      allowedProducts, tradingHoursStart, tradingHoursEnd,
+      // Compliance
+      consentAccepted,
+    } = req.body || {};
+
+    // Compliance: Consent is mandatory
+    if (!consentAccepted) {
+      return res.status(400).json({
+        success: false,
+        error: 'CONSENT_REQUIRED',
+        message: 'You must explicitly accept the authorization terms before connecting a broker.'
+      });
+    }
+
+    if (!broker) {
+      return res.status(400).json({ success: false, message: 'Broker is required.' });
+    }
+
+    // Passwords are NEVER stored — only tokens/API keys
+    if (req.body?.password) {
+      return res.status(400).json({
+        success: false,
+        error: 'PASSWORD_STORAGE_DENIED',
+        message: 'Broker login passwords cannot be stored on this platform. Please use API Key/Token credentials from your broker\'s developer portal.'
+      });
+    }
+
+    const ip = req.headers['cf-connecting-ip'] ||
+      req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
+      req.socket?.remoteAddress;
+
+    // Encrypt sensitive credentials
+    const encrypt = (val) => val ? BrokerGateway.encrypt(val) : null;
+
+    const webhookToken = uuidv4().replace(/-/g, '') + uuidv4().replace(/-/g, '');
+
+    const connection = await prisma.algoBrokerConnection.create({
+      data: {
+        userId,
+        broker: broker.toUpperCase(),
+        displayName: displayName || `${broker} Account`,
+        webhookToken,
+
+        // Encrypted credentials
+        apiKey:       encrypt(apiKey),
+        apiSecret:    encrypt(apiSecret),
+        clientId:     clientId || null,
+        accessToken:  encrypt(accessToken),
+        totpSecret:   encrypt(totpSecret),
+        vendorCode:   vendorCode || null,
+        redirectUri:  redirectUri || null,
+        imei:         imei || null,
+
+        // Consent
+        consentAccepted: true,
+        consentAt:       new Date(),
+        consentIp:       ip,
+        consentVersion:  'v1.0',
+        consentText:     CONSENT_TEXT_V1,
+
+        // Risk controls
+        maxOpenTrades:     maxOpenTrades ? parseInt(maxOpenTrades) : null,
+        maxDailyLoss:      maxDailyLoss ? parseFloat(maxDailyLoss) : null,
+        maxPositionSize:   maxPositionSize ? parseFloat(maxPositionSize) : null,
+        allowedProducts:   allowedProducts || null,
+        tradingHoursStart: tradingHoursStart || null,
+        tradingHoursEnd:   tradingHoursEnd || null,
+      }
+    });
+
+    // Audit log
+    await AuditLogger.log({
+      userId, category: CATEGORIES.CONSENT, action: 'CONSENT_RECORDED',
+      detail: `User accepted broker connection terms for ${broker}`,
+      meta: { broker, consentVersion: 'v1.0', consentIp: ip },
+      ip,
+    });
+    await AuditLogger.log({
+      userId, category: CATEGORIES.BROKER, action: 'CONNECTED',
+      detail: `Connected ${broker} broker: ${displayName || broker}`,
+      meta: { connectionId: connection.id, broker },
+      ip,
+    });
+
+    // Build webhook URL
+    const baseUrl = process.env.PUBLIC_URL || 'https://hello-trader.onrender.com';
+    const webhookUrl = `${baseUrl}/webhook/tv/${webhookToken}`;
+
+    // Notify admin — no credentials in message
+    const student = await prisma.user.findUnique({ where: { id: userId }, select: { name: true, studentId: true } });
+    N.algoConnected({ studentName: student?.name || 'Student', studentId: student?.studentId || userId, broker: broker.toUpperCase(), displayName: displayName || broker });
+
+    res.json({
+      success: true,
+      message: `${broker} broker connected successfully`,
+      connectionId: connection.id,
+      webhookUrl,
+      webhookToken,
+    });
+  } catch (err) {
+    console.error('[algo/connect]', err);
+    res.status(500).json({ success: false, message: 'Failed to connect broker: ' + err.message });
+  }
+});
+
+// ─── GET /connections ─────────────────────────────────────────
+router.get('/connections', async (req, res) => {
+  try {
+    const connections = await prisma.algoBrokerConnection.findMany({
+      where: { userId: req.user.id },
+      select: {
+        id: true, broker: true, displayName: true,
+        isActive: true, killSwitchActive: true, webhookToken: true,
+        consentAccepted: true, consentAt: true,
+        maxOpenTrades: true, maxDailyLoss: true, maxPositionSize: true,
+        allowedProducts: true, tradingHoursStart: true, tradingHoursEnd: true,
+        testStatus: true, testMessage: true, lastTestedAt: true,
+        connectedAt: true,
+      }
+    });
+
+    const baseUrl = process.env.PUBLIC_URL || 'https://hello-trader.onrender.com';
+    const result = connections.map(c => ({
+      ...c,
+      webhookUrl: `${baseUrl}/webhook/tv/${c.webhookToken}`,
+    }));
+
+    res.json({ success: true, connections: result });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ─── DELETE /connections/:id ──────────────────────────────────
+router.delete('/connections/:id', async (req, res) => {
+  const userId = req.user.id;
+  const { id } = req.params;
+  try {
+    const conn = await prisma.algoBrokerConnection.findFirst({ where: { id, userId } });
+    if (!conn) return res.status(404).json({ success: false, message: 'Connection not found' });
+
+    await prisma.algoBrokerConnection.delete({ where: { id } });
+
+    await AuditLogger.log({
+      userId, category: CATEGORIES.BROKER, action: 'DISCONNECTED',
+      detail: `Disconnected ${conn.broker} broker: ${conn.displayName}`,
+      meta: { connectionId: id, broker: conn.broker }, req,
+    });
+
+    res.json({ success: true, message: `${conn.broker} disconnected and all credentials removed.` });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ─── POST /connections/:id/test ───────────────────────────────
+router.post('/connections/:id/test', async (req, res) => {
+  const userId = req.user.id;
+  const { id } = req.params;
+  try {
+    const conn = await prisma.algoBrokerConnection.findFirst({ where: { id, userId } });
+    if (!conn) return res.status(404).json({ success: false, message: 'Connection not found' });
+
+    const result = await BrokerGateway.testConnection(conn);
+
+    // Update test status
+    await prisma.algoBrokerConnection.update({
+      where: { id },
+      data: {
+        lastTestedAt: new Date(),
+        testStatus: result.success ? 'SUCCESS' : 'FAILED',
+        testMessage: result.message,
+        isActive: result.success,
+      }
+    });
+
+    await AuditLogger.log({
+      userId, category: CATEGORIES.BROKER,
+      action: result.success ? 'TEST_PASSED' : 'TEST_FAILED',
+      detail: `Connection test for ${conn.broker}: ${result.message}`,
+      meta: { connectionId: id, profile: result.profile }, req,
+    });
+
+    res.json({ success: result.success, message: result.message, profile: result.profile });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ─── GET /connections/:id/triggers ───────────────────────────
+// Get saved UP SIDE (BUY) & DOWN SIDE (SELL) trigger configurations
+router.get('/connections/:id/triggers', async (req, res) => {
+  const userId = req.user.id;
+  const { id } = req.params;
+  try {
+    const conn = await prisma.algoBrokerConnection.findFirst({ where: { id, userId } });
+    if (!conn) return res.status(404).json({ success: false, message: 'Connection not found' });
+
+    const configs = await prisma.algoTriggerConfig.findMany({
+      where: { connectionId: id }
+    });
+
+    const upside   = configs.find(c => c.direction === 'UPSIDE') || null;
+    const downside = configs.find(c => c.direction === 'DOWNSIDE') || null;
+
+    res.json({ success: true, connectionId: id, upside, downside, configs });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ─── POST /connections/:id/triggers ──────────────────────────
+// Upsert UP SIDE or DOWN SIDE trigger configuration
+router.post('/connections/:id/triggers', async (req, res) => {
+  const userId = req.user.id;
+  const { id } = req.params;
+  try {
+    const conn = await prisma.algoBrokerConnection.findFirst({ where: { id, userId } });
+    if (!conn) return res.status(404).json({ success: false, message: 'Connection not found' });
+
+    const {
+      direction, // "UPSIDE" | "DOWNSIDE"
+      enabled = true,
+      exchange = 'NFO',
+      symbol = 'NIFTY',
+      productType = 'MIS',
+      scriptType = 'OPTION',
+      lots = 1,
+      expiryType = 'WEEKLY',
+      expiryGap = 0,
+      strikeOffset = 0,
+      strikeStep = 50,
+      optionType = direction === 'UPSIDE' ? 'CE' : 'PE',
+      orderSide = 'BUY',
+      exitOnOpposite = true,
+    } = req.body || {};
+
+    if (!direction || (direction !== 'UPSIDE' && direction !== 'DOWNSIDE')) {
+      return res.status(400).json({ success: false, message: 'direction must be "UPSIDE" or "DOWNSIDE"' });
+    }
+
+    const config = await prisma.algoTriggerConfig.upsert({
+      where: { connectionId_direction: { connectionId: id, direction } },
+      create: {
+        connectionId: id, direction, enabled: !!enabled,
+        exchange, symbol: symbol.toUpperCase(), productType, scriptType,
+        lots: Number(lots) || 1, expiryType, expiryGap: Number(expiryGap) || 0,
+        strikeOffset: Number(strikeOffset) || 0, strikeStep: Number(strikeStep) || 50,
+        optionType, orderSide, exitOnOpposite: !!exitOnOpposite,
+      },
+      update: {
+        enabled: !!enabled, exchange, symbol: symbol.toUpperCase(),
+        productType, scriptType, lots: Number(lots) || 1,
+        expiryType, expiryGap: Number(expiryGap) || 0,
+        strikeOffset: Number(strikeOffset) || 0, strikeStep: Number(strikeStep) || 50,
+        optionType, orderSide, exitOnOpposite: !!exitOnOpposite,
+      }
+    });
+
+    await AuditLogger.log({
+      userId, category: CATEGORIES.ALGO, action: 'TRIGGER_CONFIG_UPDATED',
+      detail: `Updated ${direction} trigger config for ${symbol} (${optionType} ${strikeOffset>=0?'+'+strikeOffset:strikeOffset})`,
+      meta: { connectionId: id, config }, req,
+    });
+
+    res.json({ success: true, message: `✅ ${direction} (${direction === 'UPSIDE' ? 'BUY Signal' : 'SELL Signal'}) configuration saved!`, config });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+
+// ─── PUT /connections/:id/risk ────────────────────────────────
+router.put('/connections/:id/risk', async (req, res) => {
+  const userId = req.user.id;
+  const { id } = req.params;
+  const { maxOpenTrades, maxDailyLoss, maxPositionSize, allowedProducts,
+          tradingHoursStart, tradingHoursEnd } = req.body;
+  try {
+    const conn = await prisma.algoBrokerConnection.findFirst({ where: { id, userId } });
+    if (!conn) return res.status(404).json({ success: false, message: 'Connection not found' });
+
+    await prisma.algoBrokerConnection.update({
+      where: { id },
+      data: {
+        maxOpenTrades:     maxOpenTrades != null ? parseInt(maxOpenTrades) : conn.maxOpenTrades,
+        maxDailyLoss:      maxDailyLoss != null ? parseFloat(maxDailyLoss) : conn.maxDailyLoss,
+        maxPositionSize:   maxPositionSize != null ? parseFloat(maxPositionSize) : conn.maxPositionSize,
+        allowedProducts:   allowedProducts ?? conn.allowedProducts,
+        tradingHoursStart: tradingHoursStart ?? conn.tradingHoursStart,
+        tradingHoursEnd:   tradingHoursEnd ?? conn.tradingHoursEnd,
+      }
+    });
+
+    await AuditLogger.log({
+      userId, category: CATEGORIES.ALGO, action: 'RISK_UPDATED',
+      detail: `Risk controls updated for ${conn.broker} connection`,
+      meta: { connectionId: id, maxOpenTrades, maxDailyLoss, maxPositionSize }, req,
+    });
+
+    res.json({ success: true, message: 'Risk controls updated.' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ─── POST /connections/:id/kill ───────────────────────────────
+router.post('/connections/:id/kill', async (req, res) => {
+  const userId = req.user.id;
+  const { id } = req.params;
+  const { active, reason } = req.body;
+  try {
+    const conn = await prisma.algoBrokerConnection.findFirst({ where: { id, userId } });
+    if (!conn) return res.status(404).json({ success: false, message: 'Connection not found' });
+
+    await prisma.algoBrokerConnection.update({
+      where: { id },
+      data: {
+        killSwitchActive: !!active,
+        killSwitchAt: active ? new Date() : null,
+        killSwitchReason: active ? (reason || 'User activated kill switch') : null,
+        isActive: active ? false : conn.isActive,
+      }
+    });
+
+    await AuditLogger.log({
+      userId, category: CATEGORIES.KILL,
+      action: active ? 'KILL_SWITCH_ON' : 'KILL_SWITCH_OFF',
+      detail: `Kill switch ${active ? 'ACTIVATED' : 'DEACTIVATED'} for ${conn.broker}: ${reason || ''}`,
+      meta: { connectionId: id, broker: conn.broker, reason }, req,
+    });
+
+    res.json({
+      success: true,
+      message: active
+        ? `🛑 Kill switch activated for ${conn.broker}. All automation stopped.`
+        : `✅ Kill switch deactivated for ${conn.broker}.`
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ─── POST /kill-all ───────────────────────────────────────────
+router.post('/kill-all', async (req, res) => {
+  const userId = req.user.id;
+  const { reason } = req.body;
+  try {
+    await prisma.algoBrokerConnection.updateMany({
+      where: { userId },
+      data: {
+        killSwitchActive: true,
+        killSwitchAt: new Date(),
+        killSwitchReason: reason || 'Emergency stop — all automation',
+        isActive: false,
+      }
+    });
+
+    await AuditLogger.log({
+      userId, category: CATEGORIES.KILL, action: 'EMERGENCY_STOP_ALL',
+      detail: `EMERGENCY STOP activated — all broker connections killed`,
+      meta: { reason }, req,
+    });
+
+    res.json({ success: true, message: '🛑 Emergency stop activated. All automation halted.' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ─── GET /positions ───────────────────────────────────────────
+router.get('/positions', async (req, res) => {
+  try {
+    const positions = await prisma.algoPosition.findMany({
+      where: { userId: req.user.id, status: 'OPEN' },
+      include: { connection: { select: { broker: true, displayName: true } } },
+      orderBy: { openedAt: 'desc' },
+    });
+    res.json({ success: true, positions });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ─── GET /logs ────────────────────────────────────────────────
+router.get('/logs', async (req, res) => {
+  const { limit = 50, connectionId } = req.query;
+  try {
+    const where = { userId: req.user.id };
+    if (connectionId) where.connectionId = connectionId;
+    const logs = await prisma.algoWebhookLog.findMany({
+      where,
+      orderBy: { receivedAt: 'desc' },
+      take: parseInt(limit),
+      include: { connection: { select: { broker: true, displayName: true } } },
+    });
+    res.json({ success: true, logs });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ─── GET /audit ───────────────────────────────────────────────
+router.get('/audit', async (req, res) => {
+  const { limit = 100, category } = req.query;
+  try {
+    const logs = await AuditLogger.getLogs({
+      userId: req.user.id,
+      category,
+      limit: parseInt(limit),
+    });
+    res.json({ success: true, logs });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+module.exports = router;

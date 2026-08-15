@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useMarketProvider } from '../context/MarketProviderContext';
 import { Settings, CheckCircle2, AlertCircle } from 'lucide-react';
+import apiClient from '../lib/axios';
 
 export default function ProviderSettings() {
   const { 
@@ -11,10 +12,29 @@ export default function ProviderSettings() {
   } = useMarketProvider();
 
   const [localKeys, setLocalKeys] = useState(providerKeys);
+  const [isSaving, setIsSaving] = useState(false);
 
-  // Keep localKeys synced if context changes externally
+  // Fetch Dhan backend keys on mount
   useEffect(() => {
-    setLocalKeys(providerKeys);
+    apiClient.get('/admin/settings')
+      .then(res => {
+        if (res.data) {
+          setLocalKeys(prev => ({
+            ...prev,
+            DHAN: {
+              ...prev.DHAN,
+              clientId: res.data.dhanClientId || prev.DHAN.clientId || '',
+              accessToken: res.data.dhanAccessToken || prev.DHAN.accessToken || ''
+            }
+          }));
+        }
+      })
+      .catch(console.error);
+  }, []);
+
+  // Keep localKeys synced if context changes externally (for other providers)
+  useEffect(() => {
+    setLocalKeys(prev => ({ ...providerKeys, DHAN: prev.DHAN }));
   }, [providerKeys]);
 
   const handleLocalKeyChange = (provider, field, value) => {
@@ -27,9 +47,48 @@ export default function ProviderSettings() {
     }));
   };
 
-  const handleSave = (provider) => {
-    updateProviderKeys(provider, localKeys[provider]);
-    // Set it active to test it
+  const [isTesting, setIsTesting] = useState(false);
+
+  const handleTestDhan = async () => {
+    if (!localKeys.DHAN.clientId || !localKeys.DHAN.accessToken) {
+      alert('Please enter both Dhan Client ID and Access Token to test.');
+      return;
+    }
+    setIsTesting(true);
+    try {
+      const res = await apiClient.post('/admin/test-dhan', {
+        dhanClientId: localKeys.DHAN.clientId,
+        dhanAccessToken: localKeys.DHAN.accessToken
+      });
+      alert('✅ ' + (res.data.message || 'Dhan Credentials Validated Successfully!'));
+    } catch (err) {
+      alert('❌ Dhan Connection Test Failed: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setIsTesting(false);
+    }
+  };
+
+  const handleSave = async (provider) => {
+    if (provider === 'DHAN') {
+      setIsSaving(true);
+      try {
+        const res = await apiClient.post('/admin/settings', {
+          dhanClientId: localKeys.DHAN.clientId,
+          dhanAccessToken: localKeys.DHAN.accessToken
+        });
+        alert('✅ ' + (res.data.message || 'Master Dhan Keys authenticated & saved transactionally!'));
+        updateProviderKeys(provider, localKeys[provider]);
+      } catch (err) {
+        const errData = err.response?.data;
+        const code = errData?.errorCode || 'AUTH_FAIL';
+        const msg = errData?.errorMessage || errData?.error || err.message;
+        alert(`❌ SAVE BLOCKED [Code: ${code}]\n\n${msg}\n\nCredentials were NOT saved to database.`);
+        setIsSaving(false);
+        return;
+      }
+      setIsSaving(false);
+    }
+    
     if (activeProvider !== provider) {
       setActiveProvider(provider);
     }
@@ -113,15 +172,17 @@ export default function ProviderSettings() {
             <div className="flex gap-3 pt-2">
               <button 
                 onClick={() => handleSave('DHAN')}
-                className="px-4 py-2 bg-[#00d4ff] hover:bg-[#00d4ff]/80 text-black font-extrabold rounded text-xs transition-colors"
+                disabled={isSaving}
+                className="px-4 py-2 bg-[#00d4ff] hover:bg-[#00d4ff]/80 disabled:bg-[#00d4ff]/50 text-black font-extrabold rounded text-xs transition-colors"
               >
-                Save
+                {isSaving ? 'Saving...' : 'Save & Start Stream'}
               </button>
               <button 
-                onClick={() => handleSave('DHAN')}
-                className="px-4 py-2 bg-transparent border border-[#00d4ff]/50 text-[#00d4ff] hover:bg-[#00d4ff]/10 font-bold rounded text-xs transition-colors"
+                onClick={handleTestDhan}
+                disabled={isTesting}
+                className="px-4 py-2 bg-transparent border border-[#00d4ff]/50 text-[#00d4ff] hover:bg-[#00d4ff]/10 font-bold rounded text-xs transition-colors disabled:opacity-50"
               >
-                Test Connection
+                {isTesting ? 'Testing...' : 'Test Connection'}
               </button>
             </div>
             

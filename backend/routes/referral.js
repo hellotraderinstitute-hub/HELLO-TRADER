@@ -6,11 +6,15 @@ const router = express.Router();
 // Get Referral Stats
 router.get('/', async (req, res) => {
   try {
-    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
-    
-    // Stats:
+    const userId = req.user.id;
+
+    // Fetch user for referralCode — guard against deleted accounts
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    // Fetch all referrals made by this user
     const referrals = await prisma.referral.findMany({
-      where: { referrerId: user.id }
+      where: { referrerId: userId }
     });
 
     const totalRegistrations = referrals.length;
@@ -22,22 +26,25 @@ router.get('/', async (req, res) => {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    const recentSuccessReferrals = referrals.filter(r => 
-      r.status === 'SUCCESS' && r.successAt && r.successAt >= thirtyDaysAgo
+    const recentSuccessReferrals = referrals.filter(r =>
+      r.status === 'SUCCESS' && r.successAt && new Date(r.successAt) >= thirtyDaysAgo
     );
     const recentSuccessCount = recentSuccessReferrals.length;
 
     // Unclaimed successful referrals for special bonus (3 required)
     const unclaimedForBonus = recentSuccessReferrals.filter(r => !r.bonusClaimed);
 
-    // Get Referral Balance
+    // Get Referral Balance from ledger
     const ledgers = await prisma.ledger.findMany({
-      where: { userId: user.id, walletType: 'REFERRAL' }
+      where: { userId, walletType: 'REFERRAL' }
     });
-    const referralBalance = ledgers.reduce((acc, curr) => curr.type === 'CREDIT' ? acc + curr.amount : acc - curr.amount, 0);
+    const referralBalance = ledgers.reduce(
+      (acc, curr) => curr.type === 'CREDIT' ? acc + curr.amount : acc - curr.amount,
+      0
+    );
 
     res.json({
-      referralCode: user.referralCode,
+      referralCode: user.referralCode || '',
       stats: { totalRegistrations, pending, success, rejected, recentSuccessCount },
       referralBalance,
       canWithdraw: recentSuccessCount >= 3,
@@ -215,6 +222,83 @@ router.post('/claim-special-bonus', async (req, res) => {
     });
 
     res.json({ success: true, rewardOption });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Month-End Idempotent Referral to Cash Tokens Conversion
+router.post('/month-end-convert', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    // Check referral balance
+    const ledgers = await prisma.ledger.findMany({
+      where: { userId, walletType: 'REFERRAL' }
+    });
+    const referralBalance = ledgers.reduce((acc, curr) => curr.type === 'CREDIT' ? acc + curr.amount : acc - curr.amount, 0);
+
+    if (referralBalance <= 0) {
+      return res.json({ success: true, convertedAmount: 0, message: 'No referral earnings to convert.' });
+    }
+
+    // Check 30-day recent success count
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const recentSuccessCount = await prisma.referral.count({
+      where: { referrerId: userId, status: 'SUCCESS', successAt: { gte: thirtyDaysAgo } }
+    });
+
+    if (recentSuccessCount >= 3) {
+      return res.json({ success: true, convertedAmount: 0, message: 'User meets withdrawal criteria (>= 3 referrals). Referral cash remains withdrawable.' });
+    }
+
+    // Perform Idempotent Month-End Conversion: REFERRAL DEBIT -> TOKEN CREDIT (Cash Tokens)
+    const convertedAmount = await prisma.$transaction(async (tx) => {
+      const recentConversion = await tx.ledger.findFirst({
+        where: {
+          userId,
+          walletType: 'REFERRAL',
+          type: 'DEBIT',
+          reason: { startsWith: 'REFERRAL_TO_CASH_TOKEN_CONVERSION' },
+          timestamp: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) }
+        }
+      });
+
+      if (recentConversion) {
+        return 0;
+      }
+
+      await tx.ledger.create({
+        data: {
+          userId,
+          walletType: 'REFERRAL',
+          amount: referralBalance,
+          type: 'DEBIT',
+          reason: `REFERRAL_TO_CASH_TOKEN_CONVERSION_${Date.now()}`
+        }
+      });
+
+      await tx.ledger.create({
+        data: {
+          userId,
+          walletType: 'TOKEN',
+          amount: referralBalance,
+          type: 'CREDIT',
+          reason: `REFERRAL_TO_CASH_TOKEN_CONVERSION_${Date.now()}`
+        }
+      });
+
+      return referralBalance;
+    });
+
+    if (convertedAmount > 0) {
+      const { autoBillUserIfEligible } = require('../services/autoBillingService');
+      await autoBillUserIfEligible(userId);
+    }
+
+    res.json({ success: true, convertedAmount, message: convertedAmount > 0 ? `Successfully converted ₹${convertedAmount} referral earnings to Cash Tokens.` : 'Conversion already processed.' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

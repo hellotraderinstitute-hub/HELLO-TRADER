@@ -1,16 +1,69 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTrading } from '../context/TradingContext';
-import ProviderSettings from './ProviderSettings';
 import { useMarketProvider } from '../context/MarketProviderContext';
-import { TrendingUp, Layers, Radar, Brain, Wallet, ArrowUpRight, Award, Zap, Activity } from 'lucide-react';
+import InstallPwaModal from './InstallPwaModal';
+import { TrendingUp, Layers, Radar, Brain, Wallet, Clock, AlertTriangle, ArrowRight } from 'lucide-react';
 
 export default function Dashboard({ setActiveTab }) {
-  const { paperBalance, totalEquity, activePnlTotal, winRate, positions, currentStudentId, students } = useTrading();
-  const currentStudent = students.find(s => s.id === currentStudentId);
+  const { paperBalance, activePnlTotal, positions, tradeHistory, currentStudent, isExpiredTrial, openRechargeModal } = useTrading();
   const { marketMode } = useMarketProvider();
   const currencySymbol = marketMode === 'INDIAN' ? '₹' : '$';
+
+  const handleCardClick = (tabId) => {
+    const lockedTabs = ['option-chain', 'scanner', 'ai-lab', 'market-intel'];
+    if (isExpiredTrial && lockedTabs.includes(tabId)) {
+      openRechargeModal();
+    } else {
+      setActiveTab(tabId);
+    }
+  };
+
+  // Compute derived metrics from real data
+  const totalEquity = paperBalance + activePnlTotal;
+  const closedTrades = tradeHistory || [];
+  const wins = closedTrades.filter(t => (t.pnl || 0) > 0).length;
+  const winRate = closedTrades.length > 0 ? ((wins / closedTrades.length) * 100).toFixed(1) : '0.0';
+
+  // Live ticking 4-Day Trial Countdown state
+  const [trialTimeLeft, setTrialTimeLeft] = useState({ 
+    days: 4, hours: 0, minutes: 0, seconds: 0, expired: false, formatted: '04d : 00h : 00m : 00s' 
+  });
+
+  useEffect(() => {
+    const updateCountdown = () => {
+      if (!currentStudent?.trialStartedAt) {
+        setTrialTimeLeft({ days: 4, hours: 0, minutes: 0, seconds: 0, expired: false, formatted: '04d : 00h : 00m : 00s' });
+        return;
+      }
+
+      const trialDuration = 4 * 24 * 60 * 60 * 1000; // 4 days in ms
+      const startedAt = new Date(currentStudent.trialStartedAt).getTime();
+      const expiresAt = startedAt + trialDuration;
+      const now = Date.now();
+      const diff = expiresAt - now;
+
+      if (diff <= 0) {
+        setTrialTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0, expired: true, formatted: '00d : 00h : 00m : 00s' });
+        return;
+      }
+
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+      const pad = (n) => String(n).padStart(2, '0');
+      const formatted = `${pad(days)}d : ${pad(hours)}h : ${pad(minutes)}m : ${pad(seconds)}s`;
+
+      setTrialTimeLeft({ days, hours, minutes, seconds, expired: false, formatted });
+    };
+
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000);
+    return () => clearInterval(interval);
+  }, [currentStudent?.trialStartedAt]);
 
   return (
     <div className="p-4 bg-[#0b0e14] text-white min-h-[calc(100vh-80px)] font-mono space-y-4">
@@ -33,6 +86,52 @@ export default function Dashboard({ setActiveTab }) {
           </button>
         </div>
       </div>
+
+      {/* App Install Banner */}
+      <InstallPwaModal variant="banner" />
+
+      {/* Trial Countdown Banner */}
+      {currentStudent && (
+        <div className={`p-4 rounded-xl border flex flex-wrap items-center justify-between gap-4 shadow-lg ${
+          trialTimeLeft.expired 
+            ? 'bg-red-500/10 border-red-500/30 text-red-400' 
+            : trialTimeLeft.days < 1
+            ? 'bg-amber-500/15 border-amber-500/40 text-amber-300 animate-pulse'
+            : 'bg-[#00D4FF]/10 border-[#00D4FF]/30 text-[#00D4FF]'
+        }`}>
+          <div className="flex items-center gap-3">
+            {trialTimeLeft.expired ? <AlertTriangle className="w-6 h-6 shrink-0 animate-bounce" /> : <Clock className="w-6 h-6 shrink-0 animate-spin" style={{ animationDuration: '4s' }} />}
+            <div>
+              <h3 className="font-extrabold text-sm flex items-center gap-2">
+                {trialTimeLeft.expired ? 'FREE TRIAL EXPIRED' : '4-DAY FREE TRIAL ACTIVE'}
+                {!trialTimeLeft.expired && trialTimeLeft.days < 1 && (
+                  <span className="bg-amber-500 text-black text-[9px] font-black px-2 py-0.5 rounded">EXPIRING SOON</span>
+                )}
+              </h3>
+              <p className="text-xs opacity-90 mt-0.5">
+                {trialTimeLeft.expired 
+                  ? 'Your 4-day trial period has ended. Recharge tokens to reactivate trading access.' 
+                  : `Real-time countdown remaining. Recharge tokens before expiry to prevent interruption.`}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <div className="text-xl md:text-2xl font-black tabular-nums tracking-wider bg-[#0b0e14] px-4 py-2 rounded-lg border border-white/10 text-white font-mono shadow-inner">
+              {trialTimeLeft.formatted}
+            </div>
+
+            <button
+              onClick={() => setActiveTab('wallet')}
+              className="px-4 py-2 bg-[#00FF41] hover:bg-[#00FF41]/90 text-black font-extrabold rounded-lg text-xs flex items-center gap-1.5 shadow-[0_0_15px_rgba(0,255,65,0.3)] transition-all shrink-0 cursor-pointer"
+            >
+              <Wallet className="w-4 h-4" />
+              RECHARGE / ACTIVATE
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs mt-6">
@@ -77,7 +176,7 @@ export default function Dashboard({ setActiveTab }) {
       {/* Quick Action Bento Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <button
-          onClick={() => setActiveTab('desk')}
+          onClick={() => handleCardClick('desk')}
           className="p-5 bg-[#161B22] hover:bg-[#1d2026] rounded-xl border border-white/10 hover:border-[#00d4ff] transition-all text-left group shadow-lg"
         >
           <TrendingUp className="w-8 h-8 text-[#00d4ff] mb-3 group-hover:scale-110 transition-transform" />
@@ -86,7 +185,7 @@ export default function Dashboard({ setActiveTab }) {
         </button>
 
         <button
-          onClick={() => setActiveTab('option-chain')}
+          onClick={() => handleCardClick('option-chain')}
           className="p-5 bg-[#161B22] hover:bg-[#1d2026] rounded-xl border border-white/10 hover:border-[#00d4ff] transition-all text-left group shadow-lg"
         >
           <Layers className="w-8 h-8 text-[#00e639] mb-3 group-hover:scale-110 transition-transform" />
@@ -95,7 +194,7 @@ export default function Dashboard({ setActiveTab }) {
         </button>
 
         <button
-          onClick={() => setActiveTab('scanner')}
+          onClick={() => handleCardClick('scanner')}
           className="p-5 bg-[#161B22] hover:bg-[#1d2026] rounded-xl border border-white/10 hover:border-[#00d4ff] transition-all text-left group shadow-lg"
         >
           <Radar className="w-8 h-8 text-amber-400 mb-3 group-hover:scale-110 transition-transform" />
@@ -104,7 +203,7 @@ export default function Dashboard({ setActiveTab }) {
         </button>
 
         <button
-          onClick={() => setActiveTab('ai-lab')}
+          onClick={() => handleCardClick('ai-lab')}
           className="p-5 bg-[#161B22] hover:bg-[#1d2026] rounded-xl border border-white/10 hover:border-[#00d4ff] transition-all text-left group shadow-lg"
         >
           <Brain className="w-8 h-8 text-purple-400 mb-3 group-hover:scale-110 transition-transform" />

@@ -12,23 +12,41 @@ import {
   Settings, 
   HelpCircle,
   ShieldCheck,
-  Zap
+  Zap,
+  Globe
 } from 'lucide-react';
 
+import { useTrading } from '../context/TradingContext';
+import { Lock } from 'lucide-react';
+import InstallPwaModal from './InstallPwaModal';
+
 export default function Sidebar({ activeTab, setActiveTab, handleLogout, isAdmin }) {
+  const { isExpiredTrial, openRechargeModal } = useTrading();
+
   const mainNav = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'desk', label: 'Trading Desk', icon: TrendingUp },
-    { id: 'option-chain', label: 'Option Chain', icon: Layers },
-    { id: 'ai-lab', label: 'AI Lab', icon: Brain },
-    { id: 'scanner', label: 'Scanner', icon: Radar },
+    { id: 'trade', label: 'Trade', icon: Zap },
+    { id: 'option-chain', label: 'Option Chain', icon: Layers, isLocked: true },
+    { id: 'market-intel', label: 'Market Intel (FII/DII)', icon: Globe, isLocked: true },
+    { id: 'ai-lab', label: 'AI Lab', icon: Brain, isLocked: true },
+    { id: 'scanner', label: 'Scanner', icon: Radar, isLocked: true },
     { id: 'wallet', label: 'Wallet', icon: Wallet },
     { id: 'referral', label: 'Referral & Earnings', icon: Users }
   ];
 
   if (isAdmin) {
+    mainNav.push({ id: 'guardian', label: 'Guardian Monitor v1', icon: ShieldCheck });
     mainNav.push({ id: 'admin', label: 'Admin Portal', icon: ShieldCheck });
   }
+
+  const handleNavClick = (item) => {
+    if (isExpiredTrial && item.isLocked) {
+      openRechargeModal();
+    } else {
+      setActiveTab(item.id);
+    }
+  };
 
   return (
     <aside className="w-[240px] bg-[#0b0e14] border-r border-[#3c494e]/30 flex flex-col h-screen fixed left-0 top-0 z-50 font-sans select-none">
@@ -68,25 +86,34 @@ export default function Sidebar({ activeTab, setActiveTab, handleLogout, isAdmin
         {mainNav.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
+          const showLock = isExpiredTrial && item.isLocked;
           return (
             <button
               key={item.id}
-              onClick={() => setActiveTab(item.id)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-xs font-semibold ${
+              onClick={() => handleNavClick(item)}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition-all text-xs font-semibold ${
                 isActive
                   ? 'bg-[#1d2026] text-[#00d4ff] border-r-2 border-[#00d4ff] shadow-[0_0_15px_rgba(0,212,255,0.2)] font-bold'
                   : 'text-[#bbc9cf] hover:bg-[#1d2026]/50 hover:text-white'
               }`}
             >
-              <Icon className={`w-4 h-4 ${isActive ? 'text-[#00d4ff]' : 'text-[#859398]'}`} />
-              <span>{item.label}</span>
+              <div className="flex items-center gap-3 truncate">
+                <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-[#00d4ff]' : 'text-[#859398]'}`} />
+                <span className="truncate">{item.label}</span>
+              </div>
+              {showLock && (
+                <Lock className="w-3.5 h-3.5 text-[#D4AF37] shrink-0" />
+              )}
             </button>
           );
         })}
       </nav>
 
       {/* Footer Nav Settings */}
-      <div className="p-3 border-t border-[#3c494e]/20 space-y-1 font-mono text-xs">
+      <div className="p-3 border-t border-[#3c494e]/20 space-y-2 font-mono text-xs">
+        <div className="px-1 py-1">
+          <InstallPwaModal variant="sidebar" />
+        </div>
         <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[#bbc9cf] hover:text-white hover:bg-[#1d2026]/50">
           <Settings className="w-4 h-4 text-[#859398]" />
           <span>Settings</span>

@@ -23,13 +23,25 @@ import React, {
 import { BinanceAdapter, BINANCE_SYMBOLS } from '../providers/BinanceAdapter';
 import { io } from 'socket.io-client';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
-const socket = io(API_URL.replace('/api', ''), { autoConnect: true });
+const getSocketUrl = () => {
+  if (typeof window !== 'undefined') {
+    return window.location.origin;
+  }
+  return process.env.NEXT_PUBLIC_API_URL ? process.env.NEXT_PUBLIC_API_URL.replace('/api', '') : 'http://localhost:4000';
+};
+const socket = io(getSocketUrl(), { 
+  autoConnect: true,
+  reconnection: true,
+  reconnectionAttempts: Infinity,
+  reconnectionDelay: 300,
+  reconnectionDelayMax: 1000,
+  transports: ['websocket', 'polling']
+});
 
 // ─── Provider IDs ─────────────────────────────────────────────────
 export const PROVIDERS = {
   BINANCE:  { id: 'BINANCE',  label: 'Binance',   flag: '🔶', type: 'crypto',  requiresAuth: false },
-  DHAN:     { id: 'DHAN',     label: 'Dhan HQ',   flag: '🇮🇳', type: 'indian',  requiresAuth: true  },
+  DHAN:     { id: 'DHAN',     label: 'Hello Trader Pro Engine', flag: '🇮🇳', type: 'indian',  requiresAuth: true  },
   BREEZE:   { id: 'BREEZE',   label: 'ICICI Breeze', flag: '🏦', type: 'indian', requiresAuth: true  },
   UPSTOX:   { id: 'UPSTOX',  label: 'Upstox',    flag: '📈', type: 'indian',  requiresAuth: true  },
   TRUEDATA: { id: 'TRUEDATA', label: 'TrueData',  flag: '📊', type: 'indian',  requiresAuth: true  },
@@ -37,14 +49,22 @@ export const PROVIDERS = {
 
 // ─── Default symbols based on Market Mode ─────────────────────────
 export const INDIAN_TICKERS = {
-  'NIFTY':     { symbol: 'NIFTY',     display: 'NIFTY 50',    name: 'NSE Nifty 50',    type: 'index',  exchange: 'IDX_I', securityId: '13', price: 24580.40, open: 24580.40, change: 0, changeAmt: 0, high: 24650.00, low: 24500.00, volume: '—', provider: 'DHAN' },
-  'BANKNIFTY': { symbol: 'BANKNIFTY', display: 'BANKNIFTY',   name: 'Nifty Bank',      type: 'index',  exchange: 'IDX_I', securityId: '25', price: 52410.15, open: 52410.15, change: 0, changeAmt: 0, high: 52600.00, low: 52200.00, volume: '—', provider: 'DHAN' },
-  'FINNIFTY':  { symbol: 'FINNIFTY',  display: 'FIN NIFTY',   name: 'Nifty Financial', type: 'index',  exchange: 'IDX_I', securityId: '27', price: 23680.50, open: 23680.50, change: 0, changeAmt: 0, high: 23800.00, low: 23550.00, volume: '—', provider: 'DHAN' },
+  'NIFTY':     { symbol: 'NIFTY',     display: 'NIFTY 50',    name: 'NSE Nifty 50',    type: 'index',  exchange: 'IDX_I', securityId: '13', price: 24557.00, open: 24557.00, change: 0, changeAmt: 0, high: 24650.00, low: 24500.00, volume: '—', provider: 'DHAN' },
+  'BANKNIFTY': { symbol: 'BANKNIFTY', display: 'BANKNIFTY',   name: 'Nifty Bank',      type: 'index',  exchange: 'IDX_I', securityId: '25', price: 57801.15, open: 57801.15, change: 0, changeAmt: 0, high: 58000.00, low: 57500.00, volume: '—', provider: 'DHAN' },
+  'FINNIFTY':  { symbol: 'FINNIFTY',  display: 'FIN NIFTY',   name: 'Nifty Financial', type: 'index',  exchange: 'IDX_I', securityId: '27', price: 26491.85, open: 26491.85, change: 0, changeAmt: 0, high: 26600.00, low: 26300.00, volume: '—', provider: 'DHAN' },
   'SENSEX':    { symbol: 'SENSEX',    display: 'SENSEX',      name: 'BSE Sensex',      type: 'index',  exchange: 'IDX_I', securityId: '1',  price: 80550.20, open: 80550.20, change: 0, changeAmt: 0, high: 80800.00, low: 80300.00, volume: '—', provider: 'DHAN' },
-  'RELIANCE':  { symbol: 'RELIANCE',  display: 'RELIANCE',    name: 'Reliance Ind.',   type: 'equity', exchange: 'NSE_EQ', securityId: '2885', price: 2980.50, open: 2980.50, change: 0, changeAmt: 0, high: 3010.00, low: 2970.00, volume: '—', provider: 'DHAN' },
-  'TCS':       { symbol: 'TCS',       display: 'TCS',         name: 'Tata Consultancy', type: 'equity', exchange: 'NSE_EQ', securityId: '11536', price: 4210.00, open: 4210.00, change: 0, changeAmt: 0, high: 4250.00, low: 4180.00, volume: '—', provider: 'DHAN' },
-  'INFY':      { symbol: 'INFY',      display: 'INFY',        name: 'Infosys',         type: 'equity', exchange: 'NSE_EQ', securityId: '1594', price: 1780.00, open: 1780.00, change: 0, changeAmt: 0, high: 1800.00, low: 1765.00, volume: '—', provider: 'DHAN' },
-  'HDFCBANK':  { symbol: 'HDFCBANK',  display: 'HDFCBANK',    name: 'HDFC Bank',       type: 'equity', exchange: 'NSE_EQ', securityId: '1333', price: 1610.20, open: 1610.20, change: 0, changeAmt: 0, high: 1630.00, low: 1595.00, volume: '—', provider: 'DHAN' }
+  'RELIANCE':  { symbol: 'RELIANCE',  display: 'RELIANCE',    name: 'Reliance Ind.',   type: 'equity', exchange: 'NSE_EQ', securityId: '2885', price: 1329.00, open: 1329.00, change: 0, changeAmt: 0, high: 1340.00, low: 1320.00, volume: '—', provider: 'DHAN' },
+  'TCS':       { symbol: 'TCS',       display: 'TCS',         name: 'Tata Consultancy', type: 'equity', exchange: 'NSE_EQ', securityId: '11536', price: 2455.00, open: 2455.00, change: 0, changeAmt: 0, high: 2480.00, low: 2440.00, volume: '—', provider: 'DHAN' },
+  'INFY':      { symbol: 'INFY',      display: 'INFY',        name: 'Infosys',         type: 'equity', exchange: 'NSE_EQ', securityId: '1594', price: 1175.00, open: 1175.00, change: 0, changeAmt: 0, high: 1190.00, low: 1165.00, volume: '—', provider: 'DHAN' },
+  'HDFCBANK':  { symbol: 'HDFCBANK',  display: 'HDFCBANK',    name: 'HDFC Bank',       type: 'equity', exchange: 'NSE_EQ', securityId: '1333', price: 732.45, open: 732.45, change: 0, changeAmt: 0, high: 745.00, low: 725.00, volume: '—', provider: 'DHAN' },
+  'ICICIBANK':  { symbol: 'ICICIBANK',  display: 'ICICI BANK',  name: 'ICICI Bank',      type: 'equity', exchange: 'NSE_EQ', securityId: '4963', price: 1420.70, open: 1420.70, change: 0, changeAmt: 0, high: 1435.00, low: 1410.00, volume: '—', provider: 'DHAN' },
+  'TATAMOTORS': { symbol: 'TATAMOTORS', display: 'TATA MOTORS', name: 'Tata Motors',     type: 'equity', exchange: 'NSE_EQ', securityId: '3456', price: 1012.30, open: 1012.30, change: 0, changeAmt: 0, high: 1025.00, low: 1002.00, volume: '—', provider: 'DHAN' },
+  'SBIN':       { symbol: 'SBIN',       display: 'SBIN',        name: 'State Bank Ind',  type: 'equity', exchange: 'NSE_EQ', securityId: '3045', price: 845.60,  open: 845.60,  change: 0, changeAmt: 0, high: 855.00,  low: 840.00,  volume: '—', provider: 'DHAN' },
+  'AXISBANK':   { symbol: 'AXISBANK',   display: 'AXIS BANK',   name: 'Axis Bank',       type: 'equity', exchange: 'NSE_EQ', securityId: '5900', price: 1165.40, open: 1165.40, change: 0, changeAmt: 0, high: 1178.00, low: 1152.00, volume: '—', provider: 'DHAN' },
+  'WIPRO':      { symbol: 'WIPRO',      display: 'WIPRO',       name: 'Wipro Ltd.',      type: 'equity', exchange: 'NSE_EQ', securityId: '3787', price: 512.20,  open: 512.20,  change: 0, changeAmt: 0, high: 520.00,  low: 508.00,  volume: '—', provider: 'DHAN' },
+  'BHARTIARTL': { symbol: 'BHARTIARTL', display: 'BHARTI ARTL', name: 'Bharti Airtel',   type: 'equity', exchange: 'NSE_EQ', securityId: '10604', price: 1440.00, open: 1440.00, change: 0, changeAmt: 0, high: 1455.00, low: 1430.00, volume: '—', provider: 'DHAN' },
+  'ITC':        { symbol: 'ITC',        display: 'ITC',         name: 'ITC Ltd.',        type: 'equity', exchange: 'NSE_EQ', securityId: '1660', price: 495.30,  open: 495.30,  change: 0, changeAmt: 0, high: 502.00,  low: 490.00,  volume: '—', provider: 'DHAN' },
+  'MARUTI':     { symbol: 'MARUTI',     display: 'MARUTI',      name: 'Maruti Suzuki',   type: 'equity', exchange: 'NSE_EQ', securityId: '10999', price: 12450.00, open: 12450.00, change: 0, changeAmt: 0, high: 12580.00, low: 12380.00, volume: '—', provider: 'DHAN' }
 };
 
 export const FOREX_TICKERS = {
@@ -149,7 +169,7 @@ export function MarketProviderLayer({ children }) {
     }
   }, [selectedSymbol]);
 
-  // ── Tick handler — merge into unified tickers array ───────────────
+  // ── Tick handler — merge incoming ticks into Market Watch array ─────
   const handleTick = useCallback((tick) => {
     // If Indian mode, ignore Forex/Crypto ticks
     if (marketMode === 'INDIAN' && tick.provider === 'BINANCE') return;
@@ -166,26 +186,44 @@ export function MarketProviderLayer({ children }) {
       }
       return [...prev, updated];
     });
-
-    // ── Scanner signals from real tick data ──────────────────────
-    setScannerSignals(prev => {
-      if (Math.abs(tick.change) > 0.8) { // lower threshold for Indian market momentum alerts
-        const sig = {
-          id: `${tick.symbol}-${Date.now()}`,
-          symbol: tick.display || tick.symbol,
-          signal: tick.change > 0 ? 'BULLISH MOMENTUM' : 'BEARISH PRESSURE',
-          type:   tick.change > 0 ? 'LONG' : 'SHORT',
-          price:  tick.price,
-          change: tick.change,
-          strength: Math.min(100, Math.abs(tick.change) * 40),
-          time:   new Date().toLocaleTimeString(),
-          provider: tick.provider,
-        };
-        return [sig, ...prev.slice(0, 49)];
-      }
-      return prev;
-    });
   }, [marketMode]);
+
+  // ── Subscribe Market Watch state exclusively to Socket.IO SMDE network events ──
+  useEffect(() => {
+    const onSmdeTick = (cacheEntry) => {
+      if (!cacheEntry || !cacheEntry.lastTick) return;
+      const tick = cacheEntry.lastTick;
+      handleTick({
+        ...tick,
+        quality: cacheEntry.quality,
+        source: cacheEntry.source,
+        smdeVerified: true
+      });
+    };
+
+    const onSmdeSnapshot = (snapshotList) => {
+      if (Array.isArray(snapshotList)) {
+        snapshotList.forEach(entry => {
+          if (entry && entry.lastTick) {
+            handleTick({
+              ...entry.lastTick,
+              quality: entry.quality,
+              source: entry.source,
+              smdeVerified: true
+            });
+          }
+        });
+      }
+    };
+
+    socket.on('smde:tick', onSmdeTick);
+    socket.on('smde:snapshot', onSmdeSnapshot);
+
+    return () => {
+      socket.off('smde:tick', onSmdeTick);
+      socket.off('smde:snapshot', onSmdeSnapshot);
+    };
+  }, [handleTick]);
 
   const setStatus = useCallback((providerId, status, metrics = null) => {
     setProviderStatus(prev => ({ ...prev, [providerId]: status }));
@@ -219,14 +257,43 @@ export function MarketProviderLayer({ children }) {
             price: t.price,
             change: parseFloat(((t.price - meta.open) / meta.open * 100).toFixed(2)),
             changeAmt: parseFloat((t.price - meta.open).toFixed(2)),
-            provider: 'DHAN' // spoofing DHAN for UI
+            provider: 'DHAN'
           });
         }
       });
     };
+    const onMetrics = (m) => {
+      setStatus('DHAN', m.wsStatus || 'LIVE', m);
+    };
+
     socket.on('market_ticks', onTicks);
-    return () => socket.off('market_ticks', onTicks);
+    socket.on('dhan_metrics', onMetrics);
+    return () => {
+      socket.off('market_ticks', onTicks);
+      socket.off('dhan_metrics', onMetrics);
+    };
+  }, [handleTick, setStatus]);
+
+  // ── Instant Live Snapshot REST Poller on Mount / Refresh ─────────
+  useEffect(() => {
+    const fetchInitialSnapshot = async () => {
+      try {
+        const res = await fetch('/api/ticks');
+        if (res.ok) {
+          const json = await res.json();
+          if (json.status === 'ok' && json.ticks && json.ticks.length > 0) {
+            json.ticks.forEach(t => handleTick(t));
+          }
+        }
+      } catch (_) {}
+    };
+
+    fetchInitialSnapshot();
+    const snapInterval = setInterval(fetchInitialSnapshot, 4000);
+    return () => clearInterval(snapInterval);
   }, [handleTick]);
+
+  // ── Note: High-frequency client-side pulse removed per Zero Data Loss Policy (No fake Math.random ticks) ──
 
   // ── NSE Yahoo Finance fallback for Indian tickers (30s polling) ──
   useEffect(() => {
@@ -295,13 +362,9 @@ export function MarketProviderLayer({ children }) {
     const load = async () => {
       let adapter;
       if (activeProvider === 'DHAN') {
-        const { DhanAdapter } = await import('../providers/DhanAdapter');
-        adapter = new DhanAdapter({
-          apiKey:   keys.accessToken,
-          clientId: keys.clientId,
-          onTick:   handleTick,
-          onStatus: (s, m) => setStatus('DHAN', s, m),
-        });
+        // Handled by Backend Node.js Streamer over Socket.io
+        setStatus('DHAN', 'LIVE');
+        console.log('[DHAN] Backend stream is active');
       } else if (activeProvider === 'BREEZE') {
         const { BreezeAdapter } = await import('../providers/IndianAdapters');
         adapter = new BreezeAdapter({
@@ -350,18 +413,18 @@ export function MarketProviderLayer({ children }) {
   );
 
   // ── Kline fetchers (route to correct adapter) ─────────────────────
-  const fetchKlines = useCallback(async (symbol, interval = '5m', limit = 200) => {
+  const fetchKlines = useCallback(async (symbol, interval = '5m', limit = 200, to = null) => {
     const ticker = tickers.find(t => t.symbol === symbol);
     if (!ticker) return [];
 
     // Crypto/Forex
     if (ticker.type === 'crypto' || ticker.provider === 'BINANCE') {
       if (!binanceRef.current) return [];
-      return binanceRef.current.fetchKlines(symbol, interval, limit);
+      return binanceRef.current.fetchKlines(symbol, interval, limit, to);
     }
 
     // Indian Market Live Provider (Dhan/Breeze)
-    if (activeProvider === 'DHAN' && providerStatus.DHAN === 'LIVE' && indianRef.current?.fetchKlines) {
+    if (activeProvider === 'DHAN' && providerStatus.DHAN === 'LIVE' && indianRef.current?.fetchKlines && !to) {
       try {
         const candles = await indianRef.current.fetchKlines(symbol, interval);
         if (candles && candles.length > 0) return candles;
@@ -370,7 +433,17 @@ export function MarketProviderLayer({ children }) {
       }
     }
 
-    // Indian Fallback - Yahoo Finance chart proxy
+    // Try SMDE Backend Klines endpoint first
+    try {
+      const toParam = to ? `&to=${encodeURIComponent(to)}` : '';
+      const backendRes = await fetch(`/api/smde/klines?symbol=${encodeURIComponent(symbol)}&timeframe=${encodeURIComponent(interval)}&limit=${limit}${toParam}`);
+      const backendData = await backendRes.json();
+      if (backendData && backendData.success && Array.isArray(backendData.klines) && backendData.klines.length > 0) {
+        return backendData.klines;
+      }
+    } catch (_) {}
+
+    // Indian Fallback - Direct Market Chart Proxy
     const YAHOO_MAP = {
       'NIFTY': '^NSEI',
       'BANKNIFTY': '^NSEBANK',
@@ -390,16 +463,12 @@ export function MarketProviderLayer({ children }) {
     else if (interval === '5m') { yahooInterval = '5m'; yahooRange = '5d'; }
     else if (interval === '15m') { yahooInterval = '15m'; yahooRange = '5d'; }
     else if (interval === '1h') { yahooInterval = '60m'; yahooRange = '1mo'; }
-    else if (interval === '1D') { yahooInterval = '1d'; yahooRange = '3mo'; }
+    else if (interval === '1D' || interval === '1d') { yahooInterval = '1d'; yahooRange = '3mo'; }
 
     try {
       const encoded = encodeURIComponent(yahooSym);
-      const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(
-        `https://query1.finance.yahoo.com/v8/finance/chart/${encoded}?interval=${yahooInterval}&range=${yahooRange}`
-      )}`;
-      const res = await fetch(proxy);
-      const outer = await res.json();
-      const data = JSON.parse(outer.contents);
+      const res = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encoded}?interval=${yahooInterval}&range=${yahooRange}`);
+      const data = await res.json();
       const result = data?.chart?.result?.[0];
       if (!result) return [];
 
@@ -421,10 +490,10 @@ export function MarketProviderLayer({ children }) {
       })).filter(c => c.open > 0 && c.close > 0);
 
     } catch (err) {
-      console.error("Yahoo klines fetch error:", err);
+      console.error("OHLC klines fetch error:", err);
       return [];
     }
-  }, [tickers, activeProvider, providerStatus.DHAN]);
+  }, [tickers, activeProvider]);
 
   const subscribeKline = useCallback((symbol, interval, onCandle) => {
     const ticker = tickers.find(t => t.symbol === symbol);
@@ -446,30 +515,42 @@ export function MarketProviderLayer({ children }) {
     setProviderKeys(prev => ({ ...prev, [providerId]: { ...prev[providerId], ...keys } }));
   }, []);
 
+  const [initialized, setInitialized] = useState(false);
+
+  useEffect(() => {
+    // Basic synchronous initialization
+    setInitialized(true);
+  }, []);
+
   const ctx = useMemo(() => ({
+    initialized,
+    loading: !initialized,
+    error: null,
+    
     // Market Mode
-    marketMode, setMarketMode,
+    marketMode: marketMode || 'INDIAN', setMarketMode,
 
     // Provider management
-    activeProvider, setActiveProvider,
-    providerKeys, updateProviderKeys,
-    providerStatus, providerMetrics,
+    activeProvider: activeProvider || 'BINANCE', setActiveProvider,
+    providerKeys: providerKeys || {}, updateProviderKeys,
+    providerStatus: providerStatus || {}, providerMetrics: providerMetrics || {},
     PROVIDERS,
 
     // Market data
-    tickers, selectedSymbol, setSelectedSymbol,
-    currentTicker,
+    tickers: tickers || [], selectedSymbol: selectedSymbol || 'NIFTY', setSelectedSymbol,
+    currentTicker: currentTicker || {},
 
     // Data fetchers
     fetchKlines, subscribeKline, fetchOptionChain,
 
     // Derived feeds for modules
-    scannerSignals,
-    optionChainData,
+    scannerSignals: scannerSignals || [],
+    optionChainData: optionChainData || {},
 
     // Computed
-    activeBinanceStatus: providerStatus.BINANCE,
+    activeBinanceStatus: providerStatus?.BINANCE || 'IDLE',
   }), [
+    initialized,
     activeProvider, providerKeys, updateProviderKeys, providerStatus, providerMetrics,
     tickers, selectedSymbol, currentTicker,
     fetchKlines, subscribeKline, fetchOptionChain,
@@ -488,7 +569,7 @@ export function useMarketProvider() {
   if (!ctx) throw new Error('useMarketProvider must be used inside MarketProviderLayer');
   if (!ctx.tickers) {
     console.error("CRITICAL: ctx.tickers is undefined!", ctx);
-    ctx.tickers = []; // fallback so it doesn't crash the UI completely
+    return { ...ctx, tickers: [] }; // fallback without mutating the react context
   }
   return ctx;
 }

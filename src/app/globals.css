@@ -1,12 +1,16 @@
 @import "tailwindcss";
 
+html {
+  scroll-behavior: smooth;
+}
+
 :root {
   --bg-midnight: #0B0E14;
   --bg-card: #161B22;
   --bg-card-hover: #1E2631;
   --cyber-cyan: #00D4FF;
-  --neon-green: #00FF41;
-  --neon-red: #FF3131;
+  --gold-primary: #D4AF37;
+  --gold-bright: #FFD700;
   --text-primary: #E1E2EB;
   --text-secondary: #859398;
   --border-glass: rgba(255, 255, 255, 0.08);
@@ -15,9 +19,19 @@
 body {
   background-color: #0B0E14;
   color: #E1E2EB;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   overflow-x: hidden;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
 }
+
+/* Safe Area Inset Utility Classes */
+.safe-area-pt { padding-top: env(safe-area-inset-top, 0px); }
+.safe-area-pb { padding-bottom: env(safe-area-inset-bottom, 0px); }
+.safe-area-pl { padding-left: env(safe-area-inset-left, 0px); }
+.safe-area-pr { padding-right: env(safe-area-inset-right, 0px); }
 
 /* Custom Scrollbars */
 ::-webkit-scrollbar {
@@ -32,7 +46,7 @@ body {
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #00D4FF;
+  background: #D4AF37;
 }
 
 /* Glassmorphism utility */
@@ -45,49 +59,195 @@ body {
 }
 
 .glass-panel-glow {
-  background: rgba(22, 27, 34, 0.85);
+  background: rgba(16, 19, 26, 0.85);
   backdrop-filter: blur(16px);
-  border: 1px solid rgba(0, 212, 255, 0.25);
-  box-shadow: 0 0 15px rgba(0, 212, 255, 0.15);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  box-shadow: 0 0 25px rgba(212, 175, 55, 0.2);
 }
 
-/* Glow effects */
-.glow-cyan {
-  box-shadow: 0 0 12px rgba(0, 212, 255, 0.4);
-}
-.glow-green {
-  box-shadow: 0 0 12px rgba(0, 255, 65, 0.4);
-}
-.glow-red {
-  box-shadow: 0 0 12px rgba(255, 49, 49, 0.4);
+/* Financial Grid & Background Animation */
+.bg-grid-pattern {
+  background-image: 
+    linear-gradient(to right, rgba(212, 175, 55, 0.08) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(212, 175, 55, 0.08) 1px, transparent 1px);
+  background-size: 40px 40px;
+  animation: gridDrift 60s linear infinite;
 }
 
-/* Pulse animation for live price updates */
-@keyframes flashGreen {
-  0% { background-color: rgba(0, 255, 65, 0.3); }
-  100% { background-color: transparent; }
-}
-@keyframes flashRed {
-  0% { background-color: rgba(255, 49, 49, 0.3); }
-  100% { background-color: transparent; }
-}
-
-.flash-up {
-  animation: flashGreen 0.6s ease-out;
-}
-.flash-down {
-  animation: flashRed 0.6s ease-out;
+@keyframes gridDrift {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 40px 40px;
+  }
 }
 
-/* Ticker tape infinite scroll */
-@keyframes ticker {
-  0% { transform: translate3d(0, 0, 0); }
-  100% { transform: translate3d(-50%, 0, 0); }
+/* Animated Stock Chart Candlesticks */
+@keyframes candleWave1 {
+  0%, 100% { height: 40%; }
+  50% { height: 85%; }
+}
+@keyframes candleWave2 {
+  0%, 100% { height: 75%; }
+  50% { height: 30%; }
+}
+@keyframes candleWave3 {
+  0%, 100% { height: 50%; }
+  50% { height: 95%; }
 }
 
-.animate-ticker {
-  animation: ticker 40s linear infinite;
+.animate-candle-1 { animation: candleWave1 4s ease-in-out infinite; }
+.animate-candle-2 { animation: candleWave2 5s ease-in-out infinite 0.5s; }
+.animate-candle-3 { animation: candleWave3 4.5s ease-in-out infinite 1s; }
+
+/* Moving Chart Path & Glowing Point */
+@keyframes chartPulseLine {
+  0% { stroke-dashoffset: 800; }
+  50% { stroke-dashoffset: 0; }
+  100% { stroke-dashoffset: -800; }
 }
-.animate-ticker:hover {
-  animation-play-state: paused;
+
+.animate-chart-line {
+  stroke-dasharray: 800;
+  animation: chartPulseLine 12s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+/* Gold Ambient Lighting & Particles */
+@keyframes particleFloat {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 0.2;
+  }
+  50% {
+    transform: translateY(-40px) scale(1.4);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(-80px) scale(1);
+    opacity: 0;
+  }
+}
+
+.animate-particle {
+  animation: particleFloat 6s ease-in-out infinite;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 30px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes pulseGoldGlow {
+  0%, 100% {
+    opacity: 0.2;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.45;
+    transform: scale(1.1);
+  }
+}
+
+@keyframes shimmerSweep {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-pulse-gold {
+  animation: pulseGoldGlow 6s ease-in-out infinite;
+}
+
+/* Button Shimmer Overlay Effect */
+.btn-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-shimmer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.35),
+    transparent
+  );
+  transform: translateX(-100%);
+  transition: transform 0.6s ease;
+}
+
+.btn-shimmer:hover::after {
+  animation: shimmerSweep 1.2s ease-in-out infinite;
+}
+
+/* Premium Card Hover & Elevation */
+.card-premium-hover {
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s ease, border-color 0.35s ease;
+}
+
+.card-premium-hover:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 15px 35px rgba(212, 175, 55, 0.22);
+  border-color: rgba(212, 175, 55, 0.8);
+}
+
+/* Scroll Reveal Classes */
+.scroll-reveal {
+  opacity: 0;
+  transform: translateY(35px);
+  transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.scroll-reveal.in-view {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Stagger Delays */
+.delay-100 { animation-delay: 100ms; transition-delay: 100ms; }
+.delay-200 { animation-delay: 200ms; transition-delay: 200ms; }
+.delay-300 { animation-delay: 300ms; transition-delay: 300ms; }
+.delay-400 { animation-delay: 400ms; transition-delay: 400ms; }
+.delay-500 { animation-delay: 500ms; transition-delay: 500ms; }
+
+/* Section Glow Divider */
+.section-glow-divider {
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(212, 175, 55, 0.1) 20%,
+    rgba(212, 175, 55, 0.6) 50%,
+    rgba(212, 175, 55, 0.1) 80%,
+    transparent 100%
+  );
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

@@ -2,6 +2,37 @@ const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const router = express.Router();
+const { N } = require('../services/notifier');
+
+// Get Public Payment Configuration for User Display
+router.get('/payment-config', async (req, res) => {
+  try {
+    let settings = await prisma.systemSettings.findUnique({ where: { id: 'CONFIG' } });
+    if (!settings) {
+      settings = await prisma.systemSettings.create({ data: { id: 'CONFIG' } });
+    }
+
+    res.json({
+      success: true,
+      tokenPrice: settings.tokenPrice || 1,
+      upiEnabled: settings.upiEnabled ?? true,
+      upiId: settings.upiId || '7665977937@ybl',
+      upiHolderName: settings.upiHolderName || 'Hello Trader Institute',
+
+      qrEnabled: settings.qrEnabled ?? true,
+      qrImageUrl: settings.qrImageUrl || '/images/payment_qr.png',
+
+      bankEnabled: settings.bankEnabled ?? true,
+      bankName: settings.bankName || 'Bank of Baroda',
+      bankAccountName: settings.bankAccountName || 'Hello Trader Institute',
+      bankAccountNumber: settings.bankAccountNumber || '28668100005444',
+      bankIfsc: settings.bankIfsc || 'BARB0SHIVBS',
+      bankBranch: settings.bankBranch || 'Main Branch'
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
 
 // Get Wallet Balance and Ledger
 router.get('/', async (req, res) => {
@@ -16,18 +47,28 @@ router.get('/', async (req, res) => {
       orderBy: { timestamp: 'desc' }
     });
 
+    const settings = await prisma.systemSettings.findUnique({ where: { id: 'CONFIG' } });
+
     let tokenBalance = 0;
     let paperBalance = 0;
     let referralBalance = 0;
 
     ledgers.forEach(l => {
       const amt = l.type === 'CREDIT' ? l.amount : -l.amount;
-      if (l.walletType === 'TOKEN') tokenBalance += amt;
+      if (['TOKEN', 'RECHARGE', 'BONUS'].includes(l.walletType)) tokenBalance += amt;
       if (l.walletType === 'PAPER') paperBalance += amt;
       if (l.walletType === 'REFERRAL') referralBalance += amt;
     });
 
-    res.json({ tokenBalance, paperBalance, referralBalance, ledger: ledgers, paymentHistory });
+    res.json({
+      tokenBalance: Math.max(0, tokenBalance),
+      rawLedgerTokenBalance: tokenBalance,
+      paperBalance: Math.max(0, paperBalance),
+      referralBalance: Math.max(0, referralBalance),
+      tokenPrice: settings?.tokenPrice || 1,
+      ledger: ledgers,
+      paymentHistory
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -58,6 +99,11 @@ router.post('/payment-proof', async (req, res) => {
         screenshotUrl
       }
     });
+
+    // Fetch student info for notification
+    const student = await prisma.user.findUnique({ where: { id: req.user.id }, select: { name: true, studentId: true } });
+    N.newPaymentRequest({ studentName: student?.name || 'Unknown', studentId: student?.studentId || req.user.id, amount: Number(amount) || 0, method, utr });
+
     res.json({ success: true, request });
   } catch (error) {
     res.status(500).json({ error: error.message });

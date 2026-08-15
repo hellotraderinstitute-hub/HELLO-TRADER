@@ -2,6 +2,96 @@ const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const router = express.Router();
+const dhanOptionChainService = require('../services/dhanOptionChainService');
+
+// ══════════════════════════════════════════════════════════════════════
+// OPTION CHAIN ENDPOINTS — Real Authenticated Market Data
+// Rate-limited, server-cached, credential-isolated
+// ══════════════════════════════════════════════════════════════════════
+
+// GET /option-chain/expiries?symbol=NIFTY
+router.get('/option-chain/expiries', async (req, res) => {
+  try {
+    const symbol = (req.query.symbol || 'NIFTY').toUpperCase();
+    const result = await dhanOptionChainService.getExpiries(symbol);
+
+    if (!result.success && !result.expiries?.length) {
+      return res.json({
+        success: false,
+        symbol,
+        expiries: [],
+        error: result.error || 'EXPIRY_DATA_UNAVAILABLE',
+      });
+    }
+
+    res.json({
+      success: true,
+      symbol,
+      expiries: result.expiries || [],
+      cached: result.cached || false,
+      lastUpdated: result.lastUpdated || null,
+      fetchLatencyMs: result.fetchLatencyMs || null,
+    });
+  } catch (err) {
+    res.json({ success: false, symbol: req.query.symbol, expiries: [], error: 'SERVER_ERROR' });
+  }
+});
+
+// GET /option-chain?symbol=NIFTY&expiry=2026-08-13
+router.get('/option-chain', async (req, res) => {
+  try {
+    const symbol = (req.query.symbol || 'NIFTY').toUpperCase();
+    const expiry = req.query.expiry;
+
+    if (!expiry) {
+      return res.json({ success: false, error: 'EXPIRY_REQUIRED', contracts: null });
+    }
+
+    const result = await dhanOptionChainService.getOptionChain(symbol, expiry);
+
+    if (!result.success || !result.contracts || result.contracts.length === 0) {
+      return res.json({
+        success: false,
+        symbol,
+        expiry,
+        spotPrice: null,
+        contracts: null,
+        dataTime: null,
+        lastUpdated: null,
+        fetchLatencyMs: null,
+        snapshotAgeMs: null,
+        error: result.error || 'OPTION_CHAIN_DATA_UNAVAILABLE',
+      });
+    }
+
+    res.json({
+      success: true,
+      symbol,
+      expiry,
+      spotPrice: result.spotPrice,
+      contracts: result.contracts,
+      totalStrikes: result.totalStrikes || result.contracts.length,
+      dataTime: result.dataTime,
+      lastUpdated: result.lastUpdated,
+      fetchLatencyMs: result.fetchLatencyMs,
+      snapshotAgeMs: result.snapshotAgeMs,
+      cached: result.cached || false,
+      stale: result.stale || false,
+    });
+  } catch (err) {
+    res.json({ success: false, error: 'SERVER_ERROR', contracts: null });
+  }
+});
+
+// GET /option-chain/status — Service health diagnostics (admin only)
+router.get('/option-chain/status', async (req, res) => {
+  try {
+    const status = dhanOptionChainService.getServiceStatus();
+    res.json({ success: true, ...status });
+  } catch (err) {
+    res.json({ success: false, error: err.message });
+  }
+});
 
 // Helper to get Paper Balance
 async function getPaperBalance(userId) {

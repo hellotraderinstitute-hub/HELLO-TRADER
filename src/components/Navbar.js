@@ -15,7 +15,9 @@ import {
 } from 'lucide-react';
 
 export default function Navbar({ activeTab, setActiveTab }) {
-  const { balance, totalEquity, activePnlTotal, notifications, resetAccount } = useTrading();
+  const { balance, activePnlTotal } = useTrading();
+  const notifications = []; // Notifications feature not yet implemented
+  const resetAccount = () => alert('Demo wallet reset is disabled in production mode.');
   const [showNotifications, setShowNotifications] = useState(false);
   const [logoError, setLogoError] = useState(false);
 

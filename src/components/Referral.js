@@ -1,37 +1,41 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Users, Copy, Trophy, TrendingUp, Link as LinkIcon, Gift, ArrowRightLeft, CreditCard } from 'lucide-react';
-import apiClient from '../lib/apiClient';
+import { Users, Copy, Trophy, TrendingUp, Link as LinkIcon, Gift, ArrowRightLeft, CreditCard, Info, RefreshCw } from 'lucide-react';
+import apiClient from '../lib/axios';
 
 export default function ReferralDashboard() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [convertAmount, setConvertAmount] = useState('');
   const [withdrawAmount, setWithdrawAmount] = useState('');
 
-  useEffect(() => {
-    fetchReferralData();
-  }, []);
-
   const fetchReferralData = async () => {
+    setLoading(true);
+    setError(null);
     try {
       const res = await apiClient.get('/referral');
       setData(res.data);
     } catch (err) {
-      console.error(err);
+      console.error('Referral fetch error:', err);
+      setError(err.response?.data?.error || 'Failed to load referral data. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
+  useEffect(() => {
+    fetchReferralData();
+  }, []);
+
   const referralLink = useMemo(() => {
     if (!data?.referralCode) return '';
     if (typeof window !== 'undefined') {
       const origin = window.location.origin;
-      return `${origin}/register?ref=${data.referralCode}`;
+      return `${origin}/?ref=${data.referralCode}`;
     }
-    return `https://hellotrader.in/register?ref=${data.referralCode}`;
+    return `https://hellotrader.in/?ref=${data.referralCode}`;
   }, [data]);
 
   const copyToClipboard = () => {
@@ -76,8 +80,22 @@ export default function ReferralDashboard() {
     }
   };
 
-  if (loading) return <div className="p-8 text-white">Loading Referral Dashboard...</div>;
-  if (!data) return <div className="p-8 text-white">Error loading data.</div>;
+  if (loading) return <div className="p-8 text-white font-mono">Loading Referral Dashboard...</div>;
+  if (error || !data) return (
+    <div className="p-8 flex-1 overflow-y-auto bg-[#0b0e14] font-mono flex items-center justify-center">
+      <div className="bg-[#10131a] border border-red-500/30 rounded-xl p-8 max-w-md text-center space-y-4 shadow-lg">
+        <div className="text-red-400 text-4xl">⚠️</div>
+        <h3 className="text-white font-bold text-sm">Unable to Load Referral Data</h3>
+        <p className="text-gray-400 text-xs leading-relaxed">{error || 'An unexpected error occurred.'}</p>
+        <button
+          onClick={fetchReferralData}
+          className="flex items-center gap-2 mx-auto px-5 py-2 bg-[#00d4ff]/10 hover:bg-[#00d4ff]/20 border border-[#00d4ff]/30 text-[#00d4ff] rounded-lg text-xs font-bold transition-colors"
+        >
+          <RefreshCw className="w-3.5 h-3.5" /> Retry
+        </button>
+      </div>
+    </div>
+  );
 
   const { stats, referralBalance, canWithdraw, eligibleForSpecialBonus } = data;
 
@@ -129,12 +147,12 @@ export default function ReferralDashboard() {
           </div>
 
           <div className="bg-[#10131a] border border-[#3c494e]/40 p-5 rounded-lg shadow-lg">
-            <h3 className="text-[#859398] font-bold text-xs mb-2">SUCCESS / TARGET (30D)</h3>
+            <h3 className="text-[#859398] font-bold text-xs mb-2">SAME MONTH SUCCESS TARGET</h3>
             <div className="text-3xl font-extrabold text-white mt-1">
               {stats.recentSuccessCount} / 3
             </div>
             <div className={`text-[10px] font-bold mt-2 ${canWithdraw ? 'text-[#00FF41]' : 'text-red-400'}`}>
-              {canWithdraw ? '✓ Withdrawal Unlocked' : 'Requires 3 success in 30 days'}
+              {canWithdraw ? '✓ Withdrawal Unlocked' : '3 Success Required for Cash Cashout'}
             </div>
           </div>
         </div>
@@ -143,7 +161,7 @@ export default function ReferralDashboard() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           
           <div className="bg-[#161B22] border border-white/10 p-5 rounded-lg">
-            <h3 className="text-white font-bold text-xs mb-3 flex items-center gap-2"><ArrowRightLeft className="w-4 h-4 text-purple-400"/> CONVERT TO TRADING TOKENS</h3>
+            <h3 className="text-white font-bold text-xs mb-3 flex items-center gap-2"><ArrowRightLeft className="w-4 h-4 text-purple-400"/> CONVERT TO RECHARGE TOKENS</h3>
             <p className="text-[10px] text-gray-400 mb-3">Move your referral earnings to your trading wallet to pay for memberships.</p>
             <div className="flex gap-2">
               <input type="number" value={convertAmount} onChange={e => setConvertAmount(e.target.value)} placeholder="Amount" className="w-full bg-[#0b0e14] border border-[#3c494e]/50 px-2 py-1.5 rounded focus:border-purple-400 text-xs text-white outline-none"/>
@@ -154,11 +172,11 @@ export default function ReferralDashboard() {
           <div className="bg-[#161B22] border border-white/10 p-5 rounded-lg relative overflow-hidden">
             {!canWithdraw && (
               <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px] flex items-center justify-center z-10">
-                <span className="text-red-400 font-bold text-[10px] bg-red-900/40 px-3 py-1 rounded-full border border-red-500/50">LOCKED (NEED 3 REFS)</span>
+                <span className="text-red-400 font-bold text-[10px] bg-red-900/40 px-3 py-1 rounded-full border border-red-500/50">LOCKED (3 REFS REQUIRED)</span>
               </div>
             )}
             <h3 className="text-white font-bold text-xs mb-3 flex items-center gap-2"><CreditCard className="w-4 h-4 text-[#00FF41]"/> CASH WITHDRAWAL</h3>
-            <p className="text-[10px] text-gray-400 mb-3">Withdraw directly to your bank. Requires 3 successful referrals in 30 days.</p>
+            <p className="text-[10px] text-gray-400 mb-3">Withdraw earnings to your Bank / UPI. Requires Active Membership & 3 Successful Referrals.</p>
             <div className="flex gap-2">
               <input type="number" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} placeholder="Amount" className="w-full bg-[#0b0e14] border border-[#3c494e]/50 px-2 py-1.5 rounded focus:border-[#00FF41] text-xs text-white outline-none"/>
               <button onClick={handleWithdraw} className="px-4 py-1.5 bg-[#00FF41] text-black font-bold hover:bg-[#00e639] text-[10px] rounded">WITHDRAW</button>
@@ -168,17 +186,30 @@ export default function ReferralDashboard() {
           <div className="bg-[#161B22] border border-[#00d4ff]/30 p-5 rounded-lg relative overflow-hidden shadow-[0_0_15px_rgba(0,212,255,0.1)]">
             {!eligibleForSpecialBonus && (
               <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px] flex items-center justify-center z-10">
-                <span className="text-gray-400 font-bold text-[10px] bg-gray-900/80 px-3 py-1 rounded-full border border-gray-600">PENDING TARGET</span>
+                <span className="text-gray-400 font-bold text-[10px] bg-gray-900/80 px-3 py-1 rounded-full border border-gray-600">PENDING 3 REFS IN CALENDAR MONTH</span>
               </div>
             )}
-            <h3 className="text-[#00d4ff] font-bold text-xs mb-3 flex items-center gap-2"><Gift className="w-4 h-4"/> SPECIAL BONUS (3 REFS)</h3>
-            <p className="text-[10px] text-gray-300 mb-4">Choose your reward for hitting 3 successful referrals!</p>
+            <h3 className="text-[#00d4ff] font-bold text-xs mb-3 flex items-center gap-2"><Gift className="w-4 h-4"/> CALENDAR MONTH BONUS (3 REFS)</h3>
+            <p className="text-[10px] text-gray-300 mb-4">Completed 3 referrals in the same calendar month? Claim your 1 Month Free Access!</p>
             <div className="flex flex-col gap-2">
               <button onClick={() => handleClaimBonus('FREE_MONTH')} className="w-full py-1.5 border border-[#00d4ff] text-[#00d4ff] hover:bg-[#00d4ff]/10 font-bold text-[10px] rounded transition-colors">CLAIM 1 MONTH FREE MEMBERSHIP</button>
               <button onClick={() => handleClaimBonus('CASH_600')} className="w-full py-1.5 border border-[#00FF41] text-[#00FF41] hover:bg-[#00FF41]/10 font-bold text-[10px] rounded transition-colors">CLAIM ₹600 CASH REWARD</button>
             </div>
           </div>
 
+        </div>
+
+        {/* Official Terms and Conditions Card */}
+        <div className="bg-[#161B22] border border-[#00d4ff]/30 p-5 rounded-lg space-y-3">
+          <h3 className="text-xs font-extrabold text-[#00D4FF] flex items-center gap-2 uppercase tracking-wider">
+            <Info className="w-4 h-4" /> OFFICIAL REFERRAL & WITHDRAWAL TERMS & CONDITIONS
+          </h3>
+          <ul className="list-disc list-inside space-y-1.5 text-xs text-gray-300 leading-relaxed">
+            <li><strong>Calendar Month 3-Referral Free Access:</strong> If 3 successful student referrals are completed in the <u>same calendar month</u>, you are granted <strong>1 Month Free Membership Access</strong> (or ₹600 Cash Bonus).</li>
+            <li><strong>Referral Use for Recharge (&lt; 3 Referrals):</strong> If you have 1 or 2 referrals (less than 3), earned referral tokens automatically combine with your cash wallet to pay for monthly membership recharge.</li>
+            <li><strong>Cash Withdrawal Conditions (&gt; 3 Referrals):</strong> Cash withdrawal to Bank/UPI is unlocked ONLY when you hold an <strong>Active Membership Plan</strong> AND have completed at least 3 successful referrals (used towards initial recharge).</li>
+            <li><strong>Unlimited Extra Referrals:</strong> All extra referrals beyond the initial 3 (4th, 5th, 6th referral onwards) are <strong>100% Cash Withdrawable</strong> directly to your bank account at any time!</li>
+          </ul>
         </div>
 
         {/* Stats Table */}
