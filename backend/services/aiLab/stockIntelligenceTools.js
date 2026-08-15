@@ -327,7 +327,7 @@ async function getNews(symbol) {
   const rssUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(res.name + ' stock NSE')}&hl=en-IN&gl=IN&ceid=IN:en`;
 
   try {
-    const rssRes = await axios.get(rssUrl, { timeout: 3000 });
+    const rssRes = await axios.get(rssUrl, { timeout: 1500 });
     const xml = rssRes.data || '';
     const itemMatches = [...xml.matchAll(/<item>[\s\S]*?<title>(.*?)<\/title>[\s\S]*?<link>(.*?)<\/link>[\s\S]*?<pubDate>(.*?)<\/pubDate>[\s\S]*?<\/item>/g)];
 

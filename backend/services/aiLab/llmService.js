@@ -43,7 +43,11 @@ async function generateLlmResponse({ userQuery, activeMode, intent, toolResults,
   }
 
   try {
-    const openai = new OpenAI({ apiKey });
+    const openai = new OpenAI({
+      apiKey,
+      timeout: 8000,
+      maxRetries: 0
+    });
 
     // Format conversation history for Chat Completions
     const formattedHistory = conversationHistory.map(msg => ({
