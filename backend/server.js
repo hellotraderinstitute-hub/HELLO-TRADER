@@ -16,6 +16,15 @@ if (
   process.env.DATABASE_URL = 'file:./backend.db';
 }
 
+// Safely ensure SQLite DB schema is pushed without crashing startCommand
+try {
+  const { execSync } = require('child_process');
+  execSync('npx prisma db push --schema=backend/prisma/schema.prisma --accept-data-loss', { stdio: 'ignore' });
+  console.log('[Server] SQLite Database schema synced successfully.');
+} catch (dbSyncErr) {
+  console.log('[Server] SQLite DB sync notice:', dbSyncErr.message);
+}
+
 const corsOptions = {
   origin: true, // Allow all origins (Cloudflare tunnel compatible)
   credentials: true
@@ -59,7 +68,7 @@ app.use((req, res, next) => {
 
 const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_dev_key';
 const authenticateToken = (req, res, next) => {
-  const token = req.cookies.accessToken;
+  const token = req.cookies.accessToken || (req.headers.authorization && req.headers.authorization.split(' ')[1]);
   if (!token) return res.sendStatus(401);
   jwt.verify(token, JWT_SECRET, (err, user) => {
     if (err) return res.sendStatus(403);
@@ -190,6 +199,7 @@ app.use('/api/crm/customers', authenticateToken, crmCustomersRoutes);
 app.use('/api/crm/justdial', crmJustdialRoutes);
 // User Drawing Engine: Authenticated, ownership-enforced
 app.use('/api/user/drawings', authenticateToken, userDrawingsRoutes);
+console.log('[Server] User drawings routes mounted at /api/user/drawings');
 
 app.get('/api/ticks', (req, res) => {
   try {

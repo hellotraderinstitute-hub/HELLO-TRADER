@@ -5,7 +5,7 @@ services:
     region: singapore
     plan: free
     buildCommand: npm install && npx prisma generate --schema=backend/prisma/schema.prisma
-    startCommand: npx prisma db push --schema=backend/prisma/schema.prisma --accept-data-loss && node backend/server.js
+    startCommand: node backend/server.js
     envVars:
       - key: PORT
         value: 10000
