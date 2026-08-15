@@ -4,8 +4,8 @@ services:
     env: node
     region: singapore
     plan: free
-    buildCommand: npm install --prefix backend && npx prisma generate --schema=backend/prisma/schema.prisma
-    startCommand: node backend/server.js
+    buildCommand: (cd backend && npm install && npx prisma generate --schema=prisma/schema.prisma) || (npm install && npx prisma generate --schema=backend/prisma/schema.prisma)
+    startCommand: node backend/server.js || node server.js
     envVars:
       - key: PORT
         value: 10000
