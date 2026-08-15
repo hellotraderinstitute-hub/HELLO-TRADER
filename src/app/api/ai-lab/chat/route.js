@@ -1,5 +1,19 @@
 import { NextResponse } from 'next/server';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-AI-LAB-REQUEST-ID',
+    },
+  });
+}
+
 export async function POST(request) {
   try {
     const body = await request.json();
@@ -17,7 +31,13 @@ export async function POST(request) {
     });
 
     const data = await response.json();
-    return NextResponse.json(data, { status: response.status });
+    return NextResponse.json(data, {
+      status: response.status,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate'
+      }
+    });
   } catch (error) {
     console.error('[Vercel API Route Error]:', error);
     return NextResponse.json({
