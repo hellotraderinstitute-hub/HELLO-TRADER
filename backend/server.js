@@ -7,8 +7,12 @@ const cookieParser = require('cookie-parser');
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 
-// Ensure DATABASE_URL is valid cross-platform (Linux Render vs Windows Dev)
-if (!process.env.DATABASE_URL || process.env.DATABASE_URL.includes('C:')) {
+// Ensure DATABASE_URL is valid SQLite path (Linux Render vs Windows Dev vs Prisma Accelerate)
+if (
+  !process.env.DATABASE_URL ||
+  process.env.DATABASE_URL.includes('C:') ||
+  process.env.DATABASE_URL.startsWith('prisma://')
+) {
   process.env.DATABASE_URL = 'file:./backend.db';
 }
 
@@ -140,6 +144,7 @@ const crmCustomersRoutes = require('./routes/crmCustomers');
 const crmJustdialRoutes = require('./routes/crmJustdial');
 
 const aiLabRoutes = require('./routes/aiLab');
+const userDrawingsRoutes = require('./routes/userDrawings');
 
 // Mount Routes
 app.use('/api/auth', authRoutes);
@@ -183,6 +188,8 @@ app.use('/api/crm/admin', authenticateToken, crmAdminActionsRoutes);
 app.use('/api/crm/reminders', authenticateToken, crmRemindersRoutes);
 app.use('/api/crm/customers', authenticateToken, crmCustomersRoutes);
 app.use('/api/crm/justdial', crmJustdialRoutes);
+// User Drawing Engine: Authenticated, ownership-enforced
+app.use('/api/user/drawings', authenticateToken, userDrawingsRoutes);
 
 app.get('/api/ticks', (req, res) => {
   try {
@@ -192,13 +199,14 @@ app.get('/api/ticks', (req, res) => {
   }
 });
 
-app.get('/api/smde/klines', (req, res) => {
+app.get('/api/smde/klines', async (req, res) => {
   try {
     const symbol = req.query.symbol || 'NIFTY';
     const tf = req.query.timeframe || '5m';
-    const limit = parseInt(req.query.limit || '100', 10);
-    const klines = marketDataEngine.getKlines(symbol, tf, limit);
-    res.json({ success: true, symbol, timeframe: tf, klines });
+    const limit = parseInt(req.query.limit || '200', 10);
+    const to = req.query.to ? parseInt(req.query.to, 10) : null;
+    const result = await marketDataEngine.getKlinesAsync(symbol, tf, limit, to);
+    res.json(result);
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }

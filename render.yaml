@@ -5,7 +5,7 @@ services:
     region: singapore
     plan: free
     buildCommand: npm install && npx prisma generate --schema=backend/prisma/schema.prisma
-    startCommand: node backend/server.js
+    startCommand: npx prisma db push --schema=backend/prisma/schema.prisma --accept-data-loss && node backend/server.js
     envVars:
       - key: PORT
         value: 10000
@@ -15,3 +15,5 @@ services:
         value: hello_trader_aes256_prod_secret_2026
       - key: DATABASE_URL
         value: file:./backend.db
+      - key: NODE_ENV
+        value: production
