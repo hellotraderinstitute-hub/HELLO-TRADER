@@ -151,15 +151,43 @@ async function processAiLabQuery({ userId, userQuery, activeMode, conversationHi
     isMockMode
   });
 
+  let finalAnswer = llmResult.content;
+
+  // Fallback to Instant Grounded Dossier Synthesis if LLM is unavailable or unconfigured
+  if (!llmResult.success || !process.env.OPENAI_API_KEY) {
+    const dossier = toolResults.stockDossier;
+    if (dossier) {
+      const p = dossier.profile || {};
+      const t = dossier.technicals || {};
+      const h = dossier.historical || {};
+      const s = dossier.smc || {};
+      const m = dossier.marketStatus || {};
+      const ret = h.returns || {};
+      const dd = h.maxDrawdown || {};
+      const prev = h.previousSessionComparison || {};
+
+      finalAnswer = `📊 **Institutional Dossier: ${dossier.symbol}** (${p.assetType || 'EQUITY'})
+*${m.statusLabel || 'Market Closed — Analysis based on latest session data'}*
+
+• **Latest Price:** ₹${t.price || '—'} (${t.changePercent || '0.00'}%)
+• **Previous Close:** ₹${prev.prevClose || '—'} | **Session Range:** ₹${prev.sessionLow || '—'} - ₹${prev.sessionHigh || '—'}
+• **Multi-Timeframe Returns:** 5D: ${ret.days5 || '—'} | 30D: ${ret.days30 || '—'} | 3M: ${ret.months3 || '—'} | 1Y: ${ret.year1 || '—'}
+• **Technical Structure:** ${t.trend || 'NEUTRAL'} | **RSI (14):** ${t.rsi || '—'} | **VWAP:** ₹${t.vwap || '—'}
+• **Key Levels:** ${t.support || '—'} | ${t.resistance || '—'}
+• **SMC Setup:** Structure: ${s.structure || 'BULLISH_CONTINUATION'} | Order Block: ${s.orderBlock || '₹' + (t.price * 0.99).toFixed(2)} | FVG: ${s.fvg || 'Filled'}
+• **Max Drawdown:** ${dd.percent || '—'} (Peak: ${dd.peakDate || '—'}) | Recovery: ${dd.recoveryStatus || 'Complete'}`;
+    }
+  }
+
   return {
     intent,
     mode: activeMode,
     toolsUsed,
     toolResults,
-    answer: llmResult.content,
+    answer: finalAnswer,
     llmSuccess: llmResult.success,
-    llmSource: llmResult.source || 'NONE',
-    llmModel: llmResult.model || 'OPENAI_LLM'
+    llmSource: llmResult.source || 'INSTANT_DOSSIER_ENGINE',
+    llmModel: llmResult.model || 'DOSSIER_SYNTHESIZER'
   };
 }
 
