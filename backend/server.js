@@ -4,10 +4,11 @@ const http = require('http');
 const { Server } = require('socket.io');
 const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 // Ensure DATABASE_URL is valid cross-platform (Linux Render vs Windows Dev)
-if (process.env.DATABASE_URL && process.env.DATABASE_URL.includes('C:')) {
+if (!process.env.DATABASE_URL || process.env.DATABASE_URL.includes('C:')) {
   process.env.DATABASE_URL = 'file:./backend.db';
 }
 
