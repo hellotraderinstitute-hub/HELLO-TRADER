@@ -759,15 +759,12 @@ export default function AILab() {
                 {/* Message Body Content */}
                 <p className="leading-relaxed whitespace-pre-line text-xs">{m.text}</p>
 
-                {/* Tool Badges */}
-                {m.toolsUsed && m.toolsUsed.length > 0 && (
-                  <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-white/5">
-                    <span className="text-[9px] text-gray-500 font-bold">Tools Executed:</span>
-                    {m.toolsUsed.map((tool, tIdx) => (
-                      <span key={tIdx} className="text-[9px] bg-[#00FF41]/10 text-[#00FF41] px-1.5 py-0.5 rounded border border-[#00FF41]/30 font-mono">
-                        ⚙️ {tool}
-                      </span>
-                    ))}
+                {/* Subtle Professional Disclaimer (Replaces Tools Executed UI) */}
+                {m.sender === 'ai' && (
+                  <div className="pt-1.5 border-t border-white/5">
+                    <p className="text-[10px] text-gray-400/80 leading-normal italic">
+                      ⚠️ <span className="font-semibold text-gray-300">Educational Purpose Only:</span> This information is for educational purposes only and should not be considered investment advice, a buy/sell recommendation, or a guarantee of returns.
+                    </p>
                   </div>
                 )}
               </div>
