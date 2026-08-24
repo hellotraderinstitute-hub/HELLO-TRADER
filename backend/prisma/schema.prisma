@@ -29,6 +29,13 @@ model SystemSettings {
   globalKillReason   String?
   globalKillAt       DateTime?
 
+  // Algo Charges Tiers JSON
+  algoConnectionTiersJson String?
+  algoBrokerageTiersJson  String?
+
+  // Client-Hosted Agent Execution Mode Feature Flag (Default: false)
+  agentExecutionEnabled   Boolean   @default(false)
+
   // Admin Payment Manager Settings
   upiEnabled         Boolean   @default(true)
   upiId              String    @default("7665977937@ybl")
@@ -72,7 +79,9 @@ model User {
   // Admin note for override reason
   trialOverrideNote String?
   trialOverrideAt   DateTime?
+  accountMode       String    @default("PRODUCTION")
   createdAt        DateTime  @default(now())
+  lastSeenAt       DateTime?
 
   wallets           Wallet[]
   trades            Trade[]
@@ -97,6 +106,12 @@ model User {
   algoSubscriptions AlgoCustomer[]
   copySubscriptions CopyCustomer[]
   drawings          UserDrawing[]
+  chartSettings     UserChartSetting[]
+  partnerAttribution PartnerClientAttribution?
+  agentKeys         AgentKey[]
+  agentRiskSettings AgentRiskSettings?
+  tradingVps        UserTradingVps?
+  staticIpAssignments ClientStaticIpAssignment[]
 }
 
 model Wallet {
@@ -228,6 +243,7 @@ model AlgoBrokerConnection {
   clientId     String?
   accessToken  String? // Encrypted
   totpSecret   String? // Encrypted — only for TOTP-based brokers
+  password     String? // Encrypted — only for TOTP MPIN/PIN (e.g. Angel One MPIN / Shoonya PIN)
   vendorCode   String?
   refreshToken String?
   redirectUri  String?
@@ -266,6 +282,33 @@ model AlgoBrokerConnection {
 
   webhookLogs AlgoWebhookLog[]
   positions   AlgoPosition[]
+  triggerConfigs AlgoTriggerConfig[]
+  staticIpAssignments ClientStaticIpAssignment[]
+}
+
+model AlgoTriggerConfig {
+  id             String               @id @default(uuid())
+  connectionId   String
+  connection     AlgoBrokerConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  direction      String               // UPSIDE | DOWNSIDE
+  enabled        Boolean              @default(true)
+  exchange       String               @default("NFO")
+  symbol         String               @default("NIFTY")
+  productType    String               @default("MIS")
+  scriptType     String               @default("OPTION")
+  lots           Int                  @default(1)
+  expiryType     String               @default("WEEKLY")
+  expiryGap      Int                  @default(0)
+  strikeOffset   Int                  @default(0)
+  strikeStep     Int                  @default(50)
+  optionType     String               // CE | PE
+  orderSide      String               @default("BUY")
+  exitOnOpposite Boolean              @default(true)
+
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  @@unique([connectionId, direction])
 }
 
 model AlgoWebhookLog {
@@ -284,6 +327,9 @@ model AlgoWebhookLog {
   parsedTarget    Float?
   parsedProduct   String?
   parsedOrderType String?
+  signalPrice     Float?
+  resolvedContract String?
+  actualFillPrice Float?
 
   executionStatus String  @default("PENDING") // PENDING|EXECUTED|FAILED|SKIPPED|RISK_REJECTED
   brokerOrderId   String?
@@ -918,8 +964,446 @@ model UserDrawing {
   @@index([userId, symbol])
 }
 
+model UserChartSetting {
+  id             String   @id @default(uuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  symbol         String   @default("GLOBAL")
+  timeframe      String   @default("GLOBAL")
+  indicatorsJson String   // JSON string of active indicators and their custom user settings
+  layoutJson     String?  // JSON string of user chart layout (sub-pane sizes, chart type, theme)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
+  @@unique([userId, symbol, timeframe])
+  @@index([userId])
+}
 
+// ─────────────────────────────────────────────────────────────
+// AI SOCIAL MEDIA MANAGER MODULE (PHASE 1)
+// ─────────────────────────────────────────────────────────────
 
+model SocialAccount {
+  id                String    @id @default(uuid())
+  platform          String    // INSTAGRAM | YOUTUBE | FACEBOOK | TIKTOK | LINKEDIN | TWITTER
+  accountName       String
+  accountHandle     String?
+  avatarUrl         String?
+  status            String    @default("DEMO") // DEMO | CONNECTED | DISCONNECTED | PENDING
+  followerCount     Int       @default(0)
+  postCount         Int       @default(0)
+  
+  // Phase 2: OAuth 2.0 Encrypted Credentials (AES-256 encrypted at rest. Passwords NEVER stored)
+  accessToken       String?   // AES-256 encrypted
+  refreshToken      String?   // AES-256 encrypted
+  tokenExpiresAt    DateTime?
+  externalAccountId String?
+  scopes            String?
+  
+  // Sync Engine Metadata
+  lastSyncedAt      DateTime?
+  lastSyncStatus    String?   // SUCCESS | FAILED | RATE_LIMITED
+  lastSyncError     String?
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  posts             SocialPost[]
+}
+
+model SocialPost {
+  id            String   @id @default(uuid())
+  accountId     String?
+  account       SocialAccount? @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  platform      String   // INSTAGRAM | YOUTUBE | FACEBOOK | ALL
+  contentType   String   // Reel | Short | Video | Carousel | Image | Story
+  title         String
+  caption       String?
+  postUrl       String?
+  thumbnailUrl  String?
+  durationSec   Int?
+  publishedAt   DateTime @default(now())
+  
+  topic         String?
+  hook          String?
+  hookStrength  String?  // Strong | Average | Weak
+  ctaText       String?
+  postingHour   Int?     // 0-23
+  postingDay    String?  // Monday, Tuesday, etc.
+  isDemoData    Boolean  @default(true)
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  metrics       SocialPostMetric[]
+  variants      ContentVariant[]
+}
+
+model SocialPostMetric {
+  id            String   @id @default(uuid())
+  postId        String
+  post          SocialPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  views         Int      @default(0)
+  reach         Int      @default(0)
+  likes         Int      @default(0)
+  comments      Int      @default(0)
+  shares        Int      @default(0)
+  saves         Int      @default(0)
+  followersGained Int    @default(0)
+  engagementRate Float   @default(0) // Percentage
+  score         Float    @default(0) // 0-100 Performance Score
+  retentionRate Float?   // Percentage
+  recordedAt    DateTime @default(now())
+
+  @@index([postId, recordedAt])
+}
+
+model ContentIdea {
+  id                 String    @id @default(uuid())
+  title              String
+  topic              String
+  hook               String?
+  platform           String    @default("ALL") // INSTAGRAM | YOUTUBE | FACEBOOK | ALL
+  contentType        String    @default("Reel") // Reel | Short | Video | Carousel | Image | Story
+  targetAudience     String?
+  cta                String?
+  status             String    @default("Idea") // Idea | Draft | Ready | Awaiting Approval | Approved | Published | Analysing | Winner | Rejected
+  priority           String    @default("MEDIUM") // LOW | MEDIUM | HIGH | URGENT
+  aiScore            Float     @default(75)
+  aiScript           String?   // Step-by-step video script outline
+  complianceWarnings String?   // Filter audit snapshot
+  approvedAt         DateTime?
+  approvedBy         String?
+  notes              String?
+  isArchived         Boolean   @default(false)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+}
+
+model ContentVariant {
+  id              String   @id @default(uuid())
+  postId          String?
+  post            SocialPost? @relation(fields: [postId], references: [id], onDelete: SetNull)
+  ideaTitle       String
+  variantLabel    String   // Variant A | Variant B | Variant C
+  hookText        String
+  views           Int      @default(0)
+  retentionRate   Float    @default(0)
+  engagementRate  Float    @default(0)
+  shares          Int      @default(0)
+  followersGained Int      @default(0)
+  status          String   @default("NEEDS TESTING") // WINNER | NEEDS TESTING | UNDERPERFORMING
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model ContentTopic {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  category    String   @default("TRADING_EDUCATION")
+  avgViews    Float    @default(0)
+  avgEngagement Float  @default(0)
+  totalPosts  Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ContentHook {
+  id          String   @id @default(uuid())
+  textPattern String
+  strength    String   @default("Average") // Strong | Average | Weak
+  avgViews    Float    @default(0)
+  avgShares   Float    @default(0)
+  usedCount   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model AiRecommendation {
+  id               String   @id @default(uuid())
+  title            String
+  category         String   @default("TOPIC_OPTIMIZATION")
+  reason           String
+  supportingMetric String
+  confidence       String   @default("Medium") // High | Medium | Low
+  suggestedAction  String
+  targetPlatform   String?  @default("ALL")
+  isApplied        Boolean  @default(false)
+  createdAt        DateTime @default(now())
+}
+
+model SocialStrategy {
+  id                String   @id @default("GLOBAL")
+  primaryObjective  String   @default("Trader Education & Terminal Awareness")
+  targetAudience    String   @default("Active & Aspiring Indian Stock Traders (Ages 18-45)")
+  contentPillars    String   @default("Trading Education, Trader Psychology, Trading Mistakes, Terminal / Technology, Algo Trading Education, Market Education, Behind The Scenes, Community / Student Education")
+  preferredFormats  String   @default("Reel, Short, Carousel")
+  postingFrequency  String   @default("1-2 Posts Per Day")
+  ctaStrategy       String   @default("Educational Soft-CTA: Join Free Trial / Enroll Code")
+  brandTone         String   @default("Professional, Empowering, Institutional & Transparent")
+  topicsToAvoid     String   @default("Guaranteed Returns, Financial Advice, Get Rich Quick Claims, High Leverage Gambling")
+  complianceNotes   String   @default("All AI-generated content must be manually reviewed before publishing. No guaranteed profit claims.")
+  
+  // Phase 2: Publishing Safety Gate (MUST default to FALSE)
+  autoPublishEnabled Boolean  @default(false)
+
+  updatedAt         DateTime @updatedAt
+}
+
+model ContentCalendar {
+  id             String    @id @default(uuid())
+  date           DateTime
+  platform       String    // INSTAGRAM | YOUTUBE | FACEBOOK | ALL
+  contentTitle   String
+  contentType    String    // Reel | Short | Video | Carousel | Image | Story
+  status         String    @default("Draft") // Draft | Scheduled | Published | Cancelled
+  priority       String    @default("MEDIUM") // LOW | MEDIUM | HIGH
+  ideaId         String?
+  autoPublish    Boolean   @default(false)
+  publishStatus  String?   // PENDING | SUCCESS | FAILED | CANCELLED
+  publishError   String?
+  platformPostId String?
+  publishedAt    DateTime?
+  notes          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([date, platform])
+}
+
+// ─────────────────────────────────────────────────────────────
+// PARTNER BUSINESS DASHBOARD & MANAGEMENT SYSTEM
+// ─────────────────────────────────────────────────────────────
+
+model Partner {
+  id           String    @id @default(uuid())
+  partnerId    String    @unique // PHT0036, PHT0037, PHT0038...
+  name         String
+  email        String    @unique // Gmail ID
+  phone        String    @unique // Mobile Number
+  password     String    // Bcrypt hashed password for Partner Portal
+  referralCode String    @unique // Unique Partner Referral Code (e.g., PHT0036)
+  status       String    @default("ACTIVE") // ACTIVE | INACTIVE | SUSPENDED
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  lastLoginAt  DateTime?
+
+  attributions   PartnerClientAttribution[]
+  benefitLedgers PartnerBenefitLedger[]
+  auditLogs      PartnerAuditLog[]
+}
+
+model PartnerClientAttribution {
+  id           String    @id @default(uuid())
+  partnerId    String
+  partner      Partner   @relation(fields: [partnerId], references: [id])
+  userId       String    @unique // Client User UUID
+  user         User      @relation(fields: [userId], references: [id])
+  studentId    String    // Client Student ID snapshot (e.g., HT0786)
+  referralCode String    // Partner referral code used
+  status       String    @default("PENDING") // PENDING | SUCCESS | INVALID
+  createdAt    DateTime  @default(now())
+  successAt    DateTime?
+
+  benefits     PartnerBenefitLedger[]
+}
+
+model PartnerBenefitLedger {
+  id              String                    @id @default(uuid())
+  partnerId       String
+  partner         Partner                   @relation(fields: [partnerId], references: [id])
+  attributionId   String
+  attribution     PartnerClientAttribution  @relation(fields: [attributionId], references: [id])
+  clientStudentId String                    // Snapshot of Client Student ID (e.g., HT0786)
+  paymentReqId    String?                   // Reference to approved PaymentRequest
+  amount          Float                     @default(200) // Permanently fixed at ₹200
+  payoutStatus    String                    @default("PENDING") // PENDING | PAID
+  paidAt          DateTime?
+  payoutReference String?                   // Transaction UTR / Ref recorded by Admin
+  payoutAdminId   String?                   // Admin ID who processed payout
+  createdAt       DateTime                  @default(now())
+}
+
+model PartnerAuditLog {
+  id          String   @id @default(uuid())
+  partnerId   String
+  partner     Partner  @relation(fields: [partnerId], references: [id])
+  adminId     String?  // Admin ID who performed the action (if admin-initiated)
+  action      String   // PARTNER_CREATED | STATUS_CHANGED | BENEFIT_EARNED | BENEFIT_PAID | LOGIN_ATTEMPT
+  oldValue    String?
+  newValue    String?
+  detail      String?
+  timestamp   DateTime @default(now())
+}
+
+// ─────────────────────────────────────────────────────────────
+// CLIENT-HOSTED EXECUTION AGENT MODELS (PHASE 1)
+// ─────────────────────────────────────────────────────────────
+
+model AgentKey {
+  id           String         @id @default(uuid())
+  userId       String
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  keyHash      String         @unique // SHA-256 hash of plaintext pairing key
+  keyPrefix    String         // First 16 chars for display e.g. "ht_agent_live_ab..."
+  label        String         @default("Execution Agent")
+  status       String         @default("ACTIVE") // ACTIVE | REVOKED
+  agentIp      String?
+  lastSeenAt   DateTime?
+  connectedAt  DateTime?
+  revokedAt    DateTime?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  sessions     AgentSession[]
+
+  @@index([userId, status])
+}
+
+model AgentSession {
+  id             String    @id @default(uuid())
+  agentKeyId     String
+  agentKey       AgentKey  @relation(fields: [agentKeyId], references: [id], onDelete: Cascade)
+  userId         String
+  agentIp        String?
+  connectedAt    DateTime  @default(now())
+  disconnectedAt DateTime?
+  lastHeartbeatAt DateTime @default(now())
+  latencyMs      Float?
+  status         String    @default("CONNECTED") // CONNECTED | DISCONNECTED
+  version        String?
+
+  @@index([userId, status])
+}
+
+model AgentRiskSettings {
+  id                           String   @id @default(uuid())
+  userId                       String   @unique
+  user                         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isLiveTradingEnabled         Boolean  @default(false)
+  maxLots                      Int      @default(1)
+  dailyProfitTargetEnabled     Boolean  @default(false)
+  dailyProfitTarget            Float    @default(5000)
+  dailyMaxLossEnabled          Boolean  @default(true)
+  dailyMaxLoss                 Float    @default(10000)
+  isPausedToday                Boolean  @default(false)
+  pauseReason                  String?
+  pausedDateStr                String?
+  squareOffOnDailyLimitEnabled Boolean  @default(false)
+  perTradeTargetEnabled        Boolean  @default(false)
+  perTradeTarget               Float    @default(500)
+  createdAt                    DateTime @default(now())
+  updatedAt                    DateTime @updatedAt
+}
+
+model UserTradingVps {
+  id                   String              @id @default(uuid())
+  userId               String              @unique
+  user                 User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  provider             String              @default("DIGITALOCEAN") // DIGITALOCEAN | AWS_LIGHTSAIL | LINODE
+  providerInstanceId   String?             // e.g. Droplet ID
+  providerReservedIpId String?             // e.g. Reserved IP ID
+  publicIp             String              @unique // Dedicated Static IPv4
+  region               String              @default("blr1")
+  planTier             String              @default("STARTER_1VCPU_2GB")
+
+  status               String              @default("PROVISIONING") // PROVISIONING | BOOTSTRAPPING | ACTIVE_SIMULATION | ACTIVE_VERIFIED | PAUSED_MANUAL | GRACE_PERIOD | EXPIRED_PENDING_RELEASE | TERMINATED | ERROR
+  isSimulationOnly     Boolean             @default(true) // STRICT: Starts in SIMULATION mode
+  isLiveTradingAllowed Boolean             @default(false)
+  ipWhitelistedAt      DateTime?
+
+  billingCycleMonths   Int                 @default(1)
+  monthlyAmount        Float               @default(799.00)
+  purchasedAt          DateTime            @default(now())
+  currentPeriodStart   DateTime            @default(now())
+  currentPeriodEnd     DateTime
+  gracePeriodEndsAt    DateTime?
+  terminatedAt         DateTime?
+  autoRenewEnabled     Boolean             @default(false)
+
+  agentKeyId           String?
+  auditLogs            VpsAuditLog[]
+  billingInvoices      VpsBillingInvoice[]
+
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+
+  @@index([userId, status])
+  @@index([publicIp])
+}
+
+model VpsBillingInvoice {
+  id                 String         @id @default(uuid())
+  vpsId              String
+  vps                UserTradingVps @relation(fields: [vpsId], references: [id], onDelete: Cascade)
+  userId             String
+  amount             Float
+  currency           String         @default("INR")
+  billingPeriodStart DateTime
+  billingPeriodEnd   DateTime
+  paymentMethod      String         @default("WALLET") // WALLET | UPI | RAZORPAY_MANUAL
+  paymentStatus      String         @default("PAID") // PAID | PENDING | FAILED | REFUNDED
+  paymentRefId       String?
+  invoiceNumber      String         @unique
+  createdAt          DateTime       @default(now())
+
+  @@index([userId, paymentStatus])
+}
+
+model VpsAuditLog {
+  id        String         @id @default(uuid())
+  vpsId     String
+  vps       UserTradingVps @relation(fields: [vpsId], references: [id], onDelete: Cascade)
+  userId    String
+  action    String         // PROVISIONED | RENEWED | GRACE_ENTERED | IP_RETAINED | IP_RELEASED | REBOOTED | TERMINATED
+  actor     String         @default("USER") // USER | SYSTEM | ADMIN | BILLING_CRON
+  detail    String
+  ipAddress String?
+  timestamp DateTime       @default(now())
+
+  @@index([vpsId, timestamp])
+}
+
+// ─────────────────────────────────────────────────────────────
+// 🌐 CLIENT STATIC IP ASSIGNMENT & EXECUTION INFRASTRUCTURE
+// ─────────────────────────────────────────────────────────────
+
+model ClientStaticIpAssignment {
+  id                     String                @id @default(uuid())
+  userId                 String
+  user                   User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  brokerConnectionId     String?
+  brokerConnection       AlgoBrokerConnection? @relation(fields: [brokerConnectionId], references: [id], onDelete: SetNull)
+  broker                 String                @default("ALL") // DHAN | ANGELONE | GOPOCKET | ALL
+
+  // Connection / Transport Type
+  connectionType         String                @default("DIRECT_IP") // DIRECT_IP | HTTP_PROXY | HTTPS_PROXY | SOCKS5
+
+  // Public Egress IPv4 (Expected IP for broker whitelisting)
+  ipAddress              String                // Dedicated Static IPv4 e.g. 103.212.121.207 or Expected Proxy Egress IP
+
+  // Proxy Configuration (Credentials encrypted at rest with AES-256-GCM)
+  proxyHost              String?               // e.g. 142.93.120.45 or proxy.provider.com
+  proxyPort              Int?                  // e.g. 1080, 8080
+  encryptedProxyUsername String?
+  encryptedProxyPassword String?
+
+  status                 String                @default("ASSIGNED") // UNASSIGNED | ASSIGNED | VERIFYING | VERIFIED | BLOCKED | RELEASED
+  assignedAt             DateTime              @default(now())
+  verifiedAt             DateTime?
+  releasedAt             DateTime?
+  lastObservedOutboundIp String?
+  notes                  String?
+  assignedByAdminId      String?
+
+  createdAt              DateTime              @default(now())
+  updatedAt              DateTime              @updatedAt
+
+  @@index([userId, status])
+  @@index([ipAddress])
+  @@index([status])
+  @@index([connectionType])
+}
 
 
