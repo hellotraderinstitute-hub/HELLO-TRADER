@@ -1,79 +1,63 @@
 /**
  * algoTokenBillingService.js
- * Backend-only dynamic per-lot two-sided token billing for Algo Trading.
+ * Backend-only dynamic tiered token billing for Algo Trading based on Admin saved settings.
  * 
- * Dynamic Pricing Policy:
- *   - Entry Token Fee: Configured fee per lot (Default: 15 tokens/lot) debited ONLY after confirmed live entry fill.
- *   - Exit Token Fee: Configured fee per lot (Default: 15 tokens/lot) debited ONLY after confirmed live exit square-off.
- *   - Calculation:
- *       1 Lot Entry  = 15 tokens
- *       5 Lots Entry = 75 tokens
- *       5 Lots Exit  = 75 tokens
- *       Complete 5-Lot Round Trip = 150 tokens
- *   - Strict Exclusions: Failed, rejected, blocked, duplicate, manual, or connection charge records deduct 0 tokens.
- *   - User Wallet Statement: ALGO_ENTRY / ALGO_EXIT with symbol, CE/PE, lots, quantity, orderId, deducted, before & after balance.
- *   - Admin Reporting: User-wise Entry Trades, Exit Trades, Entry Lots, Exit Lots, Entry Tokens, Exit Tokens, Total Collected, Remaining.
+ * Pricing Architecture:
+ *   A. Connection Fee Tiers (One-Time per Broker Terminal Activation):
+ *      - 1–5 lots   = 3,800 tokens
+ *      - 6–10 lots  = 7,600 tokens
+ *      - 11–15 lots = 11,400 tokens
+ *      (Charged ONLY ONCE when a new broker connection is activated; NEVER per trade)
+ * 
+ *   B. BUY & SELL Brokerage Tiers (Per Trade based on matching lot tier):
+ *      - 1–2 lots   = BUY 10 tokens | SELL 10 tokens (Round-Trip: 20 tokens)
+ *      - 3–5 lots   = BUY 12 tokens | SELL 12 tokens (Round-Trip: 24 tokens)
+ *      - 6–10 lots  = BUY 15 tokens | SELL 15 tokens (Round-Trip: 30 tokens)
+ *      (Flat tier amount per trade, NOT multiplied by lot count)
+ * 
+ *   C. Strict Exclusions (0 Tokens):
+ *      - Failed, rejected, blocked, duplicate, or manual positions deduct 0 tokens.
  */
 
 'use strict';
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { AuditLogger, CATEGORIES } = require('./auditLogger');
+const { getActiveCharges, getAlgoBrokerageForLots, DEFAULT_ALGO_BROKERAGE_TIERS } = require('./chargesService');
 
 class AlgoTokenBillingService {
   /**
-   * Get configured per-lot token fees for entry and exit.
-   * Default: 15 tokens/lot entry, 15 tokens/lot exit.
+   * Get active brokerage tiers from Admin configuration or system defaults.
    */
-  static async getConfiguredPerLotFees() {
+  static async getActiveBrokerageTiers() {
     try {
-      const settings = await prisma.systemSettings.findUnique({ where: { id: 'CONFIG' } });
-      let entryFeePerLot = 15;
-      let exitFeePerLot = 15;
-
-      if (settings?.algoBrokerageTiersJson) {
-        const parsed = JSON.parse(settings.algoBrokerageTiersJson);
-        if (parsed?.entryFeePerLot !== undefined) entryFeePerLot = Number(parsed.entryFeePerLot);
-        else if (parsed?.perLotTokens !== undefined) {
-          entryFeePerLot = Number(parsed.perLotTokens);
-          exitFeePerLot = Number(parsed.perLotTokens);
-        } else if (parsed?.perTradeTokens !== undefined) {
-          entryFeePerLot = Number(parsed.perTradeTokens);
-          exitFeePerLot = Number(parsed.perTradeTokens);
-        } else if (parsed?.entryFee !== undefined) {
-          entryFeePerLot = Number(parsed.entryFee);
-        }
-
-        if (parsed?.exitFeePerLot !== undefined) exitFeePerLot = Number(parsed.exitFeePerLot);
-        else if (parsed?.exitFee !== undefined) exitFeePerLot = Number(parsed.exitFee);
-      }
-
-      return {
-        entryFeePerLot,
-        exitFeePerLot,
-        roundTripPerLot: entryFeePerLot + exitFeePerLot
-      };
+      const charges = await getActiveCharges();
+      return charges.algoBrokerage?.tiers || DEFAULT_ALGO_BROKERAGE_TIERS;
     } catch (_) {
-      return { entryFeePerLot: 15, exitFeePerLot: 15, roundTripPerLot: 30 };
+      return DEFAULT_ALGO_BROKERAGE_TIERS;
     }
   }
 
   /**
-   * Calculate entry tokens based on lot count.
+   * Calculate BUY entry brokerage tokens for given lot count.
+   * e.g., 1-2 lots = 10 tokens, 3-5 lots = 12 tokens, 6-10 lots = 15 tokens.
    */
   static async calculateEntryTokens(lots) {
     const lotCount = Math.max(1, parseInt(lots || 1));
-    const { entryFeePerLot } = await this.getConfiguredPerLotFees();
-    return entryFeePerLot * lotCount;
+    const tiers = await this.getActiveBrokerageTiers();
+    const brokerage = getAlgoBrokerageForLots(lotCount, tiers);
+    return brokerage.buyTokens;
   }
 
   /**
-   * Calculate exit tokens based on lot count.
+   * Calculate SELL exit brokerage tokens for given lot count.
+   * e.g., 1-2 lots = 10 tokens, 3-5 lots = 12 tokens, 6-10 lots = 15 tokens.
    */
   static async calculateExitTokens(lots) {
     const lotCount = Math.max(1, parseInt(lots || 1));
-    const { exitFeePerLot } = await this.getConfiguredPerLotFees();
-    return exitFeePerLot * lotCount;
+    const tiers = await this.getActiveBrokerageTiers();
+    const brokerage = getAlgoBrokerageForLots(lotCount, tiers);
+    return brokerage.sellTokens;
   }
 
   /**
@@ -91,7 +75,7 @@ class AlgoTokenBillingService {
   }
 
   /**
-   * Deduct Entry Token Fee (Configured Fee * Lots) upon successful live algo entry execution.
+   * Deduct BUY Brokerage upon confirmed live algo entry execution.
    */
   static async deductEntryFee({ userId, connectionId, brokerOrderId, symbol, orderAction, quantity, lots, tradeId, req }) {
     if (!userId || !brokerOrderId) {
@@ -108,7 +92,7 @@ class AlgoTokenBillingService {
     if (existing) {
       await AuditLogger.log({
         userId, category: CATEGORIES.SETTINGS, action: 'TOKEN_DEBIT_SKIPPED',
-        detail: `Entry token debit skipped: Order ${brokerOrderId} on ${symbol} already billed (${existing.amount} tokens).`,
+        detail: `BUY brokerage debit skipped: Order ${brokerOrderId} on ${symbol} already billed (${existing.amount} tokens).`,
         meta: { brokerOrderId, symbol, idempotentRef }, req
       });
       return { success: true, deducted: 0, reason: 'ALREADY_BILLED', isIdempotentDuplicate: true };
@@ -116,7 +100,6 @@ class AlgoTokenBillingService {
 
     const lotCount = lots || Math.max(1, Math.round((quantity || 65) / (symbol?.includes('BANKNIFTY') ? 15 : (symbol?.includes('FINNIFTY') ? 40 : 65))));
     const amount = await this.calculateEntryTokens(lotCount);
-    const { entryFeePerLot } = await this.getConfiguredPerLotFees();
 
     const balanceBefore = await this.getUserTokenBalance(userId);
     const balanceAfter = Math.max(0, balanceBefore - amount);
@@ -125,6 +108,7 @@ class AlgoTokenBillingService {
     // 2. Format Structured Ledger Reason
     const ledgerMetadata = {
       type: 'ALGO_ENTRY',
+      label: 'ALGO BUY BROKERAGE',
       symbol,
       optionType,
       lots: lotCount,
@@ -132,7 +116,6 @@ class AlgoTokenBillingService {
       brokerOrderId,
       tradeId: tradeId || null,
       tokensDeducted: amount,
-      perLotFee: entryFeePerLot,
       balanceBefore,
       balanceAfter,
       timestamp: new Date().toISOString()
@@ -154,7 +137,7 @@ class AlgoTokenBillingService {
     // 4. Audit Log
     await AuditLogger.log({
       userId, category: CATEGORIES.SETTINGS, action: 'TOKEN_DEBITED',
-      detail: `Algo Entry Fee: Debited ${amount} tokens (${lotCount} lot(s) @ ${entryFeePerLot}/lot) for ${orderAction || 'BUY'} ${symbol} (OrderID: ${brokerOrderId}). Balance: ${balanceBefore} -> ${balanceAfter}.`,
+      detail: `Algo BUY Brokerage: Debited ${amount} tokens (${lotCount} lot(s) tier) for ${orderAction || 'BUY'} ${symbol} (OrderID: ${brokerOrderId}). Balance: ${balanceBefore} -> ${balanceAfter}.`,
       meta: { ...ledgerMetadata, ledgerId: ledgerEntry.id }, req
     });
 
@@ -162,16 +145,15 @@ class AlgoTokenBillingService {
       success: true,
       deducted: amount,
       lots: lotCount,
-      perLotFee: entryFeePerLot,
       balanceBefore,
       balanceAfter,
       ledgerId: ledgerEntry.id,
-      reason: 'ENTRY_FEE_BILLED'
+      reason: 'BUY_BROKERAGE_BILLED'
     };
   }
 
   /**
-   * Deduct Exit Token Fee (Configured Fee * Lots) upon successful live algo exit square-off.
+   * Deduct SELL Brokerage upon confirmed live algo exit square-off.
    */
   static async deductExitFee({ userId, connectionId, brokerOrderId, symbol, orderAction, quantity, lots, tradeId, exitReason, req }) {
     if (!userId || !brokerOrderId) {
@@ -188,7 +170,7 @@ class AlgoTokenBillingService {
     if (existing) {
       await AuditLogger.log({
         userId, category: CATEGORIES.SETTINGS, action: 'TOKEN_DEBIT_SKIPPED',
-        detail: `Exit token debit skipped: Order ${brokerOrderId} on ${symbol} already billed (${existing.amount} tokens).`,
+        detail: `SELL brokerage debit skipped: Order ${brokerOrderId} on ${symbol} already billed (${existing.amount} tokens).`,
         meta: { brokerOrderId, symbol, idempotentRef }, req
       });
       return { success: true, deducted: 0, reason: 'ALREADY_BILLED', isIdempotentDuplicate: true };
@@ -196,7 +178,6 @@ class AlgoTokenBillingService {
 
     const lotCount = lots || Math.max(1, Math.round((quantity || 65) / (symbol?.includes('BANKNIFTY') ? 15 : (symbol?.includes('FINNIFTY') ? 40 : 65))));
     const amount = await this.calculateExitTokens(lotCount);
-    const { exitFeePerLot } = await this.getConfiguredPerLotFees();
 
     const balanceBefore = await this.getUserTokenBalance(userId);
     const balanceAfter = Math.max(0, balanceBefore - amount);
@@ -205,6 +186,7 @@ class AlgoTokenBillingService {
     // 2. Format Structured Ledger Reason
     const ledgerMetadata = {
       type: 'ALGO_EXIT',
+      label: 'ALGO SELL BROKERAGE',
       symbol,
       optionType,
       lots: lotCount,
@@ -212,7 +194,6 @@ class AlgoTokenBillingService {
       brokerOrderId,
       tradeId: tradeId || null,
       tokensDeducted: amount,
-      perLotFee: exitFeePerLot,
       balanceBefore,
       balanceAfter,
       exitReason: exitReason || 'SIGNAL_EXIT',
@@ -235,7 +216,7 @@ class AlgoTokenBillingService {
     // 4. Audit Log
     await AuditLogger.log({
       userId, category: CATEGORIES.SETTINGS, action: 'TOKEN_DEBITED',
-      detail: `Algo Exit Fee: Debited ${amount} tokens (${lotCount} lot(s) @ ${exitFeePerLot}/lot) for EXIT on ${symbol} (OrderID: ${brokerOrderId}). Balance: ${balanceBefore} -> ${balanceAfter}.`,
+      detail: `Algo SELL Brokerage: Debited ${amount} tokens (${lotCount} lot(s) tier) for EXIT on ${symbol} (OrderID: ${brokerOrderId}). Balance: ${balanceBefore} -> ${balanceAfter}.`,
       meta: { ...ledgerMetadata, ledgerId: ledgerEntry.id }, req
     });
 
@@ -243,11 +224,10 @@ class AlgoTokenBillingService {
       success: true,
       deducted: amount,
       lots: lotCount,
-      perLotFee: exitFeePerLot,
       balanceBefore,
       balanceAfter,
       ledgerId: ledgerEntry.id,
-      reason: 'EXIT_FEE_BILLED'
+      reason: 'SELL_BROKERAGE_BILLED'
     };
   }
 
@@ -283,6 +263,7 @@ class AlgoTokenBillingService {
         id: d.id,
         timestamp: d.timestamp,
         eventType: isEntry ? 'ALGO_ENTRY' : 'ALGO_EXIT',
+        label: isEntry ? 'ALGO BUY BROKERAGE' : 'ALGO SELL BROKERAGE',
         symbol: meta.symbol || 'N/A',
         optionType: meta.optionType || (meta.symbol?.endsWith('CE') ? 'CE' : 'PE'),
         lots: lots,
@@ -297,7 +278,7 @@ class AlgoTokenBillingService {
   }
 
   /**
-   * Get Admin Two-Sided Token & Brokerage Usage Report
+   * Get Admin Token & Brokerage Usage Report
    */
   static async getAdminTokenReport(filter = {}) {
     const where = {
@@ -332,7 +313,8 @@ class AlgoTokenBillingService {
     let totalExits = 0;
     let totalEntryLots = 0;
     let totalExitLots = 0;
-    let totalTradeFeeTokens = 0;
+    let totalBuyBrokerageTokens = 0;
+    let totalSellBrokerageTokens = 0;
     let totalConnectionEvents = 0;
     let totalConnectionTokens = 0;
 
@@ -361,9 +343,9 @@ class AlgoTokenBillingService {
           exitTrades: 0,
           entryLots: 0,
           exitLots: 0,
-          entryTokens: 0,
-          exitTokens: 0,
-          tradeFeeTokens: 0,
+          buyBrokerageTokens: 0,
+          sellBrokerageTokens: 0,
+          totalTradeBrokerage: 0,
           connectionChargeTokens: 0,
           connectionEvents: 0,
           totalTokensCollected: 0,
@@ -377,19 +359,19 @@ class AlgoTokenBillingService {
       if (isEntry) {
         userSummary[uid].entryTrades += 1;
         userSummary[uid].entryLots += lots;
-        userSummary[uid].entryTokens += d.amount;
-        userSummary[uid].tradeFeeTokens += d.amount;
+        userSummary[uid].buyBrokerageTokens += d.amount;
+        userSummary[uid].totalTradeBrokerage += d.amount;
         totalEntries += 1;
         totalEntryLots += lots;
-        totalTradeFeeTokens += d.amount;
+        totalBuyBrokerageTokens += d.amount;
       } else if (isExit) {
         userSummary[uid].exitTrades += 1;
         userSummary[uid].exitLots += lots;
-        userSummary[uid].exitTokens += d.amount;
-        userSummary[uid].tradeFeeTokens += d.amount;
+        userSummary[uid].sellBrokerageTokens += d.amount;
+        userSummary[uid].totalTradeBrokerage += d.amount;
         totalExits += 1;
         totalExitLots += lots;
-        totalTradeFeeTokens += d.amount;
+        totalSellBrokerageTokens += d.amount;
       } else if (isConnection) {
         userSummary[uid].connectionEvents += 1;
         userSummary[uid].connectionChargeTokens += d.amount;
@@ -406,6 +388,7 @@ class AlgoTokenBillingService {
       userSummary[uid].transactions.push({
         ledgerId: d.id,
         eventType: isEntry ? 'ALGO_ENTRY' : (isExit ? 'ALGO_EXIT' : 'ALGO_CONNECTION_CHARGE'),
+        label: isEntry ? 'ALGO BUY BROKERAGE' : (isExit ? 'ALGO SELL BROKERAGE' : 'ALGO CONNECTION CHARGE'),
         amount: d.amount,
         lots: isConnection ? null : lots,
         quantity: isConnection ? null : (meta.quantity || (lots * 65)),
@@ -424,24 +407,29 @@ class AlgoTokenBillingService {
       userSummary[uid].remainingTokens = await this.getUserTokenBalance(uid);
     }
 
+    const totalTradeBrokerageTokens = totalBuyBrokerageTokens + totalSellBrokerageTokens;
+    const grandTotalTokensCollected = totalConnectionTokens + totalTradeBrokerageTokens;
+
     return {
       success: true,
       summary: {
-        tradeFees: {
+        connectionCharges: {
+          totalConnectionEvents,
+          totalConnectionTokens,
+        },
+        tradeBrokerage: {
           totalAlgoEntries: totalEntries,
           totalAlgoExits: totalExits,
           totalEntryLots,
           totalExitLots,
           totalTrades: totalEntries + totalExits,
-          totalTradeFeeTokens,
+          buyBrokerageTokens: totalBuyBrokerageTokens,
+          sellBrokerageTokens: totalSellBrokerageTokens,
+          totalTradeBrokerageTokens,
         },
-        connectionCharges: {
-          totalConnectionEvents,
-          totalConnectionTokens,
-        },
-        grandTotalTokensCollected: totalTradeFeeTokens + totalConnectionTokens,
+        grandTotalTokensCollected,
         uniqueUsersCount: userIds.length,
-        feesConfig: await this.getConfiguredPerLotFees(),
+        brokerageTiers: await this.getActiveBrokerageTiers(),
         date: filter.dateStr || 'ALL_TIME'
       },
       users: Object.values(userSummary),
@@ -462,6 +450,7 @@ class AlgoTokenBillingService {
           userEmail: d.user?.email,
           studentId: d.user?.studentId,
           eventType: isEntry ? 'ALGO_ENTRY' : (isExit ? 'ALGO_EXIT' : 'ALGO_CONNECTION_CHARGE'),
+          label: isEntry ? 'ALGO BUY BROKERAGE' : (isExit ? 'ALGO SELL BROKERAGE' : 'ALGO CONNECTION CHARGE'),
           symbol: meta.symbol || (isConnection ? d.reason : 'N/A'),
           lots: isConnection ? null : lots,
           quantity: isConnection ? null : (meta.quantity || (lots * 65)),
@@ -469,6 +458,7 @@ class AlgoTokenBillingService {
           timestamp: d.timestamp,
           brokerOrderId: meta.brokerOrderId || d.reason.split(':')[3]?.split('|')[0] || 'N/A',
           balanceBefore: meta.balanceBefore,
+          balanceAfter: meta.balanceAfter
         };
       })
     };

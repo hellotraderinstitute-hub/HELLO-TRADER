@@ -1,16 +1,17 @@
 /**
  * tests/live_algo_token_billing_test.js
- * Comprehensive unit and dry-run tests for Live Algo Token Billing (Requirements A through K).
- * ZERO real broker orders submitted.
+ * Comprehensive unit and integration test suite for Tiered Algo Brokerage & Connection Charges.
+ * 100% Read-Only. ZERO real broker orders submitted.
  */
 
 'use strict';
 const assert = require('assert');
 const { AlgoTokenBillingService } = require('../backend/services/algoTokenBillingService');
+const { getAlgoConnectionChargeForLots, getAlgoBrokerageForLots, DEFAULT_ALGO_CONNECTION_TIERS, DEFAULT_ALGO_BROKERAGE_TIERS } = require('../backend/services/chargesService');
 
 async function runLiveBillingTests() {
   console.log('================================================================================');
-  console.log('   RUNNING LIVE ALGO TOKEN BILLING VERIFICATION SUITE (TESTS A TO K)            ');
+  console.log('   RUNNING ADMIN TIERED ALGO BROKERAGE & CONNECTION CHARGES TEST MATRIX         ');
   console.log('================================================================================\n');
 
   let passed = 0;
@@ -26,99 +27,103 @@ async function runLiveBillingTests() {
     }
   }
 
-  // A. 1 Lot Entry => configured fee * 1
+  // 1. 1 Lot BUY = 10 tokens
   try {
     const fee = await AlgoTokenBillingService.calculateEntryTokens(1);
-    test('Test A: 1 Lot Entry Fee', fee === 15, `1 Lot = ${fee} tokens`);
-  } catch (e) { test('Test A: 1 Lot Entry Fee', false, e.message); }
+    test('1. 1 Lot BUY Brokerage', fee === 10, `1 Lot BUY = ${fee} tokens (Tier 1-2 lots)`);
+  } catch (e) { test('1. 1 Lot BUY Brokerage', false, e.message); }
 
-  // B. 5 Lots Entry => configured fee * 5
-  try {
-    const fee = await AlgoTokenBillingService.calculateEntryTokens(5);
-    test('Test B: 5 Lots Entry Fee', fee === 75, `5 Lots = ${fee} tokens`);
-  } catch (e) { test('Test B: 5 Lots Entry Fee', false, e.message); }
-
-  // C. 1 Lot Exit => configured fee * 1
+  // 2. 1 Lot SELL = 10 tokens
   try {
     const fee = await AlgoTokenBillingService.calculateExitTokens(1);
-    test('Test C: 1 Lot Exit Fee', fee === 15, `1 Lot Exit = ${fee} tokens`);
-  } catch (e) { test('Test C: 1 Lot Exit Fee', false, e.message); }
+    test('2. 1 Lot SELL Brokerage', fee === 10, `1 Lot SELL = ${fee} tokens (Tier 1-2 lots)`);
+  } catch (e) { test('2. 1 Lot SELL Brokerage', false, e.message); }
 
-  // D. 5 Lots Exit => configured fee * 5
+  // 3. 2 Lots BUY = 10 tokens
+  try {
+    const fee = await AlgoTokenBillingService.calculateEntryTokens(2);
+    test('3. 2 Lots BUY Brokerage', fee === 10, `2 Lots BUY = ${fee} tokens (Tier 1-2 lots)`);
+  } catch (e) { test('3. 2 Lots BUY Brokerage', false, e.message); }
+
+  // 4. 3 Lots BUY = 12 tokens
+  try {
+    const fee = await AlgoTokenBillingService.calculateEntryTokens(3);
+    test('4. 3 Lots BUY Brokerage', fee === 12, `3 Lots BUY = ${fee} tokens (Tier 3-5 lots)`);
+  } catch (e) { test('4. 3 Lots BUY Brokerage', false, e.message); }
+
+  // 5. 5 Lots BUY = 12 tokens (NOT 12 * 5 = 60)
+  try {
+    const fee = await AlgoTokenBillingService.calculateEntryTokens(5);
+    test('5. 5 Lots BUY Brokerage (Flat Tiered)', fee === 12, `5 Lots BUY = ${fee} tokens (Tier 3-5 lots, Flat)`);
+  } catch (e) { test('5. 5 Lots BUY Brokerage (Flat Tiered)', false, e.message); }
+
+  // 6. 5 Lots SELL = 12 tokens (NOT 12 * 5 = 60)
   try {
     const fee = await AlgoTokenBillingService.calculateExitTokens(5);
-    test('Test D: 5 Lots Exit Fee', fee === 75, `5 Lots Exit = ${fee} tokens`);
-  } catch (e) { test('Test D: 5 Lots Exit Fee', false, e.message); }
+    test('6. 5 Lots SELL Brokerage (Flat Tiered)', fee === 12, `5 Lots SELL = ${fee} tokens (Tier 3-5 lots, Flat)`);
+  } catch (e) { test('6. 5 Lots SELL Brokerage (Flat Tiered)', false, e.message); }
 
-  // E. Failed Order => 0 Tokens
+  // 7. 6 Lots BUY = 15 tokens
+  try {
+    const fee = await AlgoTokenBillingService.calculateEntryTokens(6);
+    test('7. 6 Lots BUY Brokerage', fee === 15, `6 Lots BUY = ${fee} tokens (Tier 6-10 lots)`);
+  } catch (e) { test('7. 6 Lots BUY Brokerage', false, e.message); }
+
+  // 8. 10 Lots SELL = 15 tokens
+  try {
+    const fee = await AlgoTokenBillingService.calculateExitTokens(10);
+    test('8. 10 Lots SELL Brokerage', fee === 15, `10 Lots SELL = ${fee} tokens (Tier 6-10 lots)`);
+  } catch (e) { test('8. 10 Lots SELL Brokerage', false, e.message); }
+
+  // 9. 5-Lot Complete Round Trip = 12 + 12 = 24 tokens (NOT 150)
+  try {
+    const buy5 = await AlgoTokenBillingService.calculateEntryTokens(5);
+    const sell5 = await AlgoTokenBillingService.calculateExitTokens(5);
+    const roundTrip5 = buy5 + sell5;
+    test('9. 5-Lot Complete Round Trip', roundTrip5 === 24, `BUY: ${buy5} + SELL: ${sell5} = ${roundTrip5} tokens`);
+  } catch (e) { test('9. 5-Lot Complete Round Trip', false, e.message); }
+
+  // 10. Connection Fee (1–5 Lots) = 3800 tokens ONLY ON NEW CONNECTION
+  try {
+    const connFee = getAlgoConnectionChargeForLots(5, DEFAULT_ALGO_CONNECTION_TIERS);
+    test('10. 1-5 Lots Connection Charge (One-Time)', connFee === 3800, `Connection charge: ${connFee} tokens`);
+  } catch (e) { test('10. 1-5 Lots Connection Charge (One-Time)', false, e.message); }
+
+  // 11. Repeated Trade on Same Connected Terminal = NO Connection Charge
+  try {
+    const isTerminalAlreadyConnected = true;
+    const connFeeOnTrade = isTerminalAlreadyConnected ? 0 : 3800;
+    test('11. Repeated Trade on Connected Terminal -> 0 Connection Fee', connFeeOnTrade === 0, `Per-trade connection fee: ${connFeeOnTrade} tokens`);
+  } catch (e) { test('11. Repeated Trade on Connected Terminal -> 0 Connection Fee', false, e.message); }
+
+  // 12. Failed / Rejected Order = 0 Tokens
   try {
     const execResult = { success: false, message: 'BROKER_REJECTED' };
-    const fee = execResult.success ? await AlgoTokenBillingService.calculateEntryTokens(1) : 0;
-    test('Test E: Failed Order Billed 0 Tokens', fee === 0, `Failed order debit: ${fee} tokens`);
-  } catch (e) { test('Test E: Failed Order Billed 0 Tokens', false, e.message); }
+    const fee = execResult.success ? await AlgoTokenBillingService.calculateEntryTokens(5) : 0;
+    test('12. Failed Order -> 0 Tokens Brokerage', fee === 0, `Failed order debit: ${fee} tokens`);
+  } catch (e) { test('12. Failed Order -> 0 Tokens Brokerage', false, e.message); }
 
-  // F. Duplicate Webhook => 0 Additional Tokens
+  // 13. Duplicate Webhook = 0 Additional Tokens
   try {
     const isDuplicate = true;
-    const fee = isDuplicate ? 0 : 15;
-    test('Test F: Duplicate Webhook Intercepted (0 Tokens)', fee === 0, `Duplicate debit: ${fee} tokens`);
-  } catch (e) { test('Test F: Duplicate Webhook Intercepted (0 Tokens)', false, e.message); }
+    const fee = isDuplicate ? 0 : 12;
+    test('13. Duplicate Webhook -> 0 Tokens Brokerage', fee === 0, `Duplicate debit: ${fee} tokens`);
+  } catch (e) { test('13. Duplicate Webhook -> 0 Tokens Brokerage', false, e.message); }
 
-  // G. Manual Position => 0 Tokens
-  try {
-    const isManualHolding = true;
-    const fee = isManualHolding ? 0 : 15;
-    test('Test G: Manual Position Square-Off Excluded (0 Tokens)', fee === 0, `Manual trade debit: ${fee} tokens`);
-  } catch (e) { test('Test G: Manual Position Square-Off Excluded (0 Tokens)', false, e.message); }
-
-  // H. Entry + Exit => Correct Round-Trip Total
-  try {
-    const entry5 = await AlgoTokenBillingService.calculateEntryTokens(5);
-    const exit5 = await AlgoTokenBillingService.calculateExitTokens(5);
-    const roundTrip = entry5 + exit5;
-    test('Test H: 5-Lot Round Trip Total', roundTrip === 150, `75 Entry + 75 Exit = ${roundTrip} tokens`);
-  } catch (e) { test('Test H: 5-Lot Round Trip Total', false, e.message); }
-
-  // I. Retry Same BrokerOrderId => Idempotency (No Double Billing)
-  try {
-    const mockLedgerReason = 'ALGO_ENTRY:user-1:conn-1:260824000123';
-    const isAlreadyBilled = mockLedgerReason.includes('260824000123');
-    test('Test I: Idempotent Key Prevents Duplicate Debit', isAlreadyBilled === true, `Idempotency matched on orderId`);
-  } catch (e) { test('Test I: Idempotent Key Prevents Duplicate Debit', false, e.message); }
-
-  // J. Wallet Statement Contains Both Entry and Exit Metadata
-  try {
-    const sampleEntryMeta = {
-      type: 'ALGO_ENTRY',
-      symbol: 'NIFTY25AUG2624150CE',
-      lots: 5,
-      quantity: 325,
-      brokerOrderId: '260824000823034',
-      tokensDeducted: 75,
-      balanceBefore: 226,
-      balanceAfter: 151
-    };
-    test('Test J: Wallet Statement Entry Schema Integrity',
-      sampleEntryMeta.type === 'ALGO_ENTRY' && sampleEntryMeta.lots === 5 && sampleEntryMeta.tokensDeducted === 75,
-      `Formatted schema: ${sampleEntryMeta.symbol} | ${sampleEntryMeta.lots} Lots | Order: ${sampleEntryMeta.brokerOrderId}`
-    );
-  } catch (e) { test('Test J: Wallet Statement Entry Schema Integrity', false, e.message); }
-
-  // K. Admin TODAY Report User-Wise Metric Schema & Separate Totals
+  // 14. Admin Report Separate Totals Integrity
   try {
     const report = await AlgoTokenBillingService.getAdminTokenReport();
     const hasSeparateTotals = (
       report.success === true &&
-      report.summary?.tradeFees !== undefined &&
+      report.summary?.tradeBrokerage !== undefined &&
       report.summary?.connectionCharges !== undefined &&
-      report.summary?.grandTotalTokensCollected !== undefined &&
-      report.summary.feesConfig?.entryFeePerLot === 15
+      report.summary?.grandTotalTokensCollected !== undefined
     );
-    test('Test K: Admin Token Report Separate Totals & Response Integrity',
+    test('14. Admin Report Separate Totals Integrity',
       hasSeparateTotals,
-      `Trade Fees: ${report.summary?.tradeFees?.totalTradeFeeTokens || 0} tokens | Connection Charges: ${report.summary?.connectionCharges?.totalConnectionTokens || 0} tokens | Grand Total: ${report.summary?.grandTotalTokensCollected || 0} tokens`
+      `Connection: ${report.summary?.connectionCharges?.totalConnectionTokens || 0} tokens | Trade Brokerage: ${report.summary?.tradeBrokerage?.totalTradeBrokerageTokens || 0} tokens | Grand Total: ${report.summary?.grandTotalTokensCollected || 0} tokens`
     );
-  } catch (e) { test('Test K: Admin Token Report Separate Totals & Response Integrity', false, e.message); }
+  } catch (e) { test('14. Admin Report Separate Totals Integrity', false, e.message); }
 
   console.log('\n================================================================================');
   console.log(`TEST SUITE RESULTS: ${passed} / ${total} PASSED (${Math.round(passed/total * 100)}%)`);

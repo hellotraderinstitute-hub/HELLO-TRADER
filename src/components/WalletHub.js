@@ -427,12 +427,16 @@ export default function WalletHub() {
                       <tr key={idx} className="hover:bg-white/[0.03] transition-colors">
                         <td className="py-2.5 px-3 font-extrabold text-white">
                           {isAlgoTrade ? (
-                            <span className="px-2 py-0.5 rounded text-[10px] border bg-cyan-500/10 border-cyan-500/30 text-cyan-400">
-                              ⚡ ALGO TRADE
+                            <span className={`px-2 py-0.5 rounded text-[10px] border ${
+                              tx.reason?.startsWith('ALGO_ENTRY:') 
+                                ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400' 
+                                : 'bg-orange-500/10 border-orange-500/30 text-orange-400'
+                            }`}>
+                              {tx.reason?.startsWith('ALGO_ENTRY:') ? '⚡ BUY BROKERAGE' : '🏁 SELL BROKERAGE'}
                             </span>
                           ) : isAlgoConnection ? (
                             <span className="px-2 py-0.5 rounded text-[10px] border bg-amber-500/10 border-amber-500/30 text-amber-300">
-                              🔌 ALGO CAPACITY
+                              🔌 CONNECTION CHARGE
                             </span>
                           ) : (
                             <span className={`px-2 py-0.5 rounded text-[10px] border ${
@@ -455,7 +459,7 @@ export default function WalletHub() {
                                     ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30' 
                                     : 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
                                 }`}>
-                                  {tx.algoMeta.type === 'ALGO_ENTRY' ? '⚡ ALGO ENTRY' : '🏁 ALGO EXIT'}
+                                  {tx.algoMeta.type === 'ALGO_ENTRY' ? '⚡ ALGO BUY BROKERAGE' : '🏁 ALGO SELL BROKERAGE'}
                                 </span>
                                 <strong className="text-white text-xs">{tx.algoMeta.symbol}</strong>
                                 <span className="text-[10px] text-gray-400">({tx.algoMeta.lots} Lot{tx.algoMeta.lots > 1 ? 's' : ''} / {tx.algoMeta.quantity} Qty)</span>
