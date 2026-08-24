@@ -649,26 +649,33 @@ export default function AlgoTrading({ user, onBack }) {
       {activeTab === 'POSITIONS' && (
         <div className="space-y-4 font-mono">
           {/* P&L Summary Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="bg-[#161B22] border border-white/10 rounded-xl p-4 space-y-1">
-              <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Unrealized P&L</span>
-              <div className={`text-base font-extrabold ${(positionsSummary.unrealizedPnl || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                {(positionsSummary.unrealizedPnl || 0) >= 0 ? '+' : ''}₹{(positionsSummary.unrealizedPnl || 0).toFixed(2)}
+          {(() => {
+            const realized = Number(positionsSummary.realizedPnl !== undefined ? positionsSummary.realizedPnl : (positionsSummary.todayRealizedPnl || 0));
+            const unrealized = Number(positionsSummary.unrealizedPnl || 0);
+            const netTotal = Number(positionsSummary.totalPnl !== undefined ? positionsSummary.totalPnl : (realized + unrealized));
+            return (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="bg-[#161B22] border border-white/10 rounded-xl p-4 space-y-1">
+                  <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Unrealized P&L</span>
+                  <div className={`text-base font-extrabold ${unrealized >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    {unrealized >= 0 ? '+' : ''}₹{unrealized.toFixed(2)}
+                  </div>
+                </div>
+                <div className="bg-[#161B22] border border-white/10 rounded-xl p-4 space-y-1">
+                  <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Realized P&L (Today)</span>
+                  <div className={`text-base font-extrabold ${realized >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    {realized >= 0 ? '+' : ''}₹{realized.toFixed(2)}
+                  </div>
+                </div>
+                <div className="bg-[#161B22] border border-white/10 rounded-xl p-4 space-y-1">
+                  <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Net Total P&L</span>
+                  <div className={`text-base font-extrabold ${netTotal >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    {netTotal >= 0 ? '+' : ''}₹{netTotal.toFixed(2)}
+                  </div>
+                </div>
               </div>
-            </div>
-            <div className="bg-[#161B22] border border-white/10 rounded-xl p-4 space-y-1">
-              <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Realized P&L (Today)</span>
-              <div className={`text-base font-extrabold ${(positionsSummary.realizedPnl || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                {(positionsSummary.realizedPnl || 0) >= 0 ? '+' : ''}₹{(positionsSummary.realizedPnl || 0).toFixed(2)}
-              </div>
-            </div>
-            <div className="bg-[#161B22] border border-white/10 rounded-xl p-4 space-y-1">
-              <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Net Total P&L</span>
-              <div className={`text-base font-extrabold ${(positionsSummary.totalPnl || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                {(positionsSummary.totalPnl || 0) >= 0 ? '+' : ''}₹{(positionsSummary.totalPnl || 0).toFixed(2)}
-              </div>
-            </div>
-          </div>
+            );
+          })()}
 
           <div className="bg-[#161B22] border border-white/10 rounded-2xl p-5 space-y-3">
             <h3 className="font-bold text-xs text-white uppercase tracking-wider flex items-center gap-2">

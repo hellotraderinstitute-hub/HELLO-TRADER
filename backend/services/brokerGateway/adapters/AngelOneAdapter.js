@@ -337,6 +337,28 @@ class AngelOneAdapter extends IBrokerAdapter {
       };
     } catch (err) { return { available: 0, used: 0, total: 0 }; }
   }
+
+  async getOrders() {
+    try {
+      if (!this.jwtToken) await this.authenticate();
+      const res = await axios.get(
+        `${ANGEL_BASE_URL}/rest/secure/angelbroking/order/v1/getOrderBook`,
+        this._axiosOpts({ headers: this._headers(), timeout: 8000 })
+      );
+      return res.data?.data || [];
+    } catch (err) { return []; }
+  }
+
+  async getTradeBook() {
+    try {
+      if (!this.jwtToken) await this.authenticate();
+      const res = await axios.get(
+        `${ANGEL_BASE_URL}/rest/secure/angelbroking/order/v1/getTradeBook`,
+        this._axiosOpts({ headers: this._headers(), timeout: 8000 })
+      );
+      return res.data?.data || [];
+    } catch (err) { return []; }
+  }
 }
 
 module.exports = AngelOneAdapter;

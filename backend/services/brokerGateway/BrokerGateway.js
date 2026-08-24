@@ -312,6 +312,21 @@ class BrokerGateway {
       return [];
     }
   }
+
+  /**
+   * Get today's trade book from a broker connection.
+   */
+  static async getTradeBook(connection) {
+    try {
+      const credentials = decryptCredentials(connection);
+      const proxyOpts = await resolveProxyOptions(connection);
+      const adapter = createAdapter(connection.broker, credentials, proxyOpts);
+      return typeof adapter.getTradeBook === 'function' ? await adapter.getTradeBook() : [];
+    } catch (err) {
+      console.error(`[BrokerGateway] getTradeBook() error for ${connection.broker}:`, err.message);
+      return [];
+    }
+  }
 }
 
 module.exports = { BrokerGateway, encryptValue, decryptCredentials, createAdapter };

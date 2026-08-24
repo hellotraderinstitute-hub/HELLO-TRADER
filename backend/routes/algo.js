@@ -922,10 +922,101 @@ router.post('/re-arm', async (req, res) => {
   }
 });
 
+// ─── IST Helper for Today's P&L and Date Boundaries ───────────
+function getTodayIstRange() {
+  const now = new Date();
+  const istOffsetMs = 5.5 * 60 * 60 * 1000;
+  const istNow = new Date(now.getTime() + istOffsetMs);
+  
+  const year = istNow.getUTCFullYear();
+  const month = String(istNow.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(istNow.getUTCDate()).padStart(2, '0');
+  
+  const startUtc = new Date(Date.UTC(year, parseInt(month) - 1, parseInt(day), 0, 0, 0) - istOffsetMs);
+  const endUtc = new Date(Date.UTC(year, parseInt(month) - 1, parseInt(day), 23, 59, 59, 999) - istOffsetMs);
+  
+  return { startUtc, endUtc, dateStr: `${year}-${month}-${day}` };
+}
+
+async function calculateTodayRealizedPnl(userId, cachedLivePositionsByConn = null) {
+  const { startUtc, endUtc, dateStr } = getTodayIstRange();
+
+  // 1. Calculate from closed DB algo positions for today IST
+  const closedPositions = await prisma.algoPosition.findMany({
+    where: {
+      userId,
+      status: { in: ['CLOSED', 'MANUALLY_CLOSED', 'SL_HIT', 'TARGET_HIT'] },
+      OR: [
+        { closedAt: { gte: startUtc, lte: endUtc } },
+        { openedAt: { gte: startUtc, lte: endUtc } }
+      ]
+    }
+  });
+
+  let dbRealizedPnl = 0;
+  closedPositions.forEach(pos => {
+    if (pos.pnl !== null && pos.pnl !== undefined && !isNaN(pos.pnl)) {
+      dbRealizedPnl += Number(pos.pnl);
+    } else if (pos.entryPrice > 0 && pos.exitPrice > 0) {
+      const tradePnl = pos.side === 'BUY'
+        ? (pos.exitPrice - pos.entryPrice) * pos.quantity
+        : (pos.entryPrice - pos.exitPrice) * pos.quantity;
+      dbRealizedPnl += tradePnl;
+    }
+  });
+
+  // 2. Fetch live broker positions for today (Angel One SmartAPI position book)
+  let brokerRealizedPnl = 0;
+  let brokerUnrealizedPnl = 0;
+  let hasBrokerData = false;
+
+  try {
+    let positionsByConn = cachedLivePositionsByConn;
+    if (!positionsByConn) {
+      const connections = await prisma.algoBrokerConnection.findMany({
+        where: { userId, isActive: true }
+      });
+      positionsByConn = {};
+      for (const conn of connections) {
+        positionsByConn[conn.id] = await BrokerGateway.getPositions(conn);
+      }
+    }
+
+    Object.values(positionsByConn).forEach(livePositions => {
+      if (Array.isArray(livePositions) && livePositions.length > 0) {
+        hasBrokerData = true;
+        livePositions.forEach(lp => {
+          const r = parseFloat(lp.realised !== undefined ? lp.realised : (lp.realizedPnl !== undefined ? lp.realizedPnl : 0));
+          const u = parseFloat(lp.unrealised !== undefined ? lp.unrealised : (lp.unrealizedPnl !== undefined ? lp.unrealizedPnl : 0));
+          brokerRealizedPnl += isNaN(r) ? 0 : r;
+          brokerUnrealizedPnl += isNaN(u) ? 0 : u;
+        });
+      }
+    });
+  } catch (err) {
+    console.warn('[Algo] Error fetching broker positions for PnL calculation:', err.message);
+  }
+
+  // If broker provides live position book data for today, use broker PnL; otherwise fallback to DB closed positions PnL
+  const todayRealizedPnl = hasBrokerData ? brokerRealizedPnl : dbRealizedPnl;
+
+  return {
+    todayRealizedPnl,
+    brokerRealizedPnl,
+    dbRealizedPnl,
+    unrealizedPnl: brokerUnrealizedPnl,
+    totalPnl: todayRealizedPnl + brokerUnrealizedPnl,
+    closedPositionsCount: closedPositions.length,
+    dateStr
+  };
+}
+
 // ─── GET /positions ───────────────────────────────────────────
 router.get('/positions', async (req, res) => {
-  const userId = req.user.id;
+  const userId = await resolveTargetUserId(req);
   try {
+    const { dateStr } = getTodayIstRange();
+
     const dbPositions = await prisma.algoPosition.findMany({
       where: { userId, status: 'OPEN' },
       include: { connection: { select: { id: true, broker: true, displayName: true, clientId: true } } },
@@ -934,7 +1025,7 @@ router.get('/positions', async (req, res) => {
 
     // Hydrate open positions with live broker position book
     const connections = await prisma.algoBrokerConnection.findMany({
-      where: { userId, isActive: true, testStatus: 'SUCCESS' }
+      where: { userId, isActive: true }
     });
 
     const livePositionsByConn = {};
@@ -1001,21 +1092,16 @@ router.get('/positions', async (req, res) => {
       }
     }
 
-    // Calculate aggregated PnL summary
-    let totalUnrealized = 0;
-    let totalRealized = 0;
-    Object.values(livePositionsByConn).forEach(connPositions => {
-      (connPositions || []).forEach(cp => {
-        totalUnrealized += parseFloat(cp.unrealised || 0);
-        totalRealized += parseFloat(cp.realised || 0);
-      });
-    });
+    const pnlStats = await calculateTodayRealizedPnl(userId, livePositionsByConn);
 
     const summary = {
-      unrealizedPnl: totalUnrealized,
-      realizedPnl: totalRealized,
-      totalPnl: totalUnrealized + totalRealized,
+      unrealizedPnl: pnlStats.unrealizedPnl,
+      realizedPnl: pnlStats.todayRealizedPnl,
+      todayRealizedPnl: pnlStats.todayRealizedPnl,
+      totalPnl: pnlStats.totalPnl,
       openPositionsCount: hydratedPositions.length,
+      closedPositionsCount: pnlStats.closedPositionsCount,
+      todayDateStr: dateStr
     };
 
     res.json({ success: true, positions: hydratedPositions, summary });
@@ -1349,24 +1435,14 @@ router.get('/agent/risk-settings', async (req, res) => {
       });
     }
 
-    // Calculate today's realized P&L from closed algo positions
-    const closedPositions = await prisma.algoPosition.findMany({
-      where: {
-        userId,
-        status: 'CLOSED',
-        closedAt: {
-          gte: new Date(new Date().setHours(0, 0, 0, 0))
-        }
-      }
-    });
-
-    const todayRealizedPnl = closedPositions.reduce((acc, pos) => acc + (pos.realizedPnl || 0), 0);
+    // Calculate today's realized P&L from live broker position book / closed positions
+    const pnlStats = await calculateTodayRealizedPnl(userId);
 
     res.json({
       success: true,
       settings,
-      todayRealizedPnl,
-      todayDateStr: today,
+      todayRealizedPnl: pnlStats.todayRealizedPnl,
+      todayDateStr: pnlStats.dateStr,
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
