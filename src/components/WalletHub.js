@@ -40,6 +40,7 @@ export default function WalletHub() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [ledgerCategory, setLedgerCategory] = useState('ALL');
 
   // 2. Derived Values (strict temporal order: no variable referenced before declaration)
   const tokenExchangeRate = walletData?.tokenPrice || paymentConfig?.tokenPrice || contextTokenRate || 1;
@@ -332,13 +333,71 @@ export default function WalletHub() {
           </div>
         </div>
 
+        {/* Category Filter Tabs */}
+        <div className="flex flex-wrap gap-2 mb-3 pb-2 border-b border-[#3c494e]/20 text-[10px]">
+          <button
+            type="button"
+            onClick={() => setLedgerCategory('ALL')}
+            className={`px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+              ledgerCategory === 'ALL'
+                ? 'bg-[#00D4FF]/20 text-[#00D4FF] border border-[#00D4FF]/40 shadow-sm'
+                : 'bg-white/5 text-gray-400 hover:text-white border border-transparent'
+            }`}
+          >
+            <span>ALL TRANSACTIONS</span>
+            <span className="bg-black/30 px-1.5 py-0.5 rounded text-[9px] font-mono">{walletData.ledger.length}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setLedgerCategory('ALGO_TRADES')}
+            className={`px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+              ledgerCategory === 'ALGO_TRADES'
+                ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 shadow-sm'
+                : 'bg-white/5 text-gray-400 hover:text-white border border-transparent'
+            }`}
+          >
+            <span>⚡ ALGO PER-TRADE FEES</span>
+            <span className="bg-black/30 px-1.5 py-0.5 rounded text-[9px] font-mono">
+              {walletData.ledger.filter(l => l.reason?.startsWith('ALGO_ENTRY:') || l.reason?.startsWith('ALGO_EXIT:')).length}
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setLedgerCategory('CONNECTION_CHARGES')}
+            className={`px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+              ledgerCategory === 'CONNECTION_CHARGES'
+                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm'
+                : 'bg-white/5 text-gray-400 hover:text-white border border-transparent'
+            }`}
+          >
+            <span>🔌 ALGO CONNECTION CHARGES</span>
+            <span className="bg-black/30 px-1.5 py-0.5 rounded text-[9px] font-mono">
+              {walletData.ledger.filter(l => l.reason?.startsWith('ALGO_CONNECTION_CHARGE_')).length}
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setLedgerCategory('SUBSCRIPTIONS_RECHARGES')}
+            className={`px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+              ledgerCategory === 'SUBSCRIPTIONS_RECHARGES'
+                ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40 shadow-sm'
+                : 'bg-white/5 text-gray-400 hover:text-white border border-transparent'
+            }`}
+          >
+            <span>💳 RECHARGES & MEMBERSHIP</span>
+            <span className="bg-black/30 px-1.5 py-0.5 rounded text-[9px] font-mono">
+              {walletData.ledger.filter(l => !l.reason?.startsWith('ALGO_ENTRY:') && !l.reason?.startsWith('ALGO_EXIT:') && !l.reason?.startsWith('ALGO_CONNECTION_CHARGE_')).length}
+            </span>
+          </button>
+        </div>
+
         <div className="overflow-x-auto overflow-y-auto max-h-[500px] flex-1">
           <table className="w-full text-left text-xs border-collapse">
             <thead className="sticky top-0 z-10 bg-[#10131a]">
               <tr className="text-gray-400 border-b border-[#3c494e]/30 text-[10px] bg-[#10131a]">
-                <th className="py-2.5 px-3">WALLET CATEGORY</th>
-                <th className="py-2.5 px-3">TRANSACTION REASON</th>
-                <th className="py-2.5 px-3">ACTION TYPE</th>
+                <th className="py-2.5 px-3">CATEGORY</th>
+                <th className="py-2.5 px-3">TRANSACTION DETAILS</th>
+                <th className="py-2.5 px-3">TYPE</th>
                 <th className="py-2.5 px-3">DATE & TIME</th>
                 <th className="py-2.5 px-3 text-right">AMOUNT</th>
               </tr>
@@ -347,57 +406,90 @@ export default function WalletHub() {
               {walletData.ledger.length === 0 ? (
                 <tr><td colSpan="5" className="text-center py-14 text-gray-500">No transactions recorded in immutable ledger yet.</td></tr>
               ) : (
-                walletData.ledger.map((tx, idx) => (
-                  <tr key={idx} className="hover:bg-white/[0.03] transition-colors">
-                    <td className="py-2.5 px-3 font-extrabold text-white">
-                      <span className={`px-2 py-0.5 rounded text-[10px] border ${
-                        tx.walletType === 'TOKEN' || tx.walletType === 'RECHARGE'
-                          ? 'bg-[#00FF41]/10 border-[#00FF41]/30 text-[#00FF41]'
-                          : tx.walletType === 'REFERRAL'
-                          ? 'bg-purple-500/10 border-purple-500/30 text-purple-300'
-                          : 'bg-[#00D4FF]/10 border-[#00D4FF]/30 text-[#00D4FF]'
-                      }`}>
-                        {tx.walletType}
-                      </span>
-                    </td>
-                    <td className="py-2.5 px-3 text-gray-300 font-medium">
-                      {tx.algoMeta ? (
-                        <div className="space-y-0.5">
-                          <div className="flex flex-wrap items-center gap-1.5">
-                            <span className={`px-1.5 py-0.5 rounded text-[9px] font-black tracking-wider ${
-                              tx.algoMeta.type === 'ALGO_ENTRY' 
-                                ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30' 
-                                : 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
-                            }`}>
-                              {tx.algoMeta.type === 'ALGO_ENTRY' ? '⚡ ALGO ENTRY' : '🏁 ALGO EXIT'}
+                walletData.ledger
+                  .filter(tx => {
+                    if (ledgerCategory === 'ALGO_TRADES') {
+                      return tx.reason?.startsWith('ALGO_ENTRY:') || tx.reason?.startsWith('ALGO_EXIT:');
+                    }
+                    if (ledgerCategory === 'CONNECTION_CHARGES') {
+                      return tx.reason?.startsWith('ALGO_CONNECTION_CHARGE_');
+                    }
+                    if (ledgerCategory === 'SUBSCRIPTIONS_RECHARGES') {
+                      return !tx.reason?.startsWith('ALGO_ENTRY:') && !tx.reason?.startsWith('ALGO_EXIT:') && !tx.reason?.startsWith('ALGO_CONNECTION_CHARGE_');
+                    }
+                    return true;
+                  })
+                  .map((tx, idx) => {
+                    const isAlgoTrade = tx.reason?.startsWith('ALGO_ENTRY:') || tx.reason?.startsWith('ALGO_EXIT:');
+                    const isAlgoConnection = tx.reason?.startsWith('ALGO_CONNECTION_CHARGE_');
+
+                    return (
+                      <tr key={idx} className="hover:bg-white/[0.03] transition-colors">
+                        <td className="py-2.5 px-3 font-extrabold text-white">
+                          {isAlgoTrade ? (
+                            <span className="px-2 py-0.5 rounded text-[10px] border bg-cyan-500/10 border-cyan-500/30 text-cyan-400">
+                              ⚡ ALGO TRADE
                             </span>
-                            <strong className="text-white text-xs">{tx.algoMeta.symbol}</strong>
-                            <span className="text-[10px] text-gray-400">({tx.algoMeta.lots} Lot{tx.algoMeta.lots > 1 ? 's' : ''} / {tx.algoMeta.quantity} Qty)</span>
-                          </div>
-                          <div className="text-[10px] text-gray-400 flex flex-wrap items-center gap-2 font-mono">
-                            <span>Order: <strong className="text-gray-300">{tx.algoMeta.brokerOrderId}</strong></span>
-                            {tx.algoMeta.balanceBefore !== undefined && (
-                              <span className="text-gray-500">| Bal: {tx.algoMeta.balanceBefore} ➔ {tx.algoMeta.balanceAfter}</span>
-                            )}
-                          </div>
-                        </div>
-                      ) : (
-                        tx.displayReason || tx.reason
-                      )}
-                    </td>
-                    <td className="py-2.5 px-3">
-                      <span className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase ${
-                        tx.type === 'CREDIT' ? 'bg-[#00FF41]/20 text-[#00FF41]' : 'bg-red-500/20 text-red-400'
-                      }`}>
-                        {tx.type}
-                      </span>
-                    </td>
-                    <td className="py-2.5 px-3 text-gray-400 font-mono text-[10px]">{new Date(tx.timestamp).toLocaleString()}</td>
-                    <td className={`py-2.5 px-3 text-right font-extrabold text-sm ${tx.type === 'CREDIT' ? 'text-[#00FF41]' : 'text-[#ffb4ab]'}`}>
-                      {tx.type === 'CREDIT' ? '+' : '-'}{['TOKEN', 'RECHARGE', 'BONUS'].includes(tx.walletType) ? `🪙 ${Math.abs(tx.amount)} Tokens` : `₹${Math.abs(tx.amount).toLocaleString('en-IN')}`}
-                    </td>
-                  </tr>
-                ))
+                          ) : isAlgoConnection ? (
+                            <span className="px-2 py-0.5 rounded text-[10px] border bg-amber-500/10 border-amber-500/30 text-amber-300">
+                              🔌 ALGO CAPACITY
+                            </span>
+                          ) : (
+                            <span className={`px-2 py-0.5 rounded text-[10px] border ${
+                              tx.walletType === 'TOKEN' || tx.walletType === 'RECHARGE'
+                                ? 'bg-[#00FF41]/10 border-[#00FF41]/30 text-[#00FF41]'
+                                : tx.walletType === 'REFERRAL'
+                                ? 'bg-purple-500/10 border-purple-500/30 text-purple-300'
+                                : 'bg-[#00D4FF]/10 border-[#00D4FF]/30 text-[#00D4FF]'
+                            }`}>
+                              {tx.walletType}
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-2.5 px-3 text-gray-300 font-medium">
+                          {tx.algoMeta ? (
+                            <div className="space-y-0.5">
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                <span className={`px-1.5 py-0.5 rounded text-[9px] font-black tracking-wider ${
+                                  tx.algoMeta.type === 'ALGO_ENTRY' 
+                                    ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30' 
+                                    : 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
+                                }`}>
+                                  {tx.algoMeta.type === 'ALGO_ENTRY' ? '⚡ ALGO ENTRY' : '🏁 ALGO EXIT'}
+                                </span>
+                                <strong className="text-white text-xs">{tx.algoMeta.symbol}</strong>
+                                <span className="text-[10px] text-gray-400">({tx.algoMeta.lots} Lot{tx.algoMeta.lots > 1 ? 's' : ''} / {tx.algoMeta.quantity} Qty)</span>
+                              </div>
+                              <div className="text-[10px] text-gray-400 flex flex-wrap items-center gap-2 font-mono">
+                                <span>Order: <strong className="text-gray-300">{tx.algoMeta.brokerOrderId}</strong></span>
+                                {tx.algoMeta.balanceBefore !== undefined && (
+                                  <span className="text-gray-500">| Bal: {tx.algoMeta.balanceBefore} ➔ {tx.algoMeta.balanceAfter}</span>
+                                )}
+                              </div>
+                            </div>
+                          ) : isAlgoConnection ? (
+                            <div>
+                              <strong className="text-amber-300 text-xs">Angel One SmartAPI 5-Lots Capacity Connection Charge</strong>
+                              <span className="block text-[10px] text-gray-400 font-mono">One-Time Connection Token Charge (5 Lots Capacity)</span>
+                            </div>
+                          ) : (
+                            tx.displayReason || tx.reason
+                          )}
+                        </td>
+                        <td className="py-2.5 px-3">
+                          <span className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase ${
+                            tx.type === 'CREDIT' ? 'bg-[#00FF41]/20 text-[#00FF41]' : 'bg-red-500/20 text-red-400'
+                          }`}>
+                            {tx.type}
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-3 text-gray-400 font-mono text-[10px]">{new Date(tx.timestamp).toLocaleString()}</td>
+                        <td className={`py-2.5 px-3 text-right font-extrabold text-sm ${tx.type === 'CREDIT' ? 'text-[#00FF41]' : 'text-[#ffb4ab]'}`}>
+                          {tx.type === 'CREDIT' ? '+' : '-'}{['TOKEN', 'RECHARGE', 'BONUS'].includes(tx.walletType) ? `🪙 ${Math.abs(tx.amount)} Tokens` : `₹${Math.abs(tx.amount).toLocaleString('en-IN')}`}
+                        </td>
+                      </tr>
+                    );
+                  })
               )}
             </tbody>
           </table>

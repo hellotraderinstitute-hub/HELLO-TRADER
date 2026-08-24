@@ -305,7 +305,8 @@ class AlgoTokenBillingService {
       type: 'DEBIT',
       OR: [
         { reason: { startsWith: 'ALGO_ENTRY:' } },
-        { reason: { startsWith: 'ALGO_EXIT:' } }
+        { reason: { startsWith: 'ALGO_EXIT:' } },
+        { reason: { startsWith: 'ALGO_CONNECTION_CHARGE_' } }
       ]
     };
 
@@ -331,11 +332,16 @@ class AlgoTokenBillingService {
     let totalExits = 0;
     let totalEntryLots = 0;
     let totalExitLots = 0;
-    let totalTokensUsed = 0;
+    let totalTradeFeeTokens = 0;
+    let totalConnectionEvents = 0;
+    let totalConnectionTokens = 0;
 
     for (const d of debits) {
       const uid = d.userId;
       const isEntry = d.reason.startsWith('ALGO_ENTRY:');
+      const isExit = d.reason.startsWith('ALGO_EXIT:');
+      const isConnection = d.reason.startsWith('ALGO_CONNECTION_CHARGE_');
+
       let meta = {};
       try {
         const parts = d.reason.split('|');
@@ -357,6 +363,9 @@ class AlgoTokenBillingService {
           exitLots: 0,
           entryTokens: 0,
           exitTokens: 0,
+          tradeFeeTokens: 0,
+          connectionChargeTokens: 0,
+          connectionEvents: 0,
           totalTokensCollected: 0,
           todayUsage: 0,
           lastTradeAt: d.timestamp,
@@ -369,18 +378,26 @@ class AlgoTokenBillingService {
         userSummary[uid].entryTrades += 1;
         userSummary[uid].entryLots += lots;
         userSummary[uid].entryTokens += d.amount;
+        userSummary[uid].tradeFeeTokens += d.amount;
         totalEntries += 1;
         totalEntryLots += lots;
-      } else {
+        totalTradeFeeTokens += d.amount;
+      } else if (isExit) {
         userSummary[uid].exitTrades += 1;
         userSummary[uid].exitLots += lots;
         userSummary[uid].exitTokens += d.amount;
+        userSummary[uid].tradeFeeTokens += d.amount;
         totalExits += 1;
         totalExitLots += lots;
+        totalTradeFeeTokens += d.amount;
+      } else if (isConnection) {
+        userSummary[uid].connectionEvents += 1;
+        userSummary[uid].connectionChargeTokens += d.amount;
+        totalConnectionEvents += 1;
+        totalConnectionTokens += d.amount;
       }
 
       userSummary[uid].totalTokensCollected += d.amount;
-      totalTokensUsed += d.amount;
 
       if (d.timestamp >= todayStart) {
         userSummary[uid].todayUsage += d.amount;
@@ -388,12 +405,12 @@ class AlgoTokenBillingService {
 
       userSummary[uid].transactions.push({
         ledgerId: d.id,
-        eventType: isEntry ? 'ALGO_ENTRY' : 'ALGO_EXIT',
+        eventType: isEntry ? 'ALGO_ENTRY' : (isExit ? 'ALGO_EXIT' : 'ALGO_CONNECTION_CHARGE'),
         amount: d.amount,
-        lots,
-        quantity: meta.quantity || (lots * 65),
+        lots: isConnection ? null : lots,
+        quantity: isConnection ? null : (meta.quantity || (lots * 65)),
         timestamp: d.timestamp,
-        symbol: meta.symbol || 'N/A',
+        symbol: meta.symbol || (isConnection ? d.reason : 'N/A'),
         optionType: meta.optionType || 'N/A',
         brokerOrderId: meta.brokerOrderId || d.reason.split(':')[3]?.split('|')[0] || 'N/A',
         balanceBefore: meta.balanceBefore,
@@ -410,13 +427,19 @@ class AlgoTokenBillingService {
     return {
       success: true,
       summary: {
-        totalAlgoEntries: totalEntries,
-        totalAlgoExits: totalExits,
-        totalEntryLots,
-        totalExitLots,
-        totalTrades: totalEntries + totalExits,
-        totalTokensUsed,
-        totalTokensCollected: totalTokensUsed,
+        tradeFees: {
+          totalAlgoEntries: totalEntries,
+          totalAlgoExits: totalExits,
+          totalEntryLots,
+          totalExitLots,
+          totalTrades: totalEntries + totalExits,
+          totalTradeFeeTokens,
+        },
+        connectionCharges: {
+          totalConnectionEvents,
+          totalConnectionTokens,
+        },
+        grandTotalTokensCollected: totalTradeFeeTokens + totalConnectionTokens,
         uniqueUsersCount: userIds.length,
         feesConfig: await this.getConfiguredPerLotFees(),
         date: filter.dateStr || 'ALL_TIME'
@@ -428,6 +451,9 @@ class AlgoTokenBillingService {
           const parts = d.reason.split('|');
           if (parts.length > 1) meta = JSON.parse(parts[1]);
         } catch (_) {}
+        const isEntry = d.reason.startsWith('ALGO_ENTRY:');
+        const isExit = d.reason.startsWith('ALGO_EXIT:');
+        const isConnection = d.reason.startsWith('ALGO_CONNECTION_CHARGE_');
         const lots = meta.lots || Math.max(1, Math.round((meta.quantity || 65) / (meta.symbol?.includes('BANKNIFTY') ? 15 : 65)));
         return {
           id: d.id,
@@ -435,15 +461,14 @@ class AlgoTokenBillingService {
           userName: d.user?.name,
           userEmail: d.user?.email,
           studentId: d.user?.studentId,
-          eventType: d.reason.startsWith('ALGO_ENTRY:') ? 'ALGO_ENTRY' : 'ALGO_EXIT',
-          symbol: meta.symbol || 'N/A',
-          lots,
-          quantity: meta.quantity || (lots * 65),
+          eventType: isEntry ? 'ALGO_ENTRY' : (isExit ? 'ALGO_EXIT' : 'ALGO_CONNECTION_CHARGE'),
+          symbol: meta.symbol || (isConnection ? d.reason : 'N/A'),
+          lots: isConnection ? null : lots,
+          quantity: isConnection ? null : (meta.quantity || (lots * 65)),
           amount: d.amount,
           timestamp: d.timestamp,
           brokerOrderId: meta.brokerOrderId || d.reason.split(':')[3]?.split('|')[0] || 'N/A',
           balanceBefore: meta.balanceBefore,
-          balanceAfter: meta.balanceAfter
         };
       })
     };

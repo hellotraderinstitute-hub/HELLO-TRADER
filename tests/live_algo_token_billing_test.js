@@ -104,14 +104,21 @@ async function runLiveBillingTests() {
     );
   } catch (e) { test('Test J: Wallet Statement Entry Schema Integrity', false, e.message); }
 
-  // K. Admin TODAY Report User-Wise Metric Schema
+  // K. Admin TODAY Report User-Wise Metric Schema & Separate Totals
   try {
     const report = await AlgoTokenBillingService.getAdminTokenReport();
-    test('Test K: Admin Token Report Response Integrity',
-      report.success === true && report.summary && report.summary.feesConfig?.entryFeePerLot === 15,
-      `Admin report feesConfig: Entry ${report.summary?.feesConfig?.entryFeePerLot}/lot | Exit ${report.summary?.feesConfig?.exitFeePerLot}/lot`
+    const hasSeparateTotals = (
+      report.success === true &&
+      report.summary?.tradeFees !== undefined &&
+      report.summary?.connectionCharges !== undefined &&
+      report.summary?.grandTotalTokensCollected !== undefined &&
+      report.summary.feesConfig?.entryFeePerLot === 15
     );
-  } catch (e) { test('Test K: Admin Token Report Response Integrity', false, e.message); }
+    test('Test K: Admin Token Report Separate Totals & Response Integrity',
+      hasSeparateTotals,
+      `Trade Fees: ${report.summary?.tradeFees?.totalTradeFeeTokens || 0} tokens | Connection Charges: ${report.summary?.connectionCharges?.totalConnectionTokens || 0} tokens | Grand Total: ${report.summary?.grandTotalTokensCollected || 0} tokens`
+    );
+  } catch (e) { test('Test K: Admin Token Report Separate Totals & Response Integrity', false, e.message); }
 
   console.log('\n================================================================================');
   console.log(`TEST SUITE RESULTS: ${passed} / ${total} PASSED (${Math.round(passed/total * 100)}%)`);
