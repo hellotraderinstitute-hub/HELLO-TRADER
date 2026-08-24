@@ -4,10 +4,11 @@ import {
   Zap, Shield, AlertTriangle, ArrowLeft, CheckCircle,
   Copy, RefreshCw, Power, Trash2, Key, Link2, Clock,
   Activity, Settings, Lock, Eye, EyeOff, Terminal, Check,
-  Sliders, Edit3, Plus, X, ArrowUpRight, ArrowDownRight, Layers
+  Sliders, Edit3, Plus, X, ArrowUpRight, ArrowDownRight, Layers, Server
 } from 'lucide-react';
 import apiClient from '../lib/axios';
 import { useTrading } from '../context/TradingContext';
+import ExecutionAgentDashboard from './ExecutionAgentDashboard';
 
 const BROKERS = [
   { id: 'DHAN', name: 'Dhan', icon: '⚡', fields: ['clientId', 'accessToken'] },
@@ -19,6 +20,35 @@ const BROKERS = [
 ];
 
 const CONSENT_TEXT = `I authorize Hello Trader to send orders to my connected broker account based on my selected automation settings. I understand that trading involves market risk, past performance does not guarantee future results, no returns are guaranteed, and I remain fully responsible for my own trading decisions and outcomes. I understand I can disconnect my broker at any time.`;
+
+function getBrokerFieldLabel(broker, field) {
+  if (broker === 'ANGELONE' && (field === 'password' || field === 'pin')) return 'PIN / MPIN';
+  return field.replace(/([A-Z])/g, ' $1');
+}
+
+function getBrokerFieldPlaceholder(broker, field) {
+  if (broker === 'DHAN') {
+    if (field === 'clientId') return 'e.g. 1100346083 (Dhan Numeric Client ID)';
+    if (field === 'accessToken') return 'Enter Dhan 24-Hour Access Token';
+  }
+  if (broker === 'ANGELONE') {
+    if (field === 'clientId') return 'e.g. A123456 (Angel One Client ID)';
+    if (field === 'apiKey') return 'Enter Angel One SmartAPI Key';
+    if (field === 'password' || field === 'pin') return 'Enter Angel One PIN / MPIN';
+    if (field === 'totpSecret') return 'Enter 32-digit Authenticator TOTP Secret';
+  }
+  if (broker === 'UPSTOX') {
+    if (field === 'apiKey') return 'Enter Upstox API Key';
+    if (field === 'apiSecret') return 'Enter Upstox API Secret';
+    if (field === 'accessToken') return 'Enter Upstox Access Token';
+  }
+  if (broker === 'FYERS') {
+    if (field === 'clientId') return 'e.g. FY12345 (Fyers Client ID)';
+    if (field === 'apiKey') return 'Enter Fyers App ID';
+    if (field === 'accessToken') return 'Enter Fyers Access Token';
+  }
+  return `Enter your ${getBrokerFieldLabel(broker, field)}`;
+}
 
 export default function AlgoTrading({ user, onBack }) {
   const { isExpiredTrial, openRechargeModal, authLoading } = useTrading();
@@ -41,6 +71,14 @@ export default function AlgoTrading({ user, onBack }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState('CONNECTIONS');
   const [copiedToken, setCopiedToken] = useState(null);
+
+  // ── Edit Credentials State ──
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [selectedConnForUpdate, setSelectedConnForUpdate] = useState(null);
+  const [updateFields, setUpdateFields] = useState({});
+  const [updateDisplayName, setUpdateDisplayName] = useState('');
+  const [updateSubmitting, setUpdateSubmitting] = useState(false);
+  const [updateError, setUpdateError] = useState(null);
 
   // ── Trigger Config (Custom Bridge) State ──
   const [selectedConnForTriggers, setSelectedConnForTriggers] = useState(null);
@@ -132,12 +170,55 @@ export default function AlgoTrading({ user, onBack }) {
     } catch (_) {}
   }, []);
 
+  const [algoPositions, setAlgoPositions] = useState([]);
+  const [supportedBrokers, setSupportedBrokers] = useState(BROKERS);
+  const [isKilling, setIsKilling] = useState(false);
+
+  const fetchAlgoPositions = useCallback(async () => {
+    try {
+      const res = await apiClient.get('/algo/positions');
+      if (res.data?.success) {
+        setAlgoPositions(res.data.positions || []);
+      }
+    } catch (_) {}
+  }, []);
+
+  const fetchBrokers = useCallback(async () => {
+    try {
+      const res = await apiClient.get('/algo/brokers');
+      if (res.data?.success && Array.isArray(res.data.brokers)) {
+        setSupportedBrokers(res.data.brokers);
+      }
+    } catch (_) {}
+  }, []);
+
+  const handleKillAllAlgo = async () => {
+    if (!confirm("⚠️ EMERGENCY KILL ALL ALGO: Are you sure you want to immediately stop all algo strategies and emergency close all open algo positions?")) {
+      return;
+    }
+    setIsKilling(true);
+    try {
+      const res = await apiClient.post('/algo/kill-all');
+      if (res.data?.success) {
+        alert("Emergency Kill Switch executed successfully! All active algo strategies stopped.");
+        fetchConnections();
+        fetchAlgoPositions();
+      }
+    } catch (err) {
+      alert(err.response?.data?.error || "Failed to execute emergency kill switch");
+    } finally {
+      setIsKilling(false);
+    }
+  };
+
   useEffect(() => {
     fetchConnections();
     fetchLogs();
-    const timer = setInterval(() => { fetchLogs(); }, 5000);
+    fetchBrokers();
+    fetchAlgoPositions();
+    const timer = setInterval(() => { fetchLogs(); fetchAlgoPositions(); }, 5000);
     return () => clearInterval(timer);
-  }, [fetchConnections, fetchLogs]);
+  }, [fetchConnections, fetchLogs, fetchBrokers, fetchAlgoPositions]);
 
   useEffect(() => {
     if (selectedConnForTriggers) {
@@ -157,8 +238,8 @@ export default function AlgoTrading({ user, onBack }) {
         scriptType: existing.scriptType || 'OPTION',
         lots: existing.lots || 1,
         expiryType: existing.expiryType || 'WEEKLY',
-        expiryGap: existing.expiryGap || 0,
-        strikeOffset: existing.strikeOffset || 0,
+        expiryGap: existing.expiryGap ?? 0,
+        strikeOffset: existing.strikeOffset ?? 0,
         strikeStep: existing.strikeStep || 50,
         optionType: existing.optionType || (direction === 'UPSIDE' ? 'CE' : 'PE'),
         orderSide: existing.orderSide || 'BUY',
@@ -209,6 +290,12 @@ export default function AlgoTrading({ user, onBack }) {
   const handleConnect = async (e) => {
     e.preventDefault();
     if (!consentAccepted) return alert('You must explicitly accept authorization terms.');
+
+    // Client ID Validation: Prevent website/admin login email from being submitted
+    if (formData.clientId && formData.clientId.trim().includes('@')) {
+      return alert('❌ Invalid Client ID: Please enter your broker numeric Client ID (e.g. 1100346083), NOT your website login email.');
+    }
+
     setIsSubmitting(true);
     try {
       const res = await apiClient.post('/algo/connect', {
@@ -250,6 +337,63 @@ export default function AlgoTrading({ user, onBack }) {
     fetchConnections();
   };
 
+  const handleOpenUpdateModal = (conn) => {
+    setSelectedConnForUpdate(conn);
+    setUpdateDisplayName(conn.displayName || '');
+    // Pre-populate only visible fields. Keep passwords/secrets blank.
+    const initialFields = {};
+    const brokerMeta = BROKERS.find(b => b.id === conn.broker);
+    if (brokerMeta) {
+      brokerMeta.fields.forEach(field => {
+        const isSecret = field.toLowerCase().includes('secret') ||
+                        field.toLowerCase().includes('token') ||
+                        field.toLowerCase().includes('password');
+        if (!isSecret) {
+          initialFields[field] = conn[field] || '';
+        } else {
+          initialFields[field] = ''; // Start blank for secrets
+        }
+      });
+    }
+    setUpdateFields(initialFields);
+    setUpdateError(null);
+    setShowUpdateModal(true);
+  };
+
+  const handleUpdateCredentials = async (e) => {
+    e.preventDefault();
+    if (!selectedConnForUpdate) return;
+
+    if (updateFields.clientId && updateFields.clientId.trim().includes('@')) {
+      setUpdateError('Invalid Client ID: Please enter your broker numeric Client ID, not an email address.');
+      return;
+    }
+
+    setUpdateSubmitting(true);
+    setUpdateError(null);
+
+    try {
+      const payload = {
+        displayName: updateDisplayName,
+        ...updateFields
+      };
+
+      const res = await apiClient.put(`/algo/connections/${selectedConnForUpdate.id}/credentials`, payload);
+
+      if (res.data?.success) {
+        alert('✅ Connection credentials updated and verified successfully!');
+        setShowUpdateModal(false);
+        fetchConnections();
+      } else {
+        setUpdateError(res.data?.message || 'Verification failed. Please check credentials.');
+      }
+    } catch (err) {
+      setUpdateError(err.response?.data?.message || err.message || 'Failed to update credentials.');
+    } finally {
+      setUpdateSubmitting(false);
+    }
+  };
+
   const copyToClipboard = (text, token) => {
     navigator.clipboard.writeText(text);
     setCopiedToken(token);
@@ -277,7 +421,7 @@ export default function AlgoTrading({ user, onBack }) {
         </div>
 
         {/* Tab Buttons */}
-        <div className="flex bg-[#0B0E14] p-1 rounded-xl border border-white/10 text-xs font-bold flex-wrap gap-1">
+        <div className="flex bg-[#0B0E14] p-1 rounded-xl border border-white/10 text-xs font-bold flex-wrap gap-1 items-center">
           <button
             onClick={() => setActiveTab('TRIGGERS')}
             className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${activeTab === 'TRIGGERS' ? 'bg-[#00D4FF] text-black' : 'text-gray-400 hover:text-white'}`}
@@ -285,10 +429,23 @@ export default function AlgoTrading({ user, onBack }) {
             🎛️ CUSTOM BRIDGE CONFIG
           </button>
           <button
+            onClick={() => setActiveTab('AGENT')}
+            className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${activeTab === 'AGENT' ? 'bg-[#00D4FF] text-black font-black' : 'text-gray-400 hover:text-white'}`}
+          >
+            <Server className="w-3.5 h-3.5" />
+            EXECUTION AGENT
+          </button>
+          <button
             onClick={() => setActiveTab('CONNECTIONS')}
             className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${activeTab === 'CONNECTIONS' ? 'bg-[#00D4FF] text-black' : 'text-gray-400 hover:text-white'}`}
           >
             TERMINALS ({connections.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('POSITIONS')}
+            className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${activeTab === 'POSITIONS' ? 'bg-[#00D4FF] text-black' : 'text-gray-400 hover:text-white'}`}
+          >
+            POSITIONS ({algoPositions.length})
           </button>
           <button
             onClick={() => setActiveTab('CONNECT_NEW')}
@@ -300,7 +457,15 @@ export default function AlgoTrading({ user, onBack }) {
             onClick={() => setActiveTab('LOGS')}
             className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${activeTab === 'LOGS' ? 'bg-[#00D4FF] text-black' : 'text-gray-400 hover:text-white'}`}
           >
-            WEBHOOK LOGS ({logs.length})
+            LOGS ({logs.length})
+          </button>
+          <button
+            onClick={handleKillAllAlgo}
+            disabled={isKilling}
+            className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white font-extrabold rounded-lg text-xs transition-all shadow-[0_0_15px_rgba(239,68,68,0.4)] flex items-center gap-1 cursor-pointer"
+          >
+            <Power className="w-3.5 h-3.5" />
+            {isKilling ? 'KILLING...' : 'EMERGENCY KILL ALL'}
           </button>
         </div>
       </div>
@@ -443,6 +608,58 @@ export default function AlgoTrading({ user, onBack }) {
         </div>
       )}
 
+      {/* ── EXECUTION AGENT TAB (PHASE 4) ── */}
+      {activeTab === 'AGENT' && (
+        <ExecutionAgentDashboard connections={connections} />
+      )}
+
+      {/* ── POSITIONS TAB ── */}
+      {activeTab === 'POSITIONS' && (
+        <div className="space-y-4">
+          <div className="bg-[#161B22] border border-white/10 rounded-2xl p-5 space-y-3">
+            <h3 className="font-bold text-xs text-white uppercase tracking-wider flex items-center gap-2">
+              <Layers className="w-4 h-4 text-cyan-400" /> Live Algo Positions ({algoPositions.length})
+            </h3>
+            {algoPositions.length === 0 ? (
+              <div className="text-center py-8 text-gray-500 text-xs">
+                No active algo positions currently open.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="border-b border-white/10 text-gray-400 text-[10px] uppercase font-mono">
+                      <th className="p-2">Symbol</th>
+                      <th className="p-2">Side</th>
+                      <th className="p-2">Lots</th>
+                      <th className="p-2">Entry Price</th>
+                      <th className="p-2">LTP</th>
+                      <th className="p-2">P&L</th>
+                      <th className="p-2">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5 font-mono">
+                    {algoPositions.map((pos, idx) => (
+                      <tr key={pos.id || idx} className="hover:bg-white/5">
+                        <td className="p-2 font-bold text-white">{pos.symbol}</td>
+                        <td className={`p-2 font-bold ${pos.orderSide === 'BUY' ? 'text-green-400' : 'text-red-400'}`}>{pos.orderSide}</td>
+                        <td className="p-2">{pos.lots || 1}</td>
+                        <td className="p-2">₹{pos.entryPrice || 0}</td>
+                        <td className="p-2">₹{pos.ltp || pos.entryPrice || 0}</td>
+                        <td className={`p-2 font-bold ${(pos.pnl || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                          ₹{(pos.pnl || 0).toFixed(2)}
+                        </td>
+                        <td className="p-2 text-cyan-400 font-bold">{pos.status || 'OPEN'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* ── TERMINALS TAB ── */}
       {activeTab === 'CONNECTIONS' && (
         <div className="space-y-4">
@@ -477,8 +694,8 @@ export default function AlgoTrading({ user, onBack }) {
                       <p className="text-[10px] text-gray-400 mt-0.5">Connected: {new Date(c.connectedAt).toLocaleDateString()}</p>
                     </div>
 
-                    <span className={`px-2 py-0.5 rounded text-[9px] font-black border ${c.killSwitchActive ? 'bg-red-500/20 text-red-400 border-red-500/30' : c.isActive ? 'bg-green-500/10 text-green-400 border-green-500/30' : 'bg-amber-500/10 text-amber-400 border-amber-500/30'}`}>
-                      {c.killSwitchActive ? '🛑 KILLED' : c.isActive ? 'ONLINE' : 'UNTESTED'}
+                    <span className={`px-2 py-0.5 rounded text-[9px] font-black border ${c.killSwitchActive ? 'bg-red-500/20 text-red-400 border-red-500/30' : (c.isActive && c.testStatus === 'SUCCESS' && c.clientId) ? 'bg-green-500/10 text-green-400 border-green-500/30' : 'bg-red-500/10 text-red-400 border-red-500/30'}`}>
+                      {c.killSwitchActive ? '🛑 KILLED' : (c.isActive && c.testStatus === 'SUCCESS' && c.clientId) ? 'ONLINE' : 'OFFLINE / UNAUTHENTICATED'}
                     </span>
                   </div>
 
@@ -507,6 +724,13 @@ export default function AlgoTrading({ user, onBack }) {
                     <button onClick={() => handleTestConnection(c.id)} className="flex-1 py-1.5 bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10 rounded-lg text-[10px] font-bold cursor-pointer flex items-center justify-center gap-1">
                       <RefreshCw className="w-3 h-3" /> TEST API
                     </button>
+                    <button
+                      onClick={() => handleOpenUpdateModal(c)}
+                      className="flex-1 py-1.5 bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10 rounded-lg text-[10px] font-bold cursor-pointer flex items-center justify-center gap-1"
+                      title="Edit / Update Credentials"
+                    >
+                      <Edit3 className="w-3 h-3" /> EDIT CREDENTIALS
+                    </button>
                     <button onClick={() => handleToggleKillSwitch(c.id, c.killSwitchActive)} className={`py-1.5 px-2.5 rounded-lg text-[10px] font-bold cursor-pointer flex items-center justify-center gap-1 ${c.killSwitchActive ? 'bg-green-500/10 text-green-400 border border-green-500/30' : 'bg-red-500/10 text-red-400 border border-red-500/30'}`}>
                       <Power className="w-3 h-3" /> {c.killSwitchActive ? 'RESTART' : 'KILL'}
                     </button>
@@ -527,7 +751,14 @@ export default function AlgoTrading({ user, onBack }) {
           <h2 className="text-sm font-black text-white flex items-center gap-2 border-b border-white/10 pb-3">
             <Key className="w-4 h-4 text-[#00D4FF]" /> CONNECT REAL BROKER DEMAT ACCOUNT
           </h2>
-          <form onSubmit={handleConnect} className="space-y-4 text-xs">
+          <form
+            onSubmit={handleConnect}
+            className="space-y-4 text-xs"
+            autoComplete="off"
+            data-lpignore="true"
+            data-1p-ignore="true"
+            data-form-type="other"
+          >
             <div>
               <label className="text-[10px] text-gray-400 font-bold block mb-1.5 uppercase">Select Broker</label>
               <div className="grid grid-cols-3 gap-2">
@@ -545,19 +776,45 @@ export default function AlgoTrading({ user, onBack }) {
 
             <div>
               <label className="text-[10px] text-gray-400 font-bold block mb-1 uppercase">Account Label</label>
-              <input type="text" placeholder="e.g. My Primary Trading Account" value={displayName} onChange={e => setDisplayName(e.target.value)}
-                className="w-full bg-[#0B0E14] border border-white/10 p-2.5 rounded-lg text-white font-bold outline-none focus:border-[#00D4FF]" />
+              <input
+                type="text"
+                name="broker_conn_label_no_autofill"
+                autoComplete="off"
+                data-lpignore="true"
+                data-1p-ignore="true"
+                data-form-type="other"
+                placeholder="e.g. My Primary Trading Account"
+                value={displayName}
+                onChange={e => setDisplayName(e.target.value)}
+                className="w-full bg-[#0B0E14] border border-white/10 p-2.5 rounded-lg text-white font-bold outline-none focus:border-[#00D4FF]"
+              />
             </div>
 
-            {selectedBrokerMeta?.fields.map(field => (
-              <div key={field}>
-                <label className="text-[10px] text-gray-400 font-bold block mb-1 uppercase">{field.replace(/([A-Z])/g, ' $1')}</label>
-                <input
-                  type={field.toLowerCase().includes('secret') || field.toLowerCase().includes('token') || field.toLowerCase().includes('password') ? 'password' : 'text'}
-                  placeholder={`Enter your ${field}`} value={formData[field] || ''} onChange={e => setFormData({ ...formData, [field]: e.target.value })}
-                  className="w-full bg-[#0B0E14] border border-white/10 p-2.5 rounded-lg text-white font-mono outline-none focus:border-[#00D4FF]" required />
-              </div>
-            ))}
+            {selectedBrokerMeta?.fields.map(field => {
+              const isSecret = field.toLowerCase().includes('secret') ||
+                              field.toLowerCase().includes('token') ||
+                              field.toLowerCase().includes('password');
+              return (
+                <div key={field}>
+                  <label className="text-[10px] text-gray-400 font-bold block mb-1 uppercase">
+                    {getBrokerFieldLabel(selectedBroker, field)}
+                  </label>
+                  <input
+                    type={isSecret ? 'password' : 'text'}
+                    name={`broker_${selectedBroker.toLowerCase()}_${field}_no_autofill`}
+                    autoComplete={isSecret ? "new-password" : "off"}
+                    data-lpignore="true"
+                    data-1p-ignore="true"
+                    data-form-type="other"
+                    placeholder={getBrokerFieldPlaceholder(selectedBroker, field)}
+                    value={formData[field] || ''}
+                    onChange={e => setFormData({ ...formData, [field]: e.target.value })}
+                    className="w-full bg-[#0B0E14] border border-white/10 p-2.5 rounded-lg text-white font-mono outline-none focus:border-[#00D4FF]"
+                    required
+                  />
+                </div>
+              );
+            })}
 
             <div className="bg-amber-500/10 border border-amber-500/30 p-3.5 rounded-xl space-y-2">
               <label className="flex items-start gap-2.5 cursor-pointer text-[10px] text-amber-200 leading-relaxed">
@@ -596,7 +853,13 @@ export default function AlgoTrading({ user, onBack }) {
                     {log.signalPrice && <span className="text-gray-400 text-[10px]">Spot @ ₹{log.signalPrice}</span>}
                   </div>
                   {log.resolvedContract && <div className="text-purple-300 text-[10px]">Resolved Contract: {log.resolvedContract}</div>}
-                  {log.actualFillPrice && <div className="text-green-400 text-[10px]">Fill Price: ₹{log.actualFillPrice}</div>}
+                  {log.actualFillPrice ? (
+                    <div className="text-green-400 text-[10px]">Execution Fill Price: ₹{log.actualFillPrice}</div>
+                  ) : (
+                    log.executionStatus !== 'PENDING' && (
+                      <div className="text-gray-500 text-[10px]">Execution Price: NOT EXECUTED</div>
+                    )
+                  )}
                   {log.errorMessage && <div className="text-red-400 text-[10px]">{log.errorMessage}</div>}
                   {log.riskReason && <div className="text-amber-400 text-[10px]">Risk: {log.riskReason}</div>}
                 </div>
@@ -809,6 +1072,121 @@ export default function AlgoTrading({ user, onBack }) {
                   className="flex-1 py-2.5 bg-[#00D4FF] hover:bg-[#00D4FF]/90 text-black font-black rounded-xl shadow-lg cursor-pointer"
                 >
                   {savingTrigger ? 'Saving...' : 'Submit Trigger Config'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── UPDATE CREDENTIALS MODAL ── */}
+      {showUpdateModal && selectedConnForUpdate && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div className="bg-[#161B22] border border-white/10 w-full max-w-md rounded-2xl overflow-hidden shadow-2xl space-y-4">
+            {/* Modal Header */}
+            <div className="bg-[#0B0E14] px-5 py-4 border-b border-white/10 flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <Key className="w-4 h-4 text-[#00D4FF]" />
+                <h3 className="text-sm font-black text-white">
+                  Update Credentials — {selectedConnForUpdate.displayName || selectedConnForUpdate.broker}
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowUpdateModal(false)}
+                className="text-gray-400 hover:text-white cursor-pointer transition-all"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Form */}
+            <form
+              onSubmit={handleUpdateCredentials}
+              className="p-5 space-y-4 text-xs"
+              autoComplete="off"
+              data-lpignore="true"
+              data-1p-ignore="true"
+              data-form-type="other"
+            >
+              {updateError && (
+                <div className="bg-red-500/10 border border-red-500/30 text-red-400 p-3 rounded-xl flex items-start gap-2">
+                  <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span>{updateError}</span>
+                </div>
+              )}
+
+              {/* Display Account Label */}
+              <div>
+                <label className="text-[10px] text-gray-400 font-bold block mb-1 uppercase">Account Label</label>
+                <input
+                  type="text"
+                  name="broker_update_label_no_autofill"
+                  autoComplete="off"
+                  data-lpignore="true"
+                  data-1p-ignore="true"
+                  data-form-type="other"
+                  placeholder="e.g. My Primary Trading Account"
+                  value={updateDisplayName}
+                  onChange={e => setUpdateDisplayName(e.target.value)}
+                  className="w-full bg-[#0B0E14] border border-white/10 p-2.5 rounded-lg text-white font-bold outline-none focus:border-[#00D4FF]"
+                />
+              </div>
+
+              {/* Dynamically Render Fields based on Broker Meta */}
+              {BROKERS.find(b => b.id === selectedConnForUpdate.broker)?.fields.map(field => {
+                const isSecret = field.toLowerCase().includes('secret') ||
+                                field.toLowerCase().includes('token') ||
+                                field.toLowerCase().includes('password');
+                return (
+                  <div key={field}>
+                    <label className="text-[10px] text-gray-400 font-bold block mb-1 uppercase">
+                      {getBrokerFieldLabel(selectedConnForUpdate.broker, field)}
+                    </label>
+                    <input
+                      type={isSecret ? 'password' : 'text'}
+                      name={`broker_update_${selectedConnForUpdate.broker.toLowerCase()}_${field}_no_autofill`}
+                      autoComplete={isSecret ? "new-password" : "off"}
+                      data-lpignore="true"
+                      data-1p-ignore="true"
+                      data-form-type="other"
+                      placeholder={isSecret ? '•••••••• (Enter new to overwrite, leave blank to keep existing)' : getBrokerFieldPlaceholder(selectedConnForUpdate.broker, field)}
+                      value={updateFields[field] || ''}
+                      onChange={e => setUpdateFields({ ...updateFields, [field]: e.target.value })}
+                      className="w-full bg-[#0B0E14] border border-white/10 p-2.5 rounded-lg text-white font-mono outline-none focus:border-[#00D4FF]"
+                      required={!isSecret} // Secrets are not mandatory because user can choose to preserve them
+                    />
+                  </div>
+                );
+              })}
+
+              <div className="bg-[#0B0E14] p-3.5 rounded-xl border border-white/5 space-y-1">
+                <span className="text-[9px] text-[#00D4FF] font-bold block uppercase">Security Compliance Notice</span>
+                <p className="text-[10px] text-gray-400 leading-relaxed">
+                  Your updated access tokens and API secrets are securely encrypted with AES-256 before storage and are validated immediately against the broker's endpoints. No connection fees will be charged.
+                </p>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowUpdateModal(false)}
+                  className="flex-1 py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 font-bold rounded-xl cursor-pointer transition-all"
+                >
+                  CANCEL
+                </button>
+                <button
+                  type="submit"
+                  disabled={updateSubmitting}
+                  className="flex-1 py-3 bg-[#00D4FF] hover:bg-[#00D4FF]/90 text-black font-black rounded-xl shadow-xl transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  {updateSubmitting ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      VALIDATING...
+                    </>
+                  ) : (
+                    'UPDATE & VERIFY'
+                  )}
                 </button>
               </div>
             </form>

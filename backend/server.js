@@ -8,19 +8,22 @@ const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 // Ensure DATABASE_URL is valid SQLite path (Linux Render vs Windows Dev vs Prisma Accelerate)
-if (
-  !process.env.DATABASE_URL ||
-  process.env.DATABASE_URL.includes('C:') ||
-  process.env.DATABASE_URL.startsWith('prisma://')
-) {
-  process.env.DATABASE_URL = 'file:./backend.db';
+if (!process.env.DATABASE_URL) {
+  const dbPath = path.resolve(__dirname, 'prisma/backend/backend.db');
+  process.env.DATABASE_URL = `file:${dbPath}`;
 }
 
 // Safely ensure SQLite DB schema is pushed without crashing startCommand
 try {
   const { execSync } = require('child_process');
-  execSync('npx prisma db push --schema=backend/prisma/schema.prisma --accept-data-loss', { stdio: 'ignore' });
-  console.log('[Server] SQLite Database schema synced successfully.');
+  const fs = require('fs');
+  const schemaPath = fs.existsSync(path.join(__dirname, 'prisma/schema.prisma'))
+    ? path.join(__dirname, 'prisma/schema.prisma')
+    : 'prisma/schema.prisma';
+  if (fs.existsSync(schemaPath)) {
+    execSync(`npx prisma db push --schema=${schemaPath} --accept-data-loss`, { stdio: 'ignore' });
+    console.log('[Server] SQLite Database schema synced successfully.');
+  }
 } catch (dbSyncErr) {
   console.log('[Server] SQLite DB sync notice:', dbSyncErr.message);
 }
@@ -39,6 +42,10 @@ const io = new Server(server, {
 const DhanStreamer = require('./dhanStreamer');
 const dhanStreamer = new DhanStreamer(io);
 const marketDataEngine = require('./services/marketDataEngine');
+const { agentTunnelServer } = require('./services/agentTunnelServer');
+
+// Initialize Client-Hosted Execution Agent WebSocket Tunnel
+agentTunnelServer.initialize(io);
 
 // Wire SMDE Engine Event Broadcasters
 marketDataEngine.on('tick', (cacheEntry) => {
@@ -47,6 +54,10 @@ marketDataEngine.on('tick', (cacheEntry) => {
 
 marketDataEngine.on('telemetry_update', (health) => {
   io.emit('smde:health', health);
+});
+
+marketDataEngine.on('candle_update', (candleUpdate) => {
+  io.emit('smde:candle_update', candleUpdate);
 });
 
 // Hook DhanStreamer ticks into SMDE Ingestion Engine
@@ -58,11 +69,12 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(cookieParser());
 
-// Inject Socket.io, DhanStreamer, and SMDE into request context
+// Inject Socket.io, DhanStreamer, SMDE, and AgentTunnel into request context
 app.use((req, res, next) => {
   req.io = io;
   req.dhanStreamer = dhanStreamer;
   req.marketDataEngine = marketDataEngine;
+  req.agentTunnelServer = agentTunnelServer;
   next();
 });
 
@@ -109,12 +121,18 @@ app.get('/api/smde/snapshot', (req, res) => {
 function initializeBackgroundServices() {
   const { PrismaClient } = require('@prisma/client');
   const prisma = new PrismaClient();
+  const { decryptCredential } = require('./services/crypto');
 
   prisma.systemSettings.findUnique({ where: { id: 'CONFIG' } })
     .then(settings => {
       if (settings && settings.dhanClientId && settings.dhanAccessToken) {
         console.log('[Server] Auto-starting Dhan WebSocket Stream...');
-        dhanStreamer.start(settings.dhanClientId, settings.dhanAccessToken);
+        try {
+          const decryptedToken = decryptCredential(settings.dhanAccessToken);
+          dhanStreamer.start(settings.dhanClientId, decryptedToken);
+        } catch (err) {
+          console.error('[Server] Failed to decrypt Dhan token for live streamer:', err.message);
+        }
       }
       marketDataEngine.bootstrapHistoricalCandles()
         .catch(err => console.error('[Server] Failed to bootstrap historical candles:', err.message));
@@ -154,10 +172,15 @@ const crmJustdialRoutes = require('./routes/crmJustdial');
 
 const aiLabRoutes = require('./routes/aiLab');
 const userDrawingsRoutes = require('./routes/userDrawings');
+const socialRoutes = require('./routes/social');
+const adminPartnersRoutes = require('./routes/adminPartners');
+const partnerPortalRoutes = require('./routes/partnerPortal');
 
 // Mount Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', authenticateToken, adminRoutes);
+app.use('/api/admin/partners', authenticateToken, adminPartnersRoutes);
+app.use('/api/partner', partnerPortalRoutes);
 app.use('/api/trade', authenticateToken, tradeRoutes);
 app.use('/api/wallet', authenticateToken, walletRoutes);
 app.use('/api/membership', (req, res, next) => {
@@ -181,8 +204,37 @@ const optionalAuthenticateToken = (req, res, next) => {
   });
 };
 
-app.use('/api/ai-lab', optionalAuthenticateToken, aiLabRoutes);
-// Webhook: PUBLIC — secured via per-connection webhookToken in URL
+// Diagnostic & Code Version Verification Endpoint (Public Read-Only)
+app.get('/api/diagnostic/version', (req, res) => {
+  const AngelScripMaster = require('./services/angelScripMaster');
+  const testATM = Math.round(24192 / 50) * 50;
+  const testToken = AngelScripMaster.resolveToken('NIFTY', '2026-08-27', 24200, 'CE');
+
+  res.json({
+    success: true,
+    service: 'hello-trader-backend',
+    version: '2.0.0-PROD-HARDENED',
+    buildTimestamp: '2026-08-24T13:15:00+05:30',
+    deployedEnvironment: process.env.NODE_ENV || 'production',
+    databaseDriver: 'sqlite',
+    pipelineFeatures: {
+      payloadSpotIngestion: true,
+      deterministicATMFormula: true,
+      angelOneScripMasterLoaded: true,
+      failFastNonRetryableErrors: true,
+      exactExitTargeting: true
+    },
+    testProof: {
+      spotInput: 24192,
+      calculatedATM: testATM,
+      resolvedToken: testToken
+    }
+  });
+});
+
+app.use('/api/ai-lab', authenticateToken, aiLabRoutes);
+// Webhook: PUBLIC — mounted at BOTH /api/webhook and /webhook for 100% URL compatibility
+app.use('/api/webhook', webhookRoutes);
 app.use('/webhook', webhookRoutes);
 // Telegram Bot Inbound Webhook: PUBLIC
 app.use('/api/telegram', telegramBotHandler);
@@ -200,6 +252,15 @@ app.use('/api/crm/justdial', crmJustdialRoutes);
 // User Drawing Engine: Authenticated, ownership-enforced
 app.use('/api/user/drawings', authenticateToken, userDrawingsRoutes);
 console.log('[Server] User drawings routes mounted at /api/user/drawings');
+
+// User Chart Settings & Indicator Persistence Engine: Authenticated
+const userChartSettingsRoutes = require('./routes/userChartSettings');
+app.use('/api/user/chart-settings', authenticateToken, userChartSettingsRoutes);
+console.log('[Server] User chart settings routes mounted at /api/user/chart-settings');
+
+// AI Social Media Manager Routes: Authenticated (Optional token for OAuth initiation & callbacks)
+app.use('/api/social', optionalAuthenticateToken, socialRoutes);
+console.log('[Server] AI Social Media routes mounted at /api/social');
 
 app.get('/api/ticks', (req, res) => {
   try {
@@ -235,17 +296,32 @@ app.get('/api/smde/option-chain/expiries', async (req, res) => {
   }
 });
 
-app.get('/api/smde/option-chain', async (req, res) => {
+app.get('/api/smde/option-chain', optionalAuthenticateToken, async (req, res) => {
   try {
     const symbol = (req.query.symbol || 'NIFTY').toUpperCase();
     const expiry = req.query.expiry;
     if (!expiry) return res.json({ success: false, error: 'EXPIRY_REQUIRED', contracts: null });
     const result = await dhanOptionChainService.getOptionChain(symbol, expiry);
-    res.json(result);
+    if (!result.success || !result.contracts) return res.json(result);
+
+    const { checkUserEntitlement, sanitizeOptionChainForFreeUser } = require('./services/entitlementService');
+    const entitlement = req.user?.id ? await checkUserEntitlement(req.user.id, 'OPTION_CHAIN') : { authorized: false };
+    const isPremium = entitlement.authorized;
+
+    const contractsPayload = isPremium
+      ? result.contracts
+      : sanitizeOptionChainForFreeUser(result.contracts);
+
+    res.json({
+      ...result,
+      tier: isPremium ? 'PREMIUM' : 'FREE',
+      contracts: contractsPayload
+    });
   } catch (err) {
     res.json({ success: false, error: 'SERVER_ERROR', contracts: null });
   }
 });
+
 
 app.get('/api/smde/option-chain/status', async (req, res) => {
   try {

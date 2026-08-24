@@ -26,19 +26,57 @@ const ShoonyaAdapter = require('./adapters/ShoonyaAdapter');
 const FyersAdapter = require('./adapters/FyersAdapter');
 const GoPocketAdapter = require('./adapters/GoPocketAdapter');
 
+const { ProxyTransportFactory } = require('../../../packages/agent/lib/network/ProxyTransportFactory');
+
 // ─── Adapter Factory ────────────────────────────────────────────────────────
 
-function createAdapter(broker, credentials) {
+function createAdapter(broker, credentials, options = {}) {
   switch (broker.toUpperCase()) {
-    case 'DHAN':       return new DhanAdapter(credentials);
-    case 'ANGELONE':   return new AngelOneAdapter(credentials);
-    case 'UPSTOX':     return new UpstoxAdapter(credentials);
-    case 'SHOONYA':    return new ShoonyaAdapter(credentials);
-    case 'FYERS':      return new FyersAdapter(credentials);
-    case 'GOPOCKET':   return new GoPocketAdapter(credentials);
+    case 'DHAN':       return new DhanAdapter(credentials, options);
+    case 'ANGELONE':   return new AngelOneAdapter(credentials, options);
+    case 'UPSTOX':     return new UpstoxAdapter(credentials, options);
+    case 'SHOONYA':    return new ShoonyaAdapter(credentials, options);
+    case 'FYERS':      return new FyersAdapter(credentials, options);
+    case 'GOPOCKET':   return new GoPocketAdapter(credentials, options);
     default:
       throw new Error(`Unsupported broker: ${broker}. Supported: DHAN, ANGELONE, UPSTOX, SHOONYA, FYERS, GOPOCKET`);
   }
+}
+
+// ─── Proxy Transport Resolver ────────────────────────────────────────────────
+
+async function resolveProxyOptions(connection, explicitOptions = {}) {
+  if (explicitOptions.httpsAgent) return explicitOptions;
+  if (!connection || !connection.userId) return explicitOptions;
+
+  try {
+    const { PrismaClient } = require('@prisma/client');
+    const prisma = new PrismaClient();
+    const assignment = await prisma.clientStaticIpAssignment.findFirst({
+      where: { userId: connection.userId, broker: connection.broker, status: 'VERIFIED' }
+    });
+    if (assignment) {
+      const u = assignment.encryptedProxyUsername ? decryptCredential(assignment.encryptedProxyUsername).trim() : null;
+      const p = assignment.encryptedProxyPassword ? decryptCredential(assignment.encryptedProxyPassword).trim() : null;
+      const proxyConfig = {
+        connectionType: assignment.connectionType || 'HTTPS_PROXY',
+        proxyHost: assignment.proxyHost,
+        proxyPort: assignment.proxyPort,
+        proxyUsername: u,
+        proxyPassword: p,
+      };
+      const { httpsAgent } = ProxyTransportFactory.createAgents(proxyConfig);
+      return {
+        ...explicitOptions,
+        httpsAgent,
+        publicIp: assignment.ipAddress || '151.245.182.52',
+        assignmentId: assignment.id,
+      };
+    }
+  } catch (err) {
+    console.warn('[BrokerGateway] Could not resolve proxy for connection:', err.message);
+  }
+  return explicitOptions;
 }
 
 // ─── Credential Decryptor (AES-256-GCM & Legacy Fallback) ─────────────────────
@@ -56,7 +94,8 @@ function decryptCredentials(connection) {
     apiKey: decrypt(connection.apiKey),
     apiSecret: decrypt(connection.apiSecret),
     accessToken: decrypt(connection.accessToken),
-    password: decrypt(connection.password),
+    password: decrypt(connection.password || connection.apiSecret),
+    pin: decrypt(connection.password || connection.apiSecret),
     totpSecret: decrypt(connection.totpSecret),
     vendorCode: decrypt(connection.vendorCode),
     refreshToken: decrypt(connection.refreshToken),
@@ -73,12 +112,20 @@ function encryptValue(plainText) {
 // ─── Retry with Exponential Backoff ─────────────────────────────────────────
 
 async function retryWithBackoff(fn, maxRetries = 3, baseDelayMs = 500) {
+  let lastResult = null;
   let lastError;
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       const result = await fn();
       if (result.success) return result;
+      lastResult = result;
       lastError = new Error(result.message);
+
+      // Fail fast on non-retryable deterministic errors
+      const nonRetryable = ['MISSING_SYMBOL_TOKEN', 'INVALID_SYMBOL_TOKEN', 'VALIDATION_FAILED', 'BROKER_CONNECTION_INACTIVE', 'AUTHENTICATION_FAILED', 'Invalid symboltoken'];
+      if (nonRetryable.some(errCode => (result.message || '').includes(errCode))) {
+        break;
+      }
     } catch (err) {
       lastError = err;
     }
@@ -87,7 +134,12 @@ async function retryWithBackoff(fn, maxRetries = 3, baseDelayMs = 500) {
       await new Promise(r => setTimeout(r, delay));
     }
   }
-  return { success: false, orderId: null, message: `All ${maxRetries} retries failed: ${lastError?.message}`, rawResponse: {} };
+  return {
+    success: false,
+    orderId: null,
+    message: lastResult?.message || `All ${maxRetries} retries failed: ${lastError?.message}`,
+    rawResponse: lastResult?.rawResponse || {}
+  };
 }
 
 // ─── BrokerGateway Class ─────────────────────────────────────────────────────
@@ -96,12 +148,14 @@ class BrokerGateway {
   /**
    * Test broker connection with given connection record from DB.
    * @param {Object} connection - AlgoBrokerConnection record from Prisma
+   * @param {Object} [options]
    * @returns {Promise<{success, message, profile}>}
    */
-  static async testConnection(connection) {
+  static async testConnection(connection, options = {}) {
     try {
+      const resolvedOpts = await resolveProxyOptions(connection, options);
       const credentials = decryptCredentials(connection);
-      const adapter = createAdapter(connection.broker, credentials);
+      const adapter = createAdapter(connection.broker, credentials, resolvedOpts);
       return await adapter.testConnection();
     } catch (err) {
       return { success: false, message: err.message, profile: null };
@@ -113,12 +167,14 @@ class BrokerGateway {
    * Includes automatic retry with exponential backoff.
    * @param {Object} order - Normalized order object
    * @param {Object} connection - AlgoBrokerConnection record from Prisma
+   * @param {Object} [options]
    * @returns {Promise<{success, orderId, message, rawResponse, attempts}>}
    */
-  static async executeOrder(order, connection) {
+  static async executeOrder(order, connection, options = {}) {
     try {
+      const resolvedOpts = await resolveProxyOptions(connection, options);
       const credentials = decryptCredentials(connection);
-      const adapter = createAdapter(connection.broker, credentials);
+      const adapter = createAdapter(connection.broker, credentials, resolvedOpts);
 
       let attempts = 0;
       const result = await retryWithBackoff(async () => {
