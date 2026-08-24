@@ -88,17 +88,18 @@ router.get('/', async (req, res) => {
       let algoMeta = null;
       let displayReason = l.reason;
 
-      if (l.reason.startsWith('ALGO_ENTRY:') || l.reason.startsWith('ALGO_EXIT:')) {
+      if (l.reason.startsWith('ALGO_ENTRY:') || l.reason.startsWith('ALGO_EXIT:') || l.reason.startsWith('ALGO_EXIT_PREPAID:')) {
         try {
           const parts = l.reason.split('|');
           if (parts.length > 1) {
             algoMeta = JSON.parse(parts[1]);
-            const eventLabel = algoMeta.type === 'ALGO_ENTRY' ? 'ALGO BUY BROKERAGE' : 'ALGO SELL BROKERAGE';
+            const isExitPrepaid = l.reason.startsWith('ALGO_EXIT_PREPAID:');
+            const eventLabel = isExitPrepaid ? 'ALGO EXIT BROKERAGE (PREPAID ADJUSTMENT)' : (algoMeta.label || 'ALGO PREPAID BROKERAGE (ROUND-TRIP)');
             displayReason = `${eventLabel}: ${algoMeta.symbol} (${algoMeta.lots} Lot${algoMeta.lots > 1 ? 's' : ''} / ${algoMeta.quantity} Qty) | Order: ${algoMeta.brokerOrderId}`;
           } else {
             const isEntry = l.reason.startsWith('ALGO_ENTRY:');
             const orderId = l.reason.split(':')[3] || 'N/A';
-            displayReason = `${isEntry ? 'ALGO BUY BROKERAGE' : 'ALGO SELL BROKERAGE'}: Order ${orderId}`;
+            displayReason = `${isEntry ? 'ALGO PREPAID BROKERAGE' : 'ALGO EXIT BROKERAGE'}: Order ${orderId}`;
           }
         } catch (_) {}
       } else if (l.reason.startsWith('ALGO_CONNECTION_CHARGE_')) {

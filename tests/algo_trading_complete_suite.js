@@ -121,18 +121,17 @@ async function runTestSuite() {
     );
   } catch (e) { record('Test H: Failed Order -> 0 Token Deduction', false, e.message); }
 
-  // --- TEST I: Admin Per-Lot Tiered Brokerage (1 lot = 10, 5 lots = 60, 5 lots entry+exit = 120) ---
+  // --- TEST I: Admin Upfront Prepaid Round-Trip Brokerage (1 lot = 20, 5 lots = 120, Exit = 0) ---
   try {
-    const oneLotEntry = await AlgoTokenBillingService.calculateEntryTokens(1);
-    const fiveLotEntry = await AlgoTokenBillingService.calculateEntryTokens(5);
-    const fiveLotExit = await AlgoTokenBillingService.calculateExitTokens(5);
-    const fiveLotRoundTrip = fiveLotEntry + fiveLotExit;
+    const oneLotPrepaid = await AlgoTokenBillingService.calculateEntryTokens(1);
+    const fiveLotPrepaid = await AlgoTokenBillingService.calculateEntryTokens(5);
+    const exitDebit = await AlgoTokenBillingService.calculateExitTokens(5);
 
-    record('Test I: Admin Per-Lot Tiered Brokerage (1 Lot=10, 5 Lots=60, 5 Lots Round-Trip=120)',
-      oneLotEntry === 10 && fiveLotEntry === 60 && fiveLotExit === 60 && fiveLotRoundTrip === 120,
-      `1 Lot: ${oneLotEntry} tokens | 5 Lots BUY: ${fiveLotEntry} tokens | 5 Lots SELL: ${fiveLotExit} tokens | 5 Lots Round-Trip: ${fiveLotRoundTrip} tokens`
+    record('Test I: Admin Upfront Prepaid Brokerage (1 Lot=20, 5 Lots=120, Exit Debit=0)',
+      oneLotPrepaid === 20 && fiveLotPrepaid === 120 && exitDebit === 0,
+      `1 Lot Entry: ${oneLotPrepaid} tokens | 5 Lots Entry: ${fiveLotPrepaid} tokens | Exit Debit: ${exitDebit} tokens (Prepaid at entry)`
     );
-  } catch (e) { record('Test I: Admin Per-Lot Tiered Brokerage (1 Lot=10, 5 Lots=60, 5 Lots Round-Trip=120)', false, e.message); }
+  } catch (e) { record('Test I: Admin Upfront Prepaid Brokerage (1 Lot=20, 5 Lots=120, Exit Debit=0)', false, e.message); }
 
   // --- TEST J: Same Webhook Replay -> Idempotency Check ---
   try {
