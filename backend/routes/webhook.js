@@ -192,12 +192,14 @@ router.post('/tv/:webhookToken', async (req, res) => {
               // Deduct Exit Token Fee (Default: 15) for successful algo square-off
               try {
                 const { AlgoTokenBillingService } = require('../services/algoTokenBillingService');
+                const posLots = openPos.lots || Math.max(1, Math.round((openPos.quantity || 65) / (openPos.symbol.includes('BANKNIFTY') ? 15 : 65)));
                 await AlgoTokenBillingService.deductExitFee({
                   userId,
                   connectionId: connection.id,
                   brokerOrderId: exitResult.orderId,
                   symbol: openPos.symbol,
                   quantity: openPos.quantity,
+                  lots: posLots,
                   tradeId: openPos.id,
                   exitReason: 'SIGNAL_EXIT',
                   req
@@ -301,12 +303,14 @@ router.post('/tv/:webhookToken', async (req, res) => {
               if (oppExec.success && oppExec.orderId) {
                 try {
                   const { AlgoTokenBillingService } = require('../services/algoTokenBillingService');
+                  const oppLots = oppPos.lots || Math.max(1, Math.round((oppPos.quantity || 65) / (oppPos.symbol.includes('BANKNIFTY') ? 15 : 65)));
                   await AlgoTokenBillingService.deductExitFee({
                     userId,
                     connectionId: connection.id,
                     brokerOrderId: oppExec.orderId,
                     symbol: oppPos.symbol,
                     quantity: oppPos.quantity,
+                    lots: oppLots,
                     tradeId: oppPos.id,
                     exitReason: 'REVERSAL_EXIT',
                     req
@@ -595,12 +599,16 @@ router.post('/tv/:webhookToken', async (req, res) => {
           // Deduct Token Fee for successful live algo entry
           try {
             const { AlgoTokenBillingService } = require('../services/algoTokenBillingService');
+            const entryLots = Math.max(1, Math.round(qty / (finalSymbol.includes('BANKNIFTY') ? 15 : (finalSymbol.includes('FINNIFTY') ? 40 : 65))));
             await AlgoTokenBillingService.deductEntryFee({
               userId,
               connectionId: connection.id,
               brokerOrderId: execResult.orderId,
               symbol: finalSymbol,
               orderAction,
+              quantity: qty,
+              lots: entryLots,
+              tradeId: position.id,
               req
             });
           } catch (billingErr) {
