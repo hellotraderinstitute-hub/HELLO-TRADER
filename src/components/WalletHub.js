@@ -240,12 +240,14 @@ export default function WalletHub() {
 
       {/* Wallet Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
-        <div className="bg-[#161B22] p-4 rounded-xl border border-white/10">
-          <span className="text-gray-400 text-[10px] font-bold">CASH TOKENS</span>
-          <div className="text-2xl font-extrabold text-[#00FF41] mt-1">
-            🪙 {availableTokens.toLocaleString()} <span className="text-xs font-bold text-gray-400">Tokens</span>
+        <div className="bg-[#161B22] p-5 rounded-xl border border-cyan-500/30 shadow-lg">
+          <span className="text-gray-400 text-xs font-bold uppercase tracking-wider block">AVAILABLE BALANCE</span>
+          <div className="text-3xl font-black text-[#00FF41] mt-1 font-mono">
+            {availableTokens.toLocaleString()} Tokens
           </div>
-          <span className="text-[10px] text-[#00FF41] mt-1 font-bold block">Equivalent Value: ₹{(availableTokens * (tokenExchangeRate || 1)).toLocaleString()} INR (Rate: 1 Token = ₹{tokenExchangeRate || 1} INR)</span>
+          <span className="text-[11px] text-gray-400 mt-1 font-medium block">
+            Equivalent Value: ₹{(availableTokens * (tokenExchangeRate || 1)).toLocaleString()} INR
+          </span>
         </div>
 
         {/* RECHARGE BONUS / CURRENT OFFER CARD */}
@@ -358,7 +360,31 @@ export default function WalletHub() {
                         {tx.walletType}
                       </span>
                     </td>
-                    <td className="py-2.5 px-3 text-gray-300 font-medium">{tx.reason}</td>
+                    <td className="py-2.5 px-3 text-gray-300 font-medium">
+                      {tx.algoMeta ? (
+                        <div className="space-y-0.5">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span className={`px-1.5 py-0.5 rounded text-[9px] font-black tracking-wider ${
+                              tx.algoMeta.type === 'ALGO_ENTRY' 
+                                ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30' 
+                                : 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
+                            }`}>
+                              {tx.algoMeta.type === 'ALGO_ENTRY' ? '⚡ ALGO ENTRY' : '🏁 ALGO EXIT'}
+                            </span>
+                            <strong className="text-white text-xs">{tx.algoMeta.symbol}</strong>
+                            <span className="text-[10px] text-gray-400">({tx.algoMeta.lots} Lot{tx.algoMeta.lots > 1 ? 's' : ''} / {tx.algoMeta.quantity} Qty)</span>
+                          </div>
+                          <div className="text-[10px] text-gray-400 flex flex-wrap items-center gap-2 font-mono">
+                            <span>Order: <strong className="text-gray-300">{tx.algoMeta.brokerOrderId}</strong></span>
+                            {tx.algoMeta.balanceBefore !== undefined && (
+                              <span className="text-gray-500">| Bal: {tx.algoMeta.balanceBefore} ➔ {tx.algoMeta.balanceAfter}</span>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        tx.displayReason || tx.reason
+                      )}
+                    </td>
                     <td className="py-2.5 px-3">
                       <span className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase ${
                         tx.type === 'CREDIT' ? 'bg-[#00FF41]/20 text-[#00FF41]' : 'bg-red-500/20 text-red-400'

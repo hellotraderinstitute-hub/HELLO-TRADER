@@ -37,7 +37,7 @@ router.get('/payment-config', async (req, res) => {
 // Get Wallet Balance and Ledger
 router.get('/', async (req, res) => {
   try {
-    const ledgers = await prisma.ledger.findMany({
+    const rawLedgers = await prisma.ledger.findMany({
       where: { userId: req.user.id },
       orderBy: { timestamp: 'desc' }
     });
@@ -53,7 +53,7 @@ router.get('/', async (req, res) => {
     let paperBalance = 0;
     let referralBalance = 0;
 
-    const paperLedgers = ledgers.filter(l => l.walletType === 'PAPER');
+    const paperLedgers = rawLedgers.filter(l => l.walletType === 'PAPER');
     if (paperLedgers.length === 0) {
       const initialCapital = settings?.paperBalance || 5000000;
       try {
@@ -66,7 +66,7 @@ router.get('/', async (req, res) => {
             reason: 'WELCOME_PAPER_MARGIN'
           }
         });
-        ledgers.unshift(welcomeLedger);
+        rawLedgers.unshift(welcomeLedger);
         paperBalance = initialCapital;
       } catch (_) {
         paperBalance = initialCapital;
@@ -77,10 +77,37 @@ router.get('/', async (req, res) => {
       });
     }
 
-    ledgers.forEach(l => {
+    rawLedgers.forEach(l => {
       const amt = l.type === 'CREDIT' ? l.amount : -l.amount;
       if (['TOKEN', 'RECHARGE', 'BONUS'].includes(l.walletType)) tokenBalance += amt;
       if (l.walletType === 'REFERRAL') referralBalance += amt;
+    });
+
+    // Format ledgers with parsed metadata for Algo trades
+    const ledgers = rawLedgers.map(l => {
+      let algoMeta = null;
+      let displayReason = l.reason;
+
+      if (l.reason.startsWith('ALGO_ENTRY:') || l.reason.startsWith('ALGO_EXIT:')) {
+        try {
+          const parts = l.reason.split('|');
+          if (parts.length > 1) {
+            algoMeta = JSON.parse(parts[1]);
+            const eventLabel = algoMeta.type === 'ALGO_ENTRY' ? 'ALGO ENTRY' : 'ALGO EXIT';
+            displayReason = `${eventLabel}: ${algoMeta.symbol} (${algoMeta.lots} Lot${algoMeta.lots > 1 ? 's' : ''} / ${algoMeta.quantity} Qty) | Order: ${algoMeta.brokerOrderId}`;
+          } else {
+            const isEntry = l.reason.startsWith('ALGO_ENTRY:');
+            const orderId = l.reason.split(':')[3] || 'N/A';
+            displayReason = `${isEntry ? 'ALGO ENTRY' : 'ALGO EXIT'}: Order ${orderId}`;
+          }
+        } catch (_) {}
+      }
+
+      return {
+        ...l,
+        displayReason,
+        algoMeta
+      };
     });
 
     res.json({
