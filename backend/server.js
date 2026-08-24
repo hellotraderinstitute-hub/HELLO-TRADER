@@ -7,16 +7,26 @@ const cookieParser = require('cookie-parser');
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 
-// Ensure DATABASE_URL is valid SQLite path (Linux Render vs Windows Dev vs Prisma Accelerate)
-if (!process.env.DATABASE_URL) {
-  const dbPath = path.resolve(__dirname, 'prisma/backend/backend.db');
+const fs = require('fs');
+
+// Ensure DATABASE_URL is a valid SQLite path for Linux Render vs Local Dev
+if (
+  !process.env.DATABASE_URL ||
+  process.env.DATABASE_URL.includes('C:') ||
+  process.env.DATABASE_URL.includes('/hello-trader/') ||
+  process.env.DATABASE_URL.startsWith('prisma://')
+) {
+  const dbDir = path.resolve(__dirname, 'prisma');
+  if (!fs.existsSync(dbDir)) {
+    try { fs.mkdirSync(dbDir, { recursive: true }); } catch (_) {}
+  }
+  const dbPath = path.join(dbDir, 'backend.db');
   process.env.DATABASE_URL = `file:${dbPath}`;
 }
 
 // Safely ensure SQLite DB schema is pushed without crashing startCommand
 try {
   const { execSync } = require('child_process');
-  const fs = require('fs');
   const schemaPath = fs.existsSync(path.join(__dirname, 'prisma/schema.prisma'))
     ? path.join(__dirname, 'prisma/schema.prisma')
     : 'prisma/schema.prisma';
