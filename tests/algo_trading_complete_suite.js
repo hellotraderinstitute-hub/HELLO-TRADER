@@ -121,14 +121,14 @@ async function runTestSuite() {
     );
   } catch (e) { record('Test H: Failed Order -> 0 Token Deduction', false, e.message); }
 
-  // --- TEST I: Successful entry -> exactly configured token deduction ---
+  // --- TEST I: Successful entry + exit -> exactly configured two-sided token deduction (15 + 15 = 30) ---
   try {
-    const tokensPerTrade = await AlgoTokenBillingService.getConfiguredTokensPerTrade();
-    record('Test I: Configured Token Deduction per Entry',
-      tokensPerTrade === 15,
-      `Standard configured fee: ${tokensPerTrade} tokens/trade`
+    const fees = await AlgoTokenBillingService.getConfiguredFees();
+    record('Test I: Two-Sided Token Deduction (15 Entry + 15 Exit = 30 Total)',
+      fees.entryFee === 15 && fees.exitFee === 15 && fees.totalFee === 30,
+      `Entry: ${fees.entryFee} tokens | Exit: ${fees.exitFee} tokens | Total Complete Trade: ${fees.totalFee} tokens`
     );
-  } catch (e) { record('Test I: Configured Token Deduction per Entry', false, e.message); }
+  } catch (e) { record('Test I: Two-Sided Token Deduction (15 Entry + 15 Exit = 30 Total)', false, e.message); }
 
   // --- TEST J: Same Webhook Replay -> Idempotency Check ---
   try {

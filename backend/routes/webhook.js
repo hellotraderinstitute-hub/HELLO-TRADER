@@ -188,6 +188,23 @@ router.post('/tv/:webhookToken', async (req, res) => {
                 where: { id: openPos.id },
                 data: { status: 'MANUALLY_CLOSED', exitOrderId: exitResult.orderId, closedAt: new Date() }
               }).catch(() => {});
+
+              // Deduct Exit Token Fee (Default: 15) for successful algo square-off
+              try {
+                const { AlgoTokenBillingService } = require('../services/algoTokenBillingService');
+                await AlgoTokenBillingService.deductExitFee({
+                  userId,
+                  connectionId: connection.id,
+                  brokerOrderId: exitResult.orderId,
+                  symbol: openPos.symbol,
+                  quantity: openPos.quantity,
+                  tradeId: openPos.id,
+                  exitReason: 'SIGNAL_EXIT',
+                  req
+                });
+              } catch (billingErr) {
+                console.error('[Webhook] Exit fee deduction error:', billingErr.message);
+              }
             }
 
             await AuditLogger.log({
@@ -280,6 +297,24 @@ router.post('/tv/:webhookToken', async (req, res) => {
                   exitOrderId: oppExec.orderId || null
                 }
               }).catch(() => {});
+
+              if (oppExec.success && oppExec.orderId) {
+                try {
+                  const { AlgoTokenBillingService } = require('../services/algoTokenBillingService');
+                  await AlgoTokenBillingService.deductExitFee({
+                    userId,
+                    connectionId: connection.id,
+                    brokerOrderId: oppExec.orderId,
+                    symbol: oppPos.symbol,
+                    quantity: oppPos.quantity,
+                    tradeId: oppPos.id,
+                    exitReason: 'REVERSAL_EXIT',
+                    req
+                  });
+                } catch (billingErr) {
+                  console.error('[Webhook] Reversal exit fee deduction error:', billingErr.message);
+                }
+              }
 
               await AuditLogger.log({
                 userId,

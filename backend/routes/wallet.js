@@ -53,10 +53,33 @@ router.get('/', async (req, res) => {
     let paperBalance = 0;
     let referralBalance = 0;
 
+    const paperLedgers = ledgers.filter(l => l.walletType === 'PAPER');
+    if (paperLedgers.length === 0) {
+      const initialCapital = settings?.paperBalance || 5000000;
+      try {
+        const welcomeLedger = await prisma.ledger.create({
+          data: {
+            userId: req.user.id,
+            walletType: 'PAPER',
+            amount: initialCapital,
+            type: 'CREDIT',
+            reason: 'WELCOME_PAPER_MARGIN'
+          }
+        });
+        ledgers.unshift(welcomeLedger);
+        paperBalance = initialCapital;
+      } catch (_) {
+        paperBalance = initialCapital;
+      }
+    } else {
+      paperLedgers.forEach(l => {
+        paperBalance += (l.type === 'CREDIT' ? l.amount : -l.amount);
+      });
+    }
+
     ledgers.forEach(l => {
       const amt = l.type === 'CREDIT' ? l.amount : -l.amount;
       if (['TOKEN', 'RECHARGE', 'BONUS'].includes(l.walletType)) tokenBalance += amt;
-      if (l.walletType === 'PAPER') paperBalance += amt;
       if (l.walletType === 'REFERRAL') referralBalance += amt;
     });
 
@@ -107,6 +130,19 @@ router.post('/payment-proof', async (req, res) => {
     res.json({ success: true, request });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+// ─── GET /api/wallet/algo-statements ──────────────────────────
+// Detailed user ledger statements for Algo Trading entry & exit token debits
+router.get('/algo-statements', async (req, res) => {
+  try {
+    const { AlgoTokenBillingService } = require('../services/algoTokenBillingService');
+    const statements = await AlgoTokenBillingService.getUserAlgoStatements(req.user.id);
+    const balance = await AlgoTokenBillingService.getUserTokenBalance(req.user.id);
+    res.json({ success: true, statements, currentTokenBalance: balance });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
