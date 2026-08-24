@@ -859,10 +859,50 @@ router.post('/kill-all', async (req, res) => {
       meta: { reason, positionResults, dryRun: !!dryRun }, req,
     });
 
+// ─── POST /re-arm ─────────────────────────────────────────────
+router.post('/re-arm', async (req, res) => {
+  const userId = req.user.id;
+  try {
+    const connections = await prisma.algoBrokerConnection.findMany({
+      where: { userId }
+    });
+
+    if (connections.length === 0) {
+      return res.status(400).json({ success: false, message: 'No broker connections found for user.' });
+    }
+
+    // Disarm kill switch on connections
+    await prisma.algoBrokerConnection.updateMany({
+      where: { userId },
+      data: {
+        killSwitchActive: false,
+        killSwitchAt: null,
+        killSwitchReason: null,
+        isActive: true,
+      }
+    });
+
+    // Clear preflight cache so next pre-flight evaluates the fresh active state
+    try {
+      const { MarketPreflightService } = require('../services/compliance/MarketPreflightService');
+      if (MarketPreflightService && MarketPreflightService.clearCache) {
+        MarketPreflightService.clearCache(userId);
+      }
+    } catch (_) {}
+
+    await AuditLogger.log({
+      userId,
+      category: CATEGORIES.KILL,
+      action: 'AUTOMATION_REARMED',
+      detail: `Live automation safely RE-ARMED. Kill switches disarmed for ${connections.length} connections.`,
+      meta: { connectionsCount: connections.length },
+      req,
+    });
+
     res.json({
       success: true,
-      message: '🛑 Emergency stop executed. All automation halted.',
-      positionResults
+      message: '✅ Live trading and automation safely RE-ARMED. Kill switch disarmed.',
+      connectionsUpdated: connections.length
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

@@ -173,6 +173,7 @@ export default function AlgoTrading({ user, onBack }) {
   const [algoPositions, setAlgoPositions] = useState([]);
   const [supportedBrokers, setSupportedBrokers] = useState(BROKERS);
   const [isKilling, setIsKilling] = useState(false);
+  const [isRearming, setIsRearming] = useState(false);
 
   const fetchAlgoPositions = useCallback(async () => {
     try {
@@ -193,21 +194,40 @@ export default function AlgoTrading({ user, onBack }) {
   }, []);
 
   const handleKillAllAlgo = async () => {
-    if (!confirm("⚠️ EMERGENCY KILL ALL ALGO: Are you sure you want to immediately stop all algo strategies and emergency close all open algo positions?")) {
+    if (!confirm("⚠️ EMERGENCY KILL ALL ALGO: Are you sure you want to immediately stop all algo strategies and emergency close all open algo positions at the broker?")) {
       return;
     }
     setIsKilling(true);
     try {
       const res = await apiClient.post('/algo/kill-all');
       if (res.data?.success) {
-        alert("Emergency Kill Switch executed successfully! All active algo strategies stopped.");
+        alert(res.data?.message || "Emergency Kill Switch executed successfully! All active algo strategies stopped and positions reconciled.");
         fetchConnections();
         fetchAlgoPositions();
       }
     } catch (err) {
-      alert(err.response?.data?.error || "Failed to execute emergency kill switch");
+      alert(err.response?.data?.error || err.response?.data?.message || "Failed to execute emergency kill switch");
     } finally {
       setIsKilling(false);
+    }
+  };
+
+  const handleRearmAlgo = async () => {
+    if (!confirm("✅ RE-ARM LIVE TRADING: Are you sure you want to disarm the kill switch and re-enable live algo trading automation?")) {
+      return;
+    }
+    setIsRearming(true);
+    try {
+      const res = await apiClient.post('/algo/re-arm');
+      if (res.data?.success) {
+        alert(res.data?.message || "Live trading and automation successfully RE-ARMED!");
+        fetchConnections();
+        fetchAlgoPositions();
+      }
+    } catch (err) {
+      alert(err.response?.data?.error || err.response?.data?.message || "Failed to re-arm automation");
+    } finally {
+      setIsRearming(false);
     }
   };
 
@@ -461,11 +481,19 @@ export default function AlgoTrading({ user, onBack }) {
           </button>
           <button
             onClick={handleKillAllAlgo}
-            disabled={isKilling}
+            disabled={isKilling || isRearming}
             className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white font-extrabold rounded-lg text-xs transition-all shadow-[0_0_15px_rgba(239,68,68,0.4)] flex items-center gap-1 cursor-pointer"
           >
             <Power className="w-3.5 h-3.5" />
             {isKilling ? 'KILLING...' : 'EMERGENCY KILL ALL'}
+          </button>
+          <button
+            onClick={handleRearmAlgo}
+            disabled={isKilling || isRearming}
+            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-lg text-xs transition-all shadow-[0_0_15px_rgba(16,185,129,0.4)] flex items-center gap-1 cursor-pointer"
+          >
+            <Shield className="w-3.5 h-3.5" />
+            {isRearming ? 'RE-ARMING...' : 'RE-ARM AUTOMATION'}
           </button>
         </div>
       </div>
