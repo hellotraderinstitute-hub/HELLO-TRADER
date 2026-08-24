@@ -2074,6 +2074,17 @@ router.post('/trigger-backup', async (req, res) => {
   }
 });
 
+// ─── GET /ledger-integrity ───────────────────────────────────────
+router.get('/ledger-integrity', async (req, res) => {
+  try {
+    const { LedgerIntegrityService } = require('../services/ledgerIntegrityService');
+    const integrity = await LedgerIntegrityService.verifySystemLedgerIntegrity();
+    res.json({ success: true, ...integrity });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 module.exports = router;
 
 

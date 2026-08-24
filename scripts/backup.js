@@ -104,13 +104,18 @@ async function performRestoreTest(dbDumpSqlPath, expectedRowCounts) {
 
     const latestLedger = execSync(`sqlite3 "${testDbPath}" "SELECT amount, type, reason, timestamp FROM \\"Ledger\\" WHERE userId=(SELECT id FROM \\"User\\" WHERE studentId='HT0802' LIMIT 1) ORDER BY timestamp DESC LIMIT 1;"`, { encoding: 'utf8' }).trim();
 
+    // 5. Compute Restored Ledger Checksum
+    const ledgerRowsRaw = execSync(`sqlite3 "${testDbPath}" "SELECT id, userId, walletType, amount, type, reason, timestamp FROM \\"Ledger\\" ORDER BY timestamp ASC, id ASC;"`, { encoding: 'utf8' });
+    const restoredLedgerHash = crypto.createHash('sha256').update(ledgerRowsRaw).digest('hex');
+
     console.log(`[Backup Verification] Verified Student HT0802 in restored DB: ${nituUser}`);
     console.log(`[Backup Verification] Verified Latest Ledger in restored DB: ${latestLedger}`);
+    console.log(`[Backup Verification] Restored Ledger SHA-256 Checksum: ${restoredLedgerHash}`);
 
     // Cleanup temporary test DB
     if (fs.existsSync(testDbPath)) fs.unlinkSync(testDbPath);
 
-    return { success: true, restoredCounts, verifiedAt: new Date().toISOString() };
+    return { success: true, restoredCounts, restoredLedgerHash, verifiedAt: new Date().toISOString() };
   } catch (err) {
     if (fs.existsSync(testDbPath)) fs.unlinkSync(testDbPath);
     throw new Error(`Restore Verification FAILED: ${err.message}`);
