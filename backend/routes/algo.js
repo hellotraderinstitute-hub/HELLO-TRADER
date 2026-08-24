@@ -941,6 +941,12 @@ function getTodayIstRange() {
 async function calculateTodayRealizedPnl(userId, cachedLivePositionsByConn = null) {
   const { startUtc, endUtc, dateStr } = getTodayIstRange();
 
+  console.log(`[TODAY_PNL_AUDIT_START]`, {
+    userId,
+    dateStr,
+    istWindow: { startUtc: startUtc.toISOString(), endUtc: endUtc.toISOString() }
+  });
+
   // 1. Calculate from closed DB algo positions for today IST
   const closedPositions = await prisma.algoPosition.findMany({
     where: {
@@ -955,14 +961,25 @@ async function calculateTodayRealizedPnl(userId, cachedLivePositionsByConn = nul
 
   let dbRealizedPnl = 0;
   closedPositions.forEach(pos => {
+    let pnl = 0;
     if (pos.pnl !== null && pos.pnl !== undefined && !isNaN(pos.pnl)) {
-      dbRealizedPnl += Number(pos.pnl);
+      pnl = Number(pos.pnl);
     } else if (pos.entryPrice > 0 && pos.exitPrice > 0) {
-      const tradePnl = pos.side === 'BUY'
+      pnl = pos.side === 'BUY'
         ? (pos.exitPrice - pos.entryPrice) * pos.quantity
         : (pos.entryPrice - pos.exitPrice) * pos.quantity;
-      dbRealizedPnl += tradePnl;
     }
+    dbRealizedPnl += pnl;
+    console.log(`  [DB_CLOSED_TRADE]`, {
+      id: pos.id,
+      symbol: pos.symbol,
+      direction: pos.side,
+      quantity: pos.quantity,
+      entryPrice: pos.entryPrice,
+      exitPrice: pos.exitPrice,
+      realizedPnl: pnl,
+      status: pos.status
+    });
   });
 
   // 2. Fetch live broker positions for today (Angel One SmartAPI position book)
@@ -982,23 +999,64 @@ async function calculateTodayRealizedPnl(userId, cachedLivePositionsByConn = nul
       }
     }
 
-    Object.values(positionsByConn).forEach(livePositions => {
+    for (const livePositions of Object.values(positionsByConn)) {
       if (Array.isArray(livePositions) && livePositions.length > 0) {
         hasBrokerData = true;
-        livePositions.forEach(lp => {
+        for (const lp of livePositions) {
           const r = parseFloat(lp.realised !== undefined ? lp.realised : (lp.realizedPnl !== undefined ? lp.realizedPnl : 0));
           const u = parseFloat(lp.unrealised !== undefined ? lp.unrealised : (lp.unrealizedPnl !== undefined ? lp.unrealizedPnl : 0));
-          brokerRealizedPnl += isNaN(r) ? 0 : r;
-          brokerUnrealizedPnl += isNaN(u) ? 0 : u;
-        });
+          const realized = isNaN(r) ? 0 : r;
+          const unrealized = isNaN(u) ? 0 : u;
+          brokerRealizedPnl += realized;
+          brokerUnrealizedPnl += unrealized;
+
+          console.log(`  [BROKER_POSITION_BOOK]`, {
+            symbol: lp.symbol || lp.tradingsymbol,
+            direction: lp.side || (lp.buyqty > 0 ? 'BUY' : 'SELL'),
+            buyQty: lp.buyqty,
+            sellQty: lp.sellqty,
+            netQty: lp.netqty,
+            entryPrice: lp.buyavgprice || lp.avgPrice,
+            exitPrice: lp.sellavgprice,
+            realizedPnl: realized,
+            unrealizedPnl: unrealized,
+            isClosed: lp.netqty === 0
+          });
+
+          // Sync back to DB closed position if found
+          if (lp.netqty === 0) {
+            const matchingDbPos = closedPositions.find(p => p.symbol === (lp.symbol || lp.tradingsymbol));
+            if (matchingDbPos && (matchingDbPos.pnl === null || matchingDbPos.exitPrice === null)) {
+              await prisma.algoPosition.update({
+                where: { id: matchingDbPos.id },
+                data: {
+                  entryPrice: matchingDbPos.entryPrice > 0 ? matchingDbPos.entryPrice : (lp.buyavgprice || lp.avgPrice || 0),
+                  exitPrice: lp.sellavgprice || matchingDbPos.exitPrice || 0,
+                  pnl: realized
+                }
+              }).catch(() => {});
+            }
+          }
+        }
       }
-    });
+    }
   } catch (err) {
     console.warn('[Algo] Error fetching broker positions for PnL calculation:', err.message);
   }
 
   // If broker provides live position book data for today, use broker PnL; otherwise fallback to DB closed positions PnL
   const todayRealizedPnl = hasBrokerData ? brokerRealizedPnl : dbRealizedPnl;
+
+  console.log(`[TODAY_PNL_AUDIT_RESULT]`, {
+    userId,
+    dateStr,
+    source: hasBrokerData ? 'BROKER_LIVE_POSITION_BOOK' : 'DB_CLOSED_POSITIONS',
+    todayRealizedPnl,
+    brokerRealizedPnl,
+    dbRealizedPnl,
+    unrealizedPnl: brokerUnrealizedPnl,
+    totalPnl: todayRealizedPnl + brokerUnrealizedPnl
+  });
 
   return {
     todayRealizedPnl,
