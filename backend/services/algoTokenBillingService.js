@@ -350,8 +350,26 @@ class AlgoTokenBillingService {
       if (isEntry) {
         userSummary[uid].entryTrades += 1;
         userSummary[uid].entryLots += lots;
-        const buyPortion = meta.buyFee !== undefined ? meta.buyFee : Math.floor(d.amount / 2);
-        const sellPortion = meta.sellFee !== undefined ? meta.sellFee : Math.ceil(d.amount / 2);
+        
+        let buyPortion = 0;
+        let sellPortion = 0;
+
+        if (meta.buyFee !== undefined && meta.sellFee !== undefined) {
+          buyPortion = Number(meta.buyFee);
+          sellPortion = Number(meta.sellFee);
+        } else {
+          // If transaction was a single-leg BUY debit (e.g. 10 tokens for 1 lot)
+          const tiers = await this.getActiveBrokerageTiers();
+          const brokerage = getAlgoBrokerageForLots(lots, tiers);
+          if (d.amount === brokerage.buyTokens) {
+            buyPortion = d.amount;
+            sellPortion = 0;
+          } else {
+            buyPortion = Math.round(d.amount / 2);
+            sellPortion = d.amount - buyPortion;
+          }
+        }
+
         userSummary[uid].buyBrokerageTokens += buyPortion;
         userSummary[uid].sellBrokerageTokens += sellPortion;
         userSummary[uid].totalTradeBrokerage += d.amount;

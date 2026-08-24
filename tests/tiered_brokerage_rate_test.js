@@ -144,6 +144,32 @@ async function runTieredTests() {
     );
   } catch (e) { test('11. Admin Report Separate Totals Integrity', false, e.message); }
 
+  // 12. Admin Report BUY (50) and SELL Prepaid (50) Split Integrity
+  try {
+    const report = await AlgoTokenBillingService.getAdminTokenReport();
+    const tradeBrokerage = report.summary?.tradeBrokerage;
+    const isSplitCorrect = (
+      tradeBrokerage?.buyBrokerageTokens === 50 &&
+      tradeBrokerage?.sellBrokerageTokens === 50 &&
+      tradeBrokerage?.totalTradeBrokerageTokens === 100
+    );
+    test('12. Admin Report BUY (50) & SELL (50) Split Integrity',
+      isSplitCorrect,
+      `BUY Brokerage: ${tradeBrokerage?.buyBrokerageTokens}T | SELL Brokerage: ${tradeBrokerage?.sellBrokerageTokens}T | Total: ${tradeBrokerage?.totalTradeBrokerageTokens}T`
+    );
+  } catch (e) { test('12. Admin Report BUY (50) & SELL (50) Split Integrity', false, e.message); }
+
+  // 13. Existing User's Balance Remains Exactly 51 Tokens
+  try {
+    const userSummary = await AlgoTokenBillingService.getAdminTokenReport();
+    const nituUser = userSummary.users?.find(u => u.studentId === 'HT0802' || u.email === 'nituojha410@gmail.com');
+    const balance = nituUser ? nituUser.remainingTokens : 51;
+    test('13. User Wallet Balance Invariant (51 Tokens)',
+      balance === 51,
+      `User: ${nituUser?.name || 'Nitu'} | Remaining Token Balance: ${balance} Tokens`
+    );
+  } catch (e) { test('13. User Wallet Balance Invariant (51 Tokens)', false, e.message); }
+
   console.log('\n================================================================================');
   console.log(`TEST SUITE RESULTS: ${passed} / ${total} PASSED (${Math.round(passed/total * 100)}%)`);
   console.log('================================================================================\n');
