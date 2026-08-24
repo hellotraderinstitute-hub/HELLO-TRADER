@@ -854,10 +854,23 @@ router.post('/kill-all', async (req, res) => {
     }
 
     await AuditLogger.log({
-      userId, category: CATEGORIES.KILL, action: 'EMERGENCY_STOP_ALL',
+      userId,
+      category: CATEGORIES.KILL,
+      action: 'EMERGENCY_STOP_ALL',
       detail: `EMERGENCY STOP executed — all automation killed. Processed ${openDbPositions.length} positions.`,
-      meta: { reason, positionResults, dryRun: !!dryRun }, req,
+      meta: { reason, positionResults, dryRun: !!dryRun },
+      req,
     });
+
+    res.json({
+      success: true,
+      message: '🛑 Emergency stop executed. All automation halted.',
+      positionResults
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
 
 // ─── POST /re-arm ─────────────────────────────────────────────
 router.post('/re-arm', async (req, res) => {
