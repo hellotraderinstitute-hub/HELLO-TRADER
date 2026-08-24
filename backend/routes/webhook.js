@@ -158,11 +158,68 @@ router.post('/tv/:webhookToken', async (req, res) => {
       let orderAction = 'BUY'; // The actual broker transaction action (from terminal config)
 
       const AlgoOptionResolver = require('../services/algoOptionResolver');
-
       let resolved = null;
 
-      if (!isExitSignal && !isExplicitSymbol && signalDirection) {
-        // ── MODE B: Saved User Terminal UP / DOWN Trigger Configuration ───────────────
+      // ─── 7. HANDLE EXIT / CLOSE SIGNALS (NEVER CREATES NEW ENTRIES) ─────────
+      if (isExitSignal) {
+        const openPositions = await prisma.algoPosition.findMany({
+          where: { userId, connectionId: connection.id, status: 'OPEN' }
+        });
+
+        if (openPositions.length > 0) {
+          const AngelScripMaster = require('../services/angelScripMaster');
+          for (const openPos of openPositions) {
+            const exitSide = openPos.side === 'BUY' ? 'SELL' : 'BUY';
+            const exitToken = openPos.symbolToken || openPos.securityId || AngelScripMaster.resolveToken(openPos.symbol, '', 0, 'CE');
+            const exitOrder = {
+              symbol: openPos.symbol,
+              securityId: exitToken,
+              symbolToken: exitToken,
+              exchange: openPos.exchange || 'NFO',
+              side: exitSide,
+              quantity: openPos.quantity,
+              orderType: 'MARKET',
+              productType: openPos.productType || 'INTRADAY',
+            };
+
+            const exitResult = await BrokerGateway.executeOrder(exitOrder, connection);
+            if (exitResult.success) {
+              await prisma.algoPosition.update({
+                where: { id: openPos.id },
+                data: { status: 'MANUALLY_CLOSED', exitOrderId: exitResult.orderId, closedAt: new Date() }
+              }).catch(() => {});
+            }
+
+            await AuditLogger.log({
+              userId,
+              category: CATEGORIES.POSITION,
+              action: 'EXIT_SIGNAL_PROCESSED',
+              detail: `EXIT Signal: Squared off open algo position ${openPos.symbol} (OrderID: ${exitResult.orderId || 'N/A'})`,
+              meta: { positionId: openPos.id, symbol: openPos.symbol, quantity: openPos.quantity, exitResult },
+              req,
+            });
+          }
+
+          await updateLog(webhookLog.id, 'EXECUTED', null, 'EXIT_SIGNAL_SQUARED_OFF_OPEN_POSITIONS');
+          emitUpdate('algo_execution', { action: 'EXIT', status: 'EXECUTED' });
+        } else {
+          await updateLog(webhookLog.id, 'SKIPPED', null, 'NO_OPEN_ALGO_POSITION_TO_EXIT');
+          await AuditLogger.log({
+            userId,
+            category: CATEGORIES.POSITION,
+            action: 'EXIT_SIGNAL_SKIPPED',
+            detail: 'EXIT signal received, but no open algo-owned position was found. No action taken.',
+            meta: { connectionId: connection.id },
+            req,
+          });
+          emitUpdate('algo_webhook', { id: webhookLog.id, status: 'SKIPPED', reason: 'NO_OPEN_POSITION' });
+        }
+        return;
+      }
+
+      // ─── 8. DIRECTIONAL ENTRY STATE MACHINE (BUY -> CE, SELL -> PE) ─────────
+      if (!isExplicitSymbol && signalDirection) {
+        // Mode B: User Terminal Directional Trigger Configuration
         const triggerConfig = await prisma.algoTriggerConfig.findUnique({
           where: { connectionId_direction: { connectionId: connection.id, direction: signalDirection } }
         });
@@ -175,33 +232,87 @@ router.post('/tv/:webhookToken', async (req, res) => {
           return;
         }
 
-        // Auto-close opposite open positions if exitOnOpposite is enabled
+        // 8.1. Check & Square Off Opposite Algo-Owned Positions (exitOnOpposite)
         if (triggerConfig.exitOnOpposite) {
-          const openPositions = await prisma.algoPosition.findMany({
+          const openAlgoPositions = await prisma.algoPosition.findMany({
             where: { userId, connectionId: connection.id, status: 'OPEN' }
           });
-          for (const openPos of openPositions) {
-            console.log(`[Webhook] Exit-on-Opposite: Closing open ${openPos.side} position for ${openPos.symbol}...`);
-            const exitSide = openPos.side === 'BUY' ? 'SELL' : 'BUY';
-            const exitOrder = {
-              symbol: openPos.symbol,
-              securityId: openPos.securityId || openPos.symbolToken || '',
-              symbolToken: openPos.symbolToken || openPos.securityId || '',
-              exchange: openPos.exchange || 'NFO',
-              side: exitSide,
-              quantity: openPos.quantity,
-              orderType: 'MARKET',
-              productType: openPos.productType
-            };
-            await BrokerGateway.executeOrder(exitOrder, connection).catch(() => {});
-            await prisma.algoPosition.update({
-              where: { id: openPos.id },
-              data: { status: 'MANUALLY_CLOSED', closedAt: new Date() }
-            }).catch(() => {});
+
+          // Identify opposite positions: (e.g. if UPSIDE/CE arriving, opposite is PE; if DOWNSIDE/PE arriving, opposite is CE)
+          const oppositePositions = openAlgoPositions.filter(p => {
+            const isCall = p.symbol.endsWith('CE');
+            const isPut = p.symbol.endsWith('PE');
+            if (signalDirection === 'UPSIDE' && isPut) return true;
+            if (signalDirection === 'DOWNSIDE' && isCall) return true;
+            return false;
+          });
+
+          if (oppositePositions.length > 0) {
+            for (const oppPos of oppositePositions) {
+              await AuditLogger.log({
+                userId,
+                category: CATEGORIES.POSITION,
+                action: 'OPPOSITE_EXIT_STARTED',
+                detail: `Trend Reversal to ${signalDirection}: Squaring off opposite position ${oppPos.symbol} (ID: ${oppPos.id})`,
+                meta: { positionId: oppPos.id, symbol: oppPos.symbol, reversalDirection: signalDirection },
+                req,
+              });
+
+              const oppExitSide = oppPos.side === 'BUY' ? 'SELL' : 'BUY';
+              const oppExitOrder = {
+                symbol: oppPos.symbol,
+                securityId: oppPos.securityId || oppPos.symbolToken || '',
+                symbolToken: oppPos.symbolToken || oppPos.securityId || '',
+                exchange: oppPos.exchange || 'NFO',
+                side: oppExitSide,
+                quantity: oppPos.quantity,
+                orderType: 'MARKET',
+                productType: oppPos.productType || 'INTRADAY'
+              };
+
+              const oppExec = await BrokerGateway.executeOrder(oppExitOrder, connection).catch(e => ({ success: false, message: e.message }));
+              
+              await prisma.algoPosition.update({
+                where: { id: oppPos.id },
+                data: {
+                  status: 'MANUALLY_CLOSED',
+                  closedAt: new Date(),
+                  exitOrderId: oppExec.orderId || null
+                }
+              }).catch(() => {});
+
+              await AuditLogger.log({
+                userId,
+                category: CATEGORIES.POSITION,
+                action: 'OPPOSITE_EXIT_CONFIRMED',
+                detail: `Opposite position ${oppPos.symbol} successfully squared off before entering ${signalDirection} trade.`,
+                meta: { positionId: oppPos.id, symbol: oppPos.symbol, exitOrderId: oppExec.orderId },
+                req,
+              });
+            }
           }
+
+          // 8.2. Protect Non-Algo / Manually-Held Broker Positions
+          try {
+            const liveBrokerPositions = await BrokerGateway.getPositions(connection);
+            const algoOpenSymbols = new Set(openAlgoPositions.map(p => p.symbol));
+            for (const lbp of liveBrokerPositions) {
+              const netQ = Math.abs(parseInt(lbp.netqty || lbp.quantity || 0));
+              if (netQ > 0 && !algoOpenSymbols.has(lbp.symbol)) {
+                await AuditLogger.log({
+                  userId,
+                  category: CATEGORIES.POSITION,
+                  action: 'MANUAL_POSITION_PROTECTED',
+                  detail: `Protected manually-held position ${lbp.symbol} (NetQty: ${netQ}) from algo auto-squareoff.`,
+                  meta: { manualSymbol: lbp.symbol, netQty: netQ },
+                  req,
+                });
+              }
+            }
+          } catch (_) {}
         }
 
-        // Extract payload spot price if provided in TradingView webhook
+        // 8.3. Resolve NEW Current ATM / Offset Strike After Exit Confirmation
         const payloadSpot = parseFloat(body.price || body.spot || body.ltp || body.close || body.spotPrice || 0) || null;
         const signalContext = {
           payloadSpot,
@@ -211,7 +322,6 @@ router.post('/tv/:webhookToken', async (req, res) => {
           time: body.time || body.timestamp || Date.now()
         };
 
-        // Resolve Dynamic Option Contract from user's terminal trigger configuration
         resolved = await AlgoOptionResolver.resolveContract(triggerConfig, signalContext);
         if (!resolved.success || !resolved.tradingSymbol) {
           const reason = resolved.error || 'OPTION_CONTRACT_NOT_AVAILABLE: Could not resolve option contract.';
@@ -222,44 +332,29 @@ router.post('/tv/:webhookToken', async (req, res) => {
 
         finalSymbol  = resolved.tradingSymbol;
         securityId   = resolved.securityId || resolved.symbolToken || '';
-        qty          = resolved.quantity; // Derived from user configured lots
+        qty          = resolved.quantity;
         exchange     = resolved.exchange;
         product      = resolved.productType;
         orderType    = 'MARKET';
         signalPrice  = resolved.spotPrice;
-        orderAction  = (triggerConfig.orderSide || 'BUY').toUpperCase(); // USER TERMINAL SOURCE OF TRUTH
+        orderAction  = (triggerConfig.orderSide || 'BUY').toUpperCase();
         resolvedContractStr = `${resolved.tradingSymbol} (${resolved.optionType} ${resolved.strike} ${orderAction})`;
 
-        console.log(`[Webhook] Terminal Trigger Mode B Resolved: Direction=${signalDirection} -> Contract=${finalSymbol} Action=${orderAction} (Lots: ${triggerConfig.lots}, Qty: ${qty}, Spot: ${signalPrice})`);
+        await AuditLogger.log({
+          userId,
+          category: CATEGORIES.ORDER,
+          action: 'NEW_ENTRY_AFTER_REVERSAL',
+          detail: `Resolved fresh ATM/Offset contract: ${finalSymbol} (Strike: ${resolved.strike}, Spot: ${signalPrice}, Action: ${orderAction})`,
+          meta: { finalSymbol, strike: resolved.strike, spotPrice: signalPrice, direction: signalDirection },
+          req,
+        });
       } else if (!isExitSignal) {
-        // ── MODE A: Explicit Symbol Provided ──────────────────────────────────
+        // Mode A: Explicit Symbol Provided
         finalSymbol = rawSymbol;
         orderAction = (rawInput === 'SELL' || rawInput === 'SHORT' || rawInput === 'PUT') ? 'SELL' : 'BUY';
         const spotInfo = await AlgoOptionResolver.getSpotPrice(rawSymbol || 'NIFTY', { payloadSpot: parseFloat(body.price || body.spot || 0) || null }).catch(() => ({ spotPrice: null }));
         signalPrice = spotInfo.spotPrice;
         resolvedContractStr = rawSymbol;
-
-        // Dynamic securityId resolution for Mode A option contract symbols
-        if (!securityId && rawSymbol) {
-          const parsed = AlgoOptionResolver.parseOptionSymbol(rawSymbol);
-          if (parsed) {
-            const dhanOptionChainService = require('../services/dhanOptionChainService');
-            try {
-              const chainResult = await dhanOptionChainService.getOptionChain(parsed.underlying, parsed.expiryDate);
-              if (chainResult.success && chainResult.contracts) {
-                const contract = chainResult.contracts.find(
-                  c => Math.abs(c.strike - parsed.strike) < 2
-                );
-                if (contract) {
-                  securityId = parsed.optionType === 'CE' ? contract.ceSecurityId : contract.peSecurityId;
-                  console.log(`[Webhook] Mode A Dynamic Security ID resolved: ${securityId} for ${rawSymbol}`);
-                }
-              }
-            } catch (err) {
-              console.warn(`[Webhook] Mode A Security ID lookup failed for ${rawSymbol}: ${err.message}`);
-            }
-          }
-        }
       }
 
       // Update log with parsed & resolved values
@@ -278,70 +373,14 @@ router.post('/tv/:webhookToken', async (req, res) => {
         }
       });
 
-      if (!isExitSignal && (!orderAction || !finalSymbol || !qty || qty <= 0)) {
-        await updateLog(webhookLog.id, 'FAILED', null, 'MISSING_REQUIRED_FIELDS: orderAction, symbol, qty');
-        await AuditLogger.log({ userId, category: CATEGORIES.WEBHOOK, action: 'PARSE_FAILED',
-          detail: 'Webhook payload missing required fields', meta: { orderAction, finalSymbol, qty } });
-        return;
-      }
-
-      // 6. Idempotency: dedup within sliding 5s window
-      const fiveSecondsAgo = new Date(Date.now() - 5000);
-      const existing = await prisma.algoWebhookLog.findFirst({
-        where: {
-          connectionId: connection.id,
-          parsedSymbol: finalSymbol,
-          parsedAction: orderAction,
-          id: { not: webhookLog.id },
-          receivedAt: { gte: fiveSecondsAgo },
-          executionStatus: { in: ['PENDING', 'EXECUTED', 'SIMULATION_EXECUTED'] }
-        }
-      });
-      if (existing) {
-        await updateLog(webhookLog.id, 'SKIPPED', null, 'DUPLICATE_WITHIN_5S_WINDOW');
-        await AuditLogger.log({ userId, category: CATEGORIES.WEBHOOK, action: 'DUPLICATE_SKIPPED',
-          detail: `Duplicate webhook skipped: ${finalSymbol} ${orderAction}`, meta: { parsedSymbol: finalSymbol, orderAction } });
-        return;
-      }
-      const idempotencyKey = `${connection.id}:${finalSymbol}:${orderAction}:${Date.now()}`;
-      await prisma.algoWebhookLog.update({ where: { id: webhookLog.id }, data: { idempotencyKey } });
-
-      // 7. Handle EXIT action
-      if (isExitSignal) {
-        const openPos = await prisma.algoPosition.findFirst({
-          where: { userId, connectionId: connection.id, status: 'OPEN' }
-        });
-        if (openPos) {
-          const exitSide = openPos.side === 'BUY' ? 'SELL' : 'BUY';
-          const AngelScripMaster = require('../services/angelScripMaster');
-          const exitToken = openPos.symbolToken || openPos.securityId || AngelScripMaster.resolveToken(openPos.symbol, '', 0, 'CE');
-          const exitOrder = {
-            symbol: openPos.symbol,
-            securityId: exitToken,
-            symbolToken: exitToken,
-            exchange: openPos.exchange || exchange,
-            side: exitSide,
-            quantity: openPos.quantity,
-            orderType: 'MARKET',
-            productType: openPos.productType,
-          };
-          const exitResult = await BrokerGateway.executeOrder(exitOrder, connection);
-          if (exitResult.success) {
-            await prisma.algoPosition.update({
-              where: { id: openPos.id },
-              data: { status: 'MANUALLY_CLOSED', exitOrderId: exitResult.orderId, closedAt: new Date() }
-            });
-          }
-          await updateLog(webhookLog.id, exitResult.success ? 'EXECUTED' : 'FAILED',
-            exitResult.orderId, exitResult.success ? null : exitResult.message);
-          await AuditLogger.log({ userId, category: CATEGORIES.POSITION, action: exitResult.success ? 'POSITION_CLOSED' : 'CLOSE_FAILED',
-            detail: `EXIT signal: ${openPos.symbol}. ${exitResult.message}`, meta: { positionId: openPos.id, exitResult } });
-          emitUpdate('algo_execution', { symbol: openPos.symbol, action: 'EXIT', status: exitResult.success ? 'EXECUTED' : 'FAILED' });
-        } else {
-          await updateLog(webhookLog.id, 'SKIPPED', null, 'NO_OPEN_POSITION_TO_EXIT');
-          emitUpdate('algo_webhook', { id: webhookLog.id, status: 'SKIPPED', reason: 'NO_OPEN_POSITION' });
-        }
-        return;
+      // ─── 8.4. ENFORCE CONFIGURED MAX ALLOWED LOTS ON EVERY ENTRY ────────────
+      const userRisk = await prisma.agentRiskSettings.findUnique({ where: { userId } });
+      const maxAllowedLots = userRisk?.maxLots || 1;
+      const lotSize = (finalSymbol || '').includes('BANKNIFTY') ? 15 : 65;
+      const maxAllowedQty = maxAllowedLots * lotSize;
+      if (qty > maxAllowedQty) {
+        console.log(`[Webhook] Clamping requested qty ${qty} to Max Allowed Qty ${maxAllowedQty} (${maxAllowedLots} lots)`);
+        qty = maxAllowedQty;
       }
 
       // 7.5. Validate Security ID

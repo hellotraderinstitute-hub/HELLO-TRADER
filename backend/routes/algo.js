@@ -980,6 +980,8 @@ router.get('/positions', async (req, res) => {
           entryPrice: entryPrice,
           ltp: ltp,
           pnl: pnl,
+          unrealizedPnl: match.unrealised || pnl,
+          realizedPnl: match.realised || 0,
           quantity: netQty,
           netqty: netQty,
           orderSide: pos.side,
@@ -992,12 +994,31 @@ router.get('/positions', async (req, res) => {
           orderSide: pos.side,
           lots: Math.max(1, Math.round(pos.quantity / (pos.symbol.includes('BANKNIFTY') ? 15 : 65))),
           ltp: pos.entryPrice || 0,
-          pnl: 0
+          pnl: 0,
+          unrealizedPnl: 0,
+          realizedPnl: 0
         });
       }
     }
 
-    res.json({ success: true, positions: hydratedPositions });
+    // Calculate aggregated PnL summary
+    let totalUnrealized = 0;
+    let totalRealized = 0;
+    Object.values(livePositionsByConn).forEach(connPositions => {
+      (connPositions || []).forEach(cp => {
+        totalUnrealized += parseFloat(cp.unrealised || 0);
+        totalRealized += parseFloat(cp.realised || 0);
+      });
+    });
+
+    const summary = {
+      unrealizedPnl: totalUnrealized,
+      realizedPnl: totalRealized,
+      totalPnl: totalUnrealized + totalRealized,
+      openPositionsCount: hydratedPositions.length,
+    };
+
+    res.json({ success: true, positions: hydratedPositions, summary });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
