@@ -106,11 +106,36 @@ function ModuleCard({ mod, onClick }) {
 }
 
 import { useTrading } from '../context/TradingContext';
+import apiClient from '../lib/axios';
 
 // ── Main TradeHub ─────────────────────────────────────────────
 export default function TradeHub({ user }) {
   const { isExpiredTrial, openRechargeModal } = useTrading();
   const [activeModule, setActiveModule] = useState(null);
+  const [todayStats, setTodayStats] = useState({
+    realizedPnl: 0,
+    todayRealizedPnl: 0,
+    unrealizedPnl: 0,
+    totalPnl: 0,
+    openPositionsCount: 0,
+    closedPositionsCount: 0,
+    todayDateStr: ''
+  });
+
+  const fetchTodayStats = useCallback(async () => {
+    try {
+      const res = await apiClient.get('/algo/positions');
+      if (res.data?.success && res.data.summary) {
+        setTodayStats(res.data.summary);
+      }
+    } catch (_) {}
+  }, []);
+
+  useEffect(() => {
+    fetchTodayStats();
+    const interval = setInterval(fetchTodayStats, 5000);
+    return () => clearInterval(interval);
+  }, [fetchTodayStats]);
 
   if (activeModule === 'ALGO') {
     return <AlgoTrading user={user} onBack={() => setActiveModule(null)} />;
@@ -126,6 +151,10 @@ export default function TradeHub({ user }) {
       setActiveModule(modId);
     }
   };
+
+  const realizedPnl = Number(todayStats.realizedPnl !== undefined ? todayStats.realizedPnl : (todayStats.todayRealizedPnl || 0));
+  const unrealizedPnl = Number(todayStats.unrealizedPnl || 0);
+  const totalPnl = Number(todayStats.totalPnl !== undefined ? todayStats.totalPnl : (realizedPnl + unrealizedPnl));
 
   return (
     <div style={{ height: 'calc(100vh - 80px)', overflowY: 'auto' }}
@@ -147,6 +176,39 @@ export default function TradeHub({ user }) {
         </div>
         <div className="flex items-center gap-2 text-[10px] text-gray-550">
           <Lock className="w-3 h-3" /> AES-256 Encrypted · Audit Logged · Non-Custodial
+        </div>
+      </div>
+
+      {/* ── TODAY'S P&L SUMMARY STRIP ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="bg-[#161B22] border border-white/10 rounded-xl p-4 space-y-1">
+          <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">TODAY&apos;S P&L (Realized IST)</span>
+          <div className={`text-lg font-black ${realizedPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+            {realizedPnl >= 0 ? '+' : ''}₹{realizedPnl.toFixed(2)}
+          </div>
+          <span className="text-[9px] text-gray-500 block">
+            {todayStats.closedPositionsCount || 0} Closed Algo Trades Today
+          </span>
+        </div>
+
+        <div className="bg-[#161B22] border border-white/10 rounded-xl p-4 space-y-1">
+          <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">UNREALIZED P&L</span>
+          <div className={`text-lg font-black ${unrealizedPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+            {unrealizedPnl >= 0 ? '+' : ''}₹{unrealizedPnl.toFixed(2)}
+          </div>
+          <span className="text-[9px] text-gray-500 block">
+            {todayStats.openPositionsCount || 0} Open Algo Positions
+          </span>
+        </div>
+
+        <div className="bg-[#161B22] border border-white/10 rounded-xl p-4 space-y-1">
+          <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">NET TOTAL P&L</span>
+          <div className={`text-lg font-black ${totalPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+            {totalPnl >= 0 ? '+' : ''}₹{totalPnl.toFixed(2)}
+          </div>
+          <span className="text-[9px] text-gray-500 block">
+            Realized + Unrealized Total
+          </span>
         </div>
       </div>
 
