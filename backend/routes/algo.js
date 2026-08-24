@@ -1782,14 +1782,28 @@ router.post('/onboard/activate-live', async (req, res) => {
     }
 
     const connectionId = req.body?.connectionId;
-    if (!connectionId) {
-      return res.status(400).json({ success: false, message: 'connectionId is required for activation.' });
-    }
-
     const result = await onboardingService.activateLive(targetUserId, connectionId);
     res.status(200).json(result);
   } catch (err) {
     res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+/**
+ * GET /api/algo/admin/token-report
+ * Comprehensive Admin reporting on Algo Trading token debits and broker order usage.
+ */
+router.get('/admin/token-report', async (req, res) => {
+  if (req.user?.role !== 'ADMIN') {
+    return res.status(403).json({ success: false, message: 'Admin access required.' });
+  }
+  const { dateStr } = req.query;
+  try {
+    const { AlgoTokenBillingService } = require('../services/algoTokenBillingService');
+    const report = await AlgoTokenBillingService.getAdminTokenReport({ dateStr });
+    res.json(report);
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 });
 

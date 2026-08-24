@@ -557,6 +557,21 @@ router.post('/tv/:webhookToken', async (req, res) => {
             meta: { positionId: position.id, orderId: execResult.orderId, actualFillPrice }
           });
 
+          // Deduct Token Fee for successful live algo entry
+          try {
+            const { AlgoTokenBillingService } = require('../services/algoTokenBillingService');
+            await AlgoTokenBillingService.deductEntryFee({
+              userId,
+              connectionId: connection.id,
+              brokerOrderId: execResult.orderId,
+              symbol: finalSymbol,
+              orderAction,
+              req
+            });
+          } catch (billingErr) {
+            console.error('[Webhook] Token fee deduction error:', billingErr.message);
+          }
+
           emitUpdate('algo_position', {
             type: 'OPENED',
             position: {
