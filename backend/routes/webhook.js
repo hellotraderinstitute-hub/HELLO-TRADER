@@ -27,6 +27,7 @@ const { BrokerGateway } = require('../services/brokerGateway/BrokerGateway');
 const { RiskEngine } = require('../services/riskEngine');
 const { AuditLogger, CATEGORIES } = require('../services/auditLogger');
 const AlgoOptionResolver = require('../services/algoOptionResolver');
+const { N } = require('../services/notifier');
 
 const prisma = new PrismaClient();
 
@@ -145,6 +146,17 @@ router.post('/tv/:webhookToken', async (req, res) => {
         signalDirection = 'DOWNSIDE';
       }
 
+      // Trigger non-blocking webhook received notification
+      try {
+        N.algoWebhookReceived({
+          action: rawInput,
+          symbol: rawSymbol || 'NIFTY',
+          strike: body.strike || 'ATM',
+          spotPrice: body.price || body.spotPrice || null,
+          source: 'TradingView Webhook'
+        });
+      } catch (_) {}
+
       // Check if explicit contract symbol provided (Mode A) e.g. "NIFTY25AUG24400CE"
       const isExplicitSymbol = rawSymbol && (
         rawSymbol.endsWith('CE') || rawSymbol.endsWith('PE') ||
@@ -217,6 +229,22 @@ router.post('/tv/:webhookToken', async (req, res) => {
               meta: { positionId: openPos.id, symbol: openPos.symbol, quantity: openPos.quantity, exitResult },
               req,
             });
+
+            // Telegram Notification (Non-blocking)
+            try {
+              const student = await prisma.user.findUnique({ where: { id: userId }, select: { name: true, studentId: true } });
+              N.algoExitExecuted({
+                studentName: student?.name || 'Student',
+                studentId: student?.studentId || userId,
+                symbol: openPos.symbol,
+                lots: posLots,
+                quantity: openPos.quantity,
+                price: openPos.exitPrice || openPos.currentPrice || null,
+                orderId: exitResult.orderId || 'SQUARE_OFF',
+                exitReason: 'TradingView Signal Exit',
+                realizedPnl: openPos.pnl || 0
+              });
+            } catch (_) {}
           }
 
           await updateLog(webhookLog.id, 'EXECUTED', null, 'EXIT_SIGNAL_SQUARED_OFF_OPEN_POSITIONS');
@@ -614,6 +642,37 @@ router.post('/tv/:webhookToken', async (req, res) => {
           } catch (billingErr) {
             console.error('[Webhook] Token fee deduction error:', billingErr.message);
           }
+
+          // Telegram Notification (Non-blocking)
+          try {
+            const student = await prisma.user.findUnique({ where: { id: userId }, select: { name: true, studentId: true } });
+            const entryLots = Math.max(1, Math.round(qty / (finalSymbol.includes('BANKNIFTY') ? 15 : (finalSymbol.includes('FINNIFTY') ? 40 : 65))));
+            if (orderAction === 'BUY') {
+              N.algoBuyExecuted({
+                studentName: student?.name || 'Student',
+                studentId: student?.studentId || userId,
+                symbol: finalSymbol,
+                lots: entryLots,
+                quantity: qty,
+                price: actualFillPrice,
+                orderId: execResult.orderId,
+                tokensDebited: 0,
+                balanceAfter: 0
+              });
+            } else {
+              N.algoSellExecuted({
+                studentName: student?.name || 'Student',
+                studentId: student?.studentId || userId,
+                symbol: finalSymbol,
+                lots: entryLots,
+                quantity: qty,
+                price: actualFillPrice,
+                orderId: execResult.orderId,
+                tokensDebited: 0,
+                balanceAfter: 0
+              });
+            }
+          } catch (_) {}
 
           emitUpdate('algo_position', {
             type: 'OPENED',

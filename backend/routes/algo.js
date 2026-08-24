@@ -862,6 +862,17 @@ router.post('/kill-all', async (req, res) => {
       req,
     });
 
+    // Telegram Notification (Non-blocking)
+    try {
+      const student = await prisma.user.findUnique({ where: { id: userId }, select: { name: true, studentId: true } });
+      N.algoKillSwitchTriggered({
+        studentName: student?.name || 'User',
+        studentId: student?.studentId || userId,
+        triggerSource: `Kill All (${reason || 'Manual Emergency Stop'})`,
+        affectedPositions: openDbPositions.length
+      });
+    } catch (_) {}
+
     res.json({
       success: true,
       message: '🛑 Emergency stop executed. All automation halted.',

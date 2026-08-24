@@ -158,6 +158,21 @@ class AlgoTokenBillingService {
       meta: { ...ledgerMetadata, ledgerId: ledgerEntry.id }, req
     });
 
+    // 5. Telegram Notification (Non-blocking)
+    try {
+      const { N } = require('./notifier');
+      const student = await prisma.user.findUnique({ where: { id: userId }, select: { name: true, studentId: true } });
+      N.algoTokenDeducted({
+        studentName: student?.name || 'Student',
+        studentId: student?.studentId || userId,
+        amount,
+        reason: `Prepaid Algo Brokerage (${lotCount} Lots)`,
+        balanceBefore,
+        balanceAfter,
+        orderId: brokerOrderId
+      });
+    } catch (_) {}
+
     return {
       success: true,
       deducted: amount,
