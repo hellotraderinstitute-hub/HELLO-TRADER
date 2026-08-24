@@ -1,0 +1,1938 @@
+{
+  "NIFTY25AUG2621700PE": {
+    "token": "61339",
+    "symbol": "NIFTY25AUG2621700PE",
+    "expiry": "25AUG2026",
+    "strike": 21700,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2622150PE": {
+    "token": "61365",
+    "symbol": "NIFTY25AUG2622150PE",
+    "expiry": "25AUG2026",
+    "strike": 22150,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2622350CE": {
+    "token": "61378",
+    "symbol": "NIFTY25AUG2622350CE",
+    "expiry": "25AUG2026",
+    "strike": 22350,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2622750PE": {
+    "token": "61412",
+    "symbol": "NIFTY25AUG2622750PE",
+    "expiry": "25AUG2026",
+    "strike": 22750,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2623100CE": {
+    "token": "61436",
+    "symbol": "NIFTY25AUG2623100CE",
+    "expiry": "25AUG2026",
+    "strike": 23100,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2623200CE": {
+    "token": "61445",
+    "symbol": "NIFTY25AUG2623200CE",
+    "expiry": "25AUG2026",
+    "strike": 23200,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2623250PE": {
+    "token": "61454",
+    "symbol": "NIFTY25AUG2623250PE",
+    "expiry": "25AUG2026",
+    "strike": 23250,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2623450CE": {
+    "token": "61493",
+    "symbol": "NIFTY25AUG2623450CE",
+    "expiry": "25AUG2026",
+    "strike": 23450,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2623500PE": {
+    "token": "61500",
+    "symbol": "NIFTY25AUG2623500PE",
+    "expiry": "25AUG2026",
+    "strike": 23500,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2623900CE": {
+    "token": "61557",
+    "symbol": "NIFTY25AUG2623900CE",
+    "expiry": "25AUG2026",
+    "strike": 23900,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2623950PE": {
+    "token": "61588",
+    "symbol": "NIFTY25AUG2623950PE",
+    "expiry": "25AUG2026",
+    "strike": 23950,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2624350CE": {
+    "token": "61717",
+    "symbol": "NIFTY25AUG2624350CE",
+    "expiry": "25AUG2026",
+    "strike": 24350,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2624600CE": {
+    "token": "61775",
+    "symbol": "NIFTY25AUG2624600CE",
+    "expiry": "25AUG2026",
+    "strike": 24600,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2624700CE": {
+    "token": "61793",
+    "symbol": "NIFTY25AUG2624700CE",
+    "expiry": "25AUG2026",
+    "strike": 24700,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2624800PE": {
+    "token": "61846",
+    "symbol": "NIFTY25AUG2624800PE",
+    "expiry": "25AUG2026",
+    "strike": 24800,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2624850CE": {
+    "token": "61855",
+    "symbol": "NIFTY25AUG2624850CE",
+    "expiry": "25AUG2026",
+    "strike": 24850,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2624900PE": {
+    "token": "61859",
+    "symbol": "NIFTY25AUG2624900PE",
+    "expiry": "25AUG2026",
+    "strike": 24900,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2625000CE": {
+    "token": "61897",
+    "symbol": "NIFTY25AUG2625000CE",
+    "expiry": "25AUG2026",
+    "strike": 25000,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2625050PE": {
+    "token": "61910",
+    "symbol": "NIFTY25AUG2625050PE",
+    "expiry": "25AUG2026",
+    "strike": 25050,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2625400CE": {
+    "token": "61955",
+    "symbol": "NIFTY25AUG2625400CE",
+    "expiry": "25AUG2026",
+    "strike": 25400,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2625450PE": {
+    "token": "61974",
+    "symbol": "NIFTY25AUG2625450PE",
+    "expiry": "25AUG2026",
+    "strike": 25450,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2625600PE": {
+    "token": "61980",
+    "symbol": "NIFTY25AUG2625600PE",
+    "expiry": "25AUG2026",
+    "strike": 25600,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2625750PE": {
+    "token": "61995",
+    "symbol": "NIFTY25AUG2625750PE",
+    "expiry": "25AUG2026",
+    "strike": 25750,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2626100PE": {
+    "token": "62052",
+    "symbol": "NIFTY25AUG2626100PE",
+    "expiry": "25AUG2026",
+    "strike": 26100,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2626250PE": {
+    "token": "62059",
+    "symbol": "NIFTY25AUG2626250PE",
+    "expiry": "25AUG2026",
+    "strike": 26250,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2626350CE": {
+    "token": "62101",
+    "symbol": "NIFTY25AUG2626350CE",
+    "expiry": "25AUG2026",
+    "strike": 26350,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2626400CE": {
+    "token": "62117",
+    "symbol": "NIFTY25AUG2626400CE",
+    "expiry": "25AUG2026",
+    "strike": 26400,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2626400PE": {
+    "token": "62118",
+    "symbol": "NIFTY25AUG2626400PE",
+    "expiry": "25AUG2026",
+    "strike": 26400,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2626450CE": {
+    "token": "62119",
+    "symbol": "NIFTY25AUG2626450CE",
+    "expiry": "25AUG2026",
+    "strike": 26450,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2626800PE": {
+    "token": "62198",
+    "symbol": "NIFTY25AUG2626800PE",
+    "expiry": "25AUG2026",
+    "strike": 26800,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2627000PE": {
+    "token": "62230",
+    "symbol": "NIFTY25AUG2627000PE",
+    "expiry": "25AUG2026",
+    "strike": 27000,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2627050PE": {
+    "token": "62235",
+    "symbol": "NIFTY25AUG2627050PE",
+    "expiry": "25AUG2026",
+    "strike": 27050,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2621450PE": {
+    "token": "61208",
+    "symbol": "NIFTY25AUG2621450PE",
+    "expiry": "25AUG2026",
+    "strike": 21450,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2621600CE": {
+    "token": "61334",
+    "symbol": "NIFTY25AUG2621600CE",
+    "expiry": "25AUG2026",
+    "strike": 21600,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2621800PE": {
+    "token": "61343",
+    "symbol": "NIFTY25AUG2621800PE",
+    "expiry": "25AUG2026",
+    "strike": 21800,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2621900CE": {
+    "token": "61346",
+    "symbol": "NIFTY25AUG2621900CE",
+    "expiry": "25AUG2026",
+    "strike": 21900,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2621950PE": {
+    "token": "61351",
+    "symbol": "NIFTY25AUG2621950PE",
+    "expiry": "25AUG2026",
+    "strike": 21950,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2622100PE": {
+    "token": "61357",
+    "symbol": "NIFTY25AUG2622100PE",
+    "expiry": "25AUG2026",
+    "strike": 22100,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2622300CE": {
+    "token": "61376",
+    "symbol": "NIFTY25AUG2622300CE",
+    "expiry": "25AUG2026",
+    "strike": 22300,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2622350PE": {
+    "token": "61379",
+    "symbol": "NIFTY25AUG2622350PE",
+    "expiry": "25AUG2026",
+    "strike": 22350,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2622450CE": {
+    "token": "61389",
+    "symbol": "NIFTY25AUG2622450CE",
+    "expiry": "25AUG2026",
+    "strike": 22450,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2622600PE": {
+    "token": "61402",
+    "symbol": "NIFTY25AUG2622600PE",
+    "expiry": "25AUG2026",
+    "strike": 22600,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2622800PE": {
+    "token": "61417",
+    "symbol": "NIFTY25AUG2622800PE",
+    "expiry": "25AUG2026",
+    "strike": 22800,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2622950PE": {
+    "token": "61427",
+    "symbol": "NIFTY25AUG2622950PE",
+    "expiry": "25AUG2026",
+    "strike": 22950,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2623100PE": {
+    "token": "61437",
+    "symbol": "NIFTY25AUG2623100PE",
+    "expiry": "25AUG2026",
+    "strike": 23100,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2623400CE": {
+    "token": "61468",
+    "symbol": "NIFTY25AUG2623400CE",
+    "expiry": "25AUG2026",
+    "strike": 23400,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2623550CE": {
+    "token": "61501",
+    "symbol": "NIFTY25AUG2623550CE",
+    "expiry": "25AUG2026",
+    "strike": 23550,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2623850PE": {
+    "token": "61550",
+    "symbol": "NIFTY25AUG2623850PE",
+    "expiry": "25AUG2026",
+    "strike": 23850,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2624300PE": {
+    "token": "61703",
+    "symbol": "NIFTY25AUG2624300PE",
+    "expiry": "25AUG2026",
+    "strike": 24300,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2624000PE": {
+    "token": "61604",
+    "symbol": "NIFTY25AUG2624000PE",
+    "expiry": "25AUG2026",
+    "strike": 24000,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2624100CE": {
+    "token": "61610",
+    "symbol": "NIFTY25AUG2624100CE",
+    "expiry": "25AUG2026",
+    "strike": 24100,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2624150PE": {
+    "token": "61646",
+    "symbol": "NIFTY25AUG2624150PE",
+    "expiry": "25AUG2026",
+    "strike": 24150,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2624400CE": {
+    "token": "61720",
+    "symbol": "NIFTY25AUG2624400CE",
+    "expiry": "25AUG2026",
+    "strike": 24400,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2624600PE": {
+    "token": "61776",
+    "symbol": "NIFTY25AUG2624600PE",
+    "expiry": "25AUG2026",
+    "strike": 24600,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2624900CE": {
+    "token": "61857",
+    "symbol": "NIFTY25AUG2624900CE",
+    "expiry": "25AUG2026",
+    "strike": 24900,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2625000PE": {
+    "token": "61898",
+    "symbol": "NIFTY25AUG2625000PE",
+    "expiry": "25AUG2026",
+    "strike": 25000,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2625250CE": {
+    "token": "61931",
+    "symbol": "NIFTY25AUG2625250CE",
+    "expiry": "25AUG2026",
+    "strike": 25250,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2625300CE": {
+    "token": "61943",
+    "symbol": "NIFTY25AUG2625300CE",
+    "expiry": "25AUG2026",
+    "strike": 25300,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2625650CE": {
+    "token": "61981",
+    "symbol": "NIFTY25AUG2625650CE",
+    "expiry": "25AUG2026",
+    "strike": 25650,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2626000PE": {
+    "token": "62039",
+    "symbol": "NIFTY25AUG2626000PE",
+    "expiry": "25AUG2026",
+    "strike": 26000,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2626150CE": {
+    "token": "62053",
+    "symbol": "NIFTY25AUG2626150CE",
+    "expiry": "25AUG2026",
+    "strike": 26150,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2626700PE": {
+    "token": "62176",
+    "symbol": "NIFTY25AUG2626700PE",
+    "expiry": "25AUG2026",
+    "strike": 26700,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2627050CE": {
+    "token": "62234",
+    "symbol": "NIFTY25AUG2627050CE",
+    "expiry": "25AUG2026",
+    "strike": 27050,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2627150CE": {
+    "token": "62238",
+    "symbol": "NIFTY25AUG2627150CE",
+    "expiry": "25AUG2026",
+    "strike": 27150,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2621600PE": {
+    "token": "61335",
+    "symbol": "NIFTY25AUG2621600PE",
+    "expiry": "25AUG2026",
+    "strike": 21600,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2621750CE": {
+    "token": "61340",
+    "symbol": "NIFTY25AUG2621750CE",
+    "expiry": "25AUG2026",
+    "strike": 21750,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2621900PE": {
+    "token": "61347",
+    "symbol": "NIFTY25AUG2621900PE",
+    "expiry": "25AUG2026",
+    "strike": 21900,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2622050PE": {
+    "token": "61355",
+    "symbol": "NIFTY25AUG2622050PE",
+    "expiry": "25AUG2026",
+    "strike": 22050,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2622500CE": {
+    "token": "61397",
+    "symbol": "NIFTY25AUG2622500CE",
+    "expiry": "25AUG2026",
+    "strike": 22500,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2622500PE": {
+    "token": "61398",
+    "symbol": "NIFTY25AUG2622500PE",
+    "expiry": "25AUG2026",
+    "strike": 22500,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2622700PE": {
+    "token": "61410",
+    "symbol": "NIFTY25AUG2622700PE",
+    "expiry": "25AUG2026",
+    "strike": 22700,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2622950CE": {
+    "token": "61426",
+    "symbol": "NIFTY25AUG2622950CE",
+    "expiry": "25AUG2026",
+    "strike": 22950,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2623400PE": {
+    "token": "61492",
+    "symbol": "NIFTY25AUG2623400PE",
+    "expiry": "25AUG2026",
+    "strike": 23400,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2623950CE": {
+    "token": "61587",
+    "symbol": "NIFTY25AUG2623950CE",
+    "expiry": "25AUG2026",
+    "strike": 23950,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2624200CE": {
+    "token": "61647",
+    "symbol": "NIFTY25AUG2624200CE",
+    "expiry": "25AUG2026",
+    "strike": 24200,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2624300CE": {
+    "token": "61685",
+    "symbol": "NIFTY25AUG2624300CE",
+    "expiry": "25AUG2026",
+    "strike": 24300,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2624450CE": {
+    "token": "61727",
+    "symbol": "NIFTY25AUG2624450CE",
+    "expiry": "25AUG2026",
+    "strike": 24450,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2624550PE": {
+    "token": "61774",
+    "symbol": "NIFTY25AUG2624550PE",
+    "expiry": "25AUG2026",
+    "strike": 24550,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2625750CE": {
+    "token": "61994",
+    "symbol": "NIFTY25AUG2625750CE",
+    "expiry": "25AUG2026",
+    "strike": 25750,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2626050PE": {
+    "token": "62044",
+    "symbol": "NIFTY25AUG2626050PE",
+    "expiry": "25AUG2026",
+    "strike": 26050,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2626100CE": {
+    "token": "62045",
+    "symbol": "NIFTY25AUG2626100CE",
+    "expiry": "25AUG2026",
+    "strike": 26100,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2626300CE": {
+    "token": "62066",
+    "symbol": "NIFTY25AUG2626300CE",
+    "expiry": "25AUG2026",
+    "strike": 26300,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2626800CE": {
+    "token": "62197",
+    "symbol": "NIFTY25AUG2626800CE",
+    "expiry": "25AUG2026",
+    "strike": 26800,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2626900PE": {
+    "token": "62226",
+    "symbol": "NIFTY25AUG2626900PE",
+    "expiry": "25AUG2026",
+    "strike": 26900,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2627000CE": {
+    "token": "62229",
+    "symbol": "NIFTY25AUG2627000CE",
+    "expiry": "25AUG2026",
+    "strike": 27000,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2621500PE": {
+    "token": "61212",
+    "symbol": "NIFTY25AUG2621500PE",
+    "expiry": "25AUG2026",
+    "strike": 21500,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2621550CE": {
+    "token": "61271",
+    "symbol": "NIFTY25AUG2621550CE",
+    "expiry": "25AUG2026",
+    "strike": 21550,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2621700CE": {
+    "token": "61338",
+    "symbol": "NIFTY25AUG2621700CE",
+    "expiry": "25AUG2026",
+    "strike": 21700,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2621800CE": {
+    "token": "61342",
+    "symbol": "NIFTY25AUG2621800CE",
+    "expiry": "25AUG2026",
+    "strike": 21800,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2622000CE": {
+    "token": "61352",
+    "symbol": "NIFTY25AUG2622000CE",
+    "expiry": "25AUG2026",
+    "strike": 22000,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2622150CE": {
+    "token": "61364",
+    "symbol": "NIFTY25AUG2622150CE",
+    "expiry": "25AUG2026",
+    "strike": 22150,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2622550CE": {
+    "token": "61399",
+    "symbol": "NIFTY25AUG2622550CE",
+    "expiry": "25AUG2026",
+    "strike": 22550,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2623150CE": {
+    "token": "61440",
+    "symbol": "NIFTY25AUG2623150CE",
+    "expiry": "25AUG2026",
+    "strike": 23150,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2623150PE": {
+    "token": "61444",
+    "symbol": "NIFTY25AUG2623150PE",
+    "expiry": "25AUG2026",
+    "strike": 23150,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2623300CE": {
+    "token": "61455",
+    "symbol": "NIFTY25AUG2623300CE",
+    "expiry": "25AUG2026",
+    "strike": 23300,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2623450PE": {
+    "token": "61498",
+    "symbol": "NIFTY25AUG2623450PE",
+    "expiry": "25AUG2026",
+    "strike": 23450,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2623600PE": {
+    "token": "61518",
+    "symbol": "NIFTY25AUG2623600PE",
+    "expiry": "25AUG2026",
+    "strike": 23600,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2623800CE": {
+    "token": "61534",
+    "symbol": "NIFTY25AUG2623800CE",
+    "expiry": "25AUG2026",
+    "strike": 23800,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2623850CE": {
+    "token": "61536",
+    "symbol": "NIFTY25AUG2623850CE",
+    "expiry": "25AUG2026",
+    "strike": 23850,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2624700PE": {
+    "token": "61796",
+    "symbol": "NIFTY25AUG2624700PE",
+    "expiry": "25AUG2026",
+    "strike": 24700,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2624750CE": {
+    "token": "61797",
+    "symbol": "NIFTY25AUG2624750CE",
+    "expiry": "25AUG2026",
+    "strike": 24750,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2624750PE": {
+    "token": "61798",
+    "symbol": "NIFTY25AUG2624750PE",
+    "expiry": "25AUG2026",
+    "strike": 24750,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2625050CE": {
+    "token": "61909",
+    "symbol": "NIFTY25AUG2625050CE",
+    "expiry": "25AUG2026",
+    "strike": 25050,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2625100CE": {
+    "token": "61913",
+    "symbol": "NIFTY25AUG2625100CE",
+    "expiry": "25AUG2026",
+    "strike": 25100,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2625100PE": {
+    "token": "61914",
+    "symbol": "NIFTY25AUG2625100PE",
+    "expiry": "25AUG2026",
+    "strike": 25100,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2625200CE": {
+    "token": "61929",
+    "symbol": "NIFTY25AUG2625200CE",
+    "expiry": "25AUG2026",
+    "strike": 25200,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2625200PE": {
+    "token": "61930",
+    "symbol": "NIFTY25AUG2625200PE",
+    "expiry": "25AUG2026",
+    "strike": 25200,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2625250PE": {
+    "token": "61934",
+    "symbol": "NIFTY25AUG2625250PE",
+    "expiry": "25AUG2026",
+    "strike": 25250,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2625600CE": {
+    "token": "61979",
+    "symbol": "NIFTY25AUG2625600CE",
+    "expiry": "25AUG2026",
+    "strike": 25600,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2625700CE": {
+    "token": "61983",
+    "symbol": "NIFTY25AUG2625700CE",
+    "expiry": "25AUG2026",
+    "strike": 25700,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2625900PE": {
+    "token": "62023",
+    "symbol": "NIFTY25AUG2625900PE",
+    "expiry": "25AUG2026",
+    "strike": 25900,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2626050CE": {
+    "token": "62043",
+    "symbol": "NIFTY25AUG2626050CE",
+    "expiry": "25AUG2026",
+    "strike": 26050,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2626200PE": {
+    "token": "62056",
+    "symbol": "NIFTY25AUG2626200PE",
+    "expiry": "25AUG2026",
+    "strike": 26200,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2626500CE": {
+    "token": "62125",
+    "symbol": "NIFTY25AUG2626500CE",
+    "expiry": "25AUG2026",
+    "strike": 26500,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2626550PE": {
+    "token": "62136",
+    "symbol": "NIFTY25AUG2626550PE",
+    "expiry": "25AUG2026",
+    "strike": 26550,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2626650CE": {
+    "token": "62170",
+    "symbol": "NIFTY25AUG2626650CE",
+    "expiry": "25AUG2026",
+    "strike": 26650,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2626700CE": {
+    "token": "62172",
+    "symbol": "NIFTY25AUG2626700CE",
+    "expiry": "25AUG2026",
+    "strike": 26700,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2621300PE": {
+    "token": "61172",
+    "symbol": "NIFTY25AUG2621300PE",
+    "expiry": "25AUG2026",
+    "strike": 21300,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2621400CE": {
+    "token": "61175",
+    "symbol": "NIFTY25AUG2621400CE",
+    "expiry": "25AUG2026",
+    "strike": 21400,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2621950CE": {
+    "token": "61350",
+    "symbol": "NIFTY25AUG2621950CE",
+    "expiry": "25AUG2026",
+    "strike": 21950,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2622200CE": {
+    "token": "61366",
+    "symbol": "NIFTY25AUG2622200CE",
+    "expiry": "25AUG2026",
+    "strike": 22200,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2622800CE": {
+    "token": "61416",
+    "symbol": "NIFTY25AUG2622800CE",
+    "expiry": "25AUG2026",
+    "strike": 22800,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2623000PE": {
+    "token": "61429",
+    "symbol": "NIFTY25AUG2623000PE",
+    "expiry": "25AUG2026",
+    "strike": 23000,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2623350CE": {
+    "token": "61459",
+    "symbol": "NIFTY25AUG2623350CE",
+    "expiry": "25AUG2026",
+    "strike": 23350,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2623350PE": {
+    "token": "61467",
+    "symbol": "NIFTY25AUG2623350PE",
+    "expiry": "25AUG2026",
+    "strike": 23350,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2623500CE": {
+    "token": "61499",
+    "symbol": "NIFTY25AUG2623500CE",
+    "expiry": "25AUG2026",
+    "strike": 23500,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2623700PE": {
+    "token": "61531",
+    "symbol": "NIFTY25AUG2623700PE",
+    "expiry": "25AUG2026",
+    "strike": 23700,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2623750PE": {
+    "token": "61533",
+    "symbol": "NIFTY25AUG2623750PE",
+    "expiry": "25AUG2026",
+    "strike": 23750,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2624250PE": {
+    "token": "61684",
+    "symbol": "NIFTY25AUG2624250PE",
+    "expiry": "25AUG2026",
+    "strike": 24250,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2624350PE": {
+    "token": "61719",
+    "symbol": "NIFTY25AUG2624350PE",
+    "expiry": "25AUG2026",
+    "strike": 24350,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2624650CE": {
+    "token": "61778",
+    "symbol": "NIFTY25AUG2624650CE",
+    "expiry": "25AUG2026",
+    "strike": 24650,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2624950CE": {
+    "token": "61865",
+    "symbol": "NIFTY25AUG2624950CE",
+    "expiry": "25AUG2026",
+    "strike": 24950,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2624950PE": {
+    "token": "61866",
+    "symbol": "NIFTY25AUG2624950PE",
+    "expiry": "25AUG2026",
+    "strike": 24950,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2625150CE": {
+    "token": "61921",
+    "symbol": "NIFTY25AUG2625150CE",
+    "expiry": "25AUG2026",
+    "strike": 25150,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2625550PE": {
+    "token": "61978",
+    "symbol": "NIFTY25AUG2625550PE",
+    "expiry": "25AUG2026",
+    "strike": 25550,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2625700PE": {
+    "token": "61984",
+    "symbol": "NIFTY25AUG2625700PE",
+    "expiry": "25AUG2026",
+    "strike": 25700,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2625850CE": {
+    "token": "62002",
+    "symbol": "NIFTY25AUG2625850CE",
+    "expiry": "25AUG2026",
+    "strike": 25850,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2625950PE": {
+    "token": "62037",
+    "symbol": "NIFTY25AUG2625950PE",
+    "expiry": "25AUG2026",
+    "strike": 25950,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2626350PE": {
+    "token": "62106",
+    "symbol": "NIFTY25AUG2626350PE",
+    "expiry": "25AUG2026",
+    "strike": 26350,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2626850CE": {
+    "token": "62220",
+    "symbol": "NIFTY25AUG2626850CE",
+    "expiry": "25AUG2026",
+    "strike": 26850,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2627100PE": {
+    "token": "62237",
+    "symbol": "NIFTY25AUG2627100PE",
+    "expiry": "25AUG2026",
+    "strike": 27100,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2621250CE": {
+    "token": "61154",
+    "symbol": "NIFTY25AUG2621250CE",
+    "expiry": "25AUG2026",
+    "strike": 21250,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2621450CE": {
+    "token": "61177",
+    "symbol": "NIFTY25AUG2621450CE",
+    "expiry": "25AUG2026",
+    "strike": 21450,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2622000PE": {
+    "token": "61353",
+    "symbol": "NIFTY25AUG2622000PE",
+    "expiry": "25AUG2026",
+    "strike": 22000,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2622250CE": {
+    "token": "61372",
+    "symbol": "NIFTY25AUG2622250CE",
+    "expiry": "25AUG2026",
+    "strike": 22250,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2622250PE": {
+    "token": "61373",
+    "symbol": "NIFTY25AUG2622250PE",
+    "expiry": "25AUG2026",
+    "strike": 22250,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2622400CE": {
+    "token": "61380",
+    "symbol": "NIFTY25AUG2622400CE",
+    "expiry": "25AUG2026",
+    "strike": 22400,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2622400PE": {
+    "token": "61381",
+    "symbol": "NIFTY25AUG2622400PE",
+    "expiry": "25AUG2026",
+    "strike": 22400,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2622450PE": {
+    "token": "61396",
+    "symbol": "NIFTY25AUG2622450PE",
+    "expiry": "25AUG2026",
+    "strike": 22450,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2622650CE": {
+    "token": "61403",
+    "symbol": "NIFTY25AUG2622650CE",
+    "expiry": "25AUG2026",
+    "strike": 22650,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2622850PE": {
+    "token": "61423",
+    "symbol": "NIFTY25AUG2622850PE",
+    "expiry": "25AUG2026",
+    "strike": 22850,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2623000CE": {
+    "token": "61428",
+    "symbol": "NIFTY25AUG2623000CE",
+    "expiry": "25AUG2026",
+    "strike": 23000,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2623050CE": {
+    "token": "61430",
+    "symbol": "NIFTY25AUG2623050CE",
+    "expiry": "25AUG2026",
+    "strike": 23050,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2623200PE": {
+    "token": "61446",
+    "symbol": "NIFTY25AUG2623200PE",
+    "expiry": "25AUG2026",
+    "strike": 23200,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2623300PE": {
+    "token": "61458",
+    "symbol": "NIFTY25AUG2623300PE",
+    "expiry": "25AUG2026",
+    "strike": 23300,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2623650CE": {
+    "token": "61519",
+    "symbol": "NIFTY25AUG2623650CE",
+    "expiry": "25AUG2026",
+    "strike": 23650,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2623900PE": {
+    "token": "61586",
+    "symbol": "NIFTY25AUG2623900PE",
+    "expiry": "25AUG2026",
+    "strike": 23900,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2624000CE": {
+    "token": "61593",
+    "symbol": "NIFTY25AUG2624000CE",
+    "expiry": "25AUG2026",
+    "strike": 24000,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2624250CE": {
+    "token": "61671",
+    "symbol": "NIFTY25AUG2624250CE",
+    "expiry": "25AUG2026",
+    "strike": 24250,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2624450PE": {
+    "token": "61733",
+    "symbol": "NIFTY25AUG2624450PE",
+    "expiry": "25AUG2026",
+    "strike": 24450,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2625300PE": {
+    "token": "61944",
+    "symbol": "NIFTY25AUG2625300PE",
+    "expiry": "25AUG2026",
+    "strike": 25300,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2625350CE": {
+    "token": "61953",
+    "symbol": "NIFTY25AUG2625350CE",
+    "expiry": "25AUG2026",
+    "strike": 25350,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2625450CE": {
+    "token": "61973",
+    "symbol": "NIFTY25AUG2625450CE",
+    "expiry": "25AUG2026",
+    "strike": 25450,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2625550CE": {
+    "token": "61977",
+    "symbol": "NIFTY25AUG2625550CE",
+    "expiry": "25AUG2026",
+    "strike": 25550,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2625650PE": {
+    "token": "61982",
+    "symbol": "NIFTY25AUG2625650PE",
+    "expiry": "25AUG2026",
+    "strike": 25650,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2625800CE": {
+    "token": "61997",
+    "symbol": "NIFTY25AUG2625800CE",
+    "expiry": "25AUG2026",
+    "strike": 25800,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2626000CE": {
+    "token": "62038",
+    "symbol": "NIFTY25AUG2626000CE",
+    "expiry": "25AUG2026",
+    "strike": 26000,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2626500PE": {
+    "token": "62126",
+    "symbol": "NIFTY25AUG2626500PE",
+    "expiry": "25AUG2026",
+    "strike": 26500,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2626650PE": {
+    "token": "62171",
+    "symbol": "NIFTY25AUG2626650PE",
+    "expiry": "25AUG2026",
+    "strike": 26650,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2626750PE": {
+    "token": "62196",
+    "symbol": "NIFTY25AUG2626750PE",
+    "expiry": "25AUG2026",
+    "strike": 26750,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2627200PE": {
+    "token": "62245",
+    "symbol": "NIFTY25AUG2627200PE",
+    "expiry": "25AUG2026",
+    "strike": 27200,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2621300CE": {
+    "token": "61156",
+    "symbol": "NIFTY25AUG2621300CE",
+    "expiry": "25AUG2026",
+    "strike": 21300,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2621350PE": {
+    "token": "61174",
+    "symbol": "NIFTY25AUG2621350PE",
+    "expiry": "25AUG2026",
+    "strike": 21350,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2621400PE": {
+    "token": "61176",
+    "symbol": "NIFTY25AUG2621400PE",
+    "expiry": "25AUG2026",
+    "strike": 21400,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2621500CE": {
+    "token": "61211",
+    "symbol": "NIFTY25AUG2621500CE",
+    "expiry": "25AUG2026",
+    "strike": 21500,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2621650PE": {
+    "token": "61337",
+    "symbol": "NIFTY25AUG2621650PE",
+    "expiry": "25AUG2026",
+    "strike": 21650,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2621850PE": {
+    "token": "61345",
+    "symbol": "NIFTY25AUG2621850PE",
+    "expiry": "25AUG2026",
+    "strike": 21850,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2623050PE": {
+    "token": "61431",
+    "symbol": "NIFTY25AUG2623050PE",
+    "expiry": "25AUG2026",
+    "strike": 23050,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2623600CE": {
+    "token": "61517",
+    "symbol": "NIFTY25AUG2623600CE",
+    "expiry": "25AUG2026",
+    "strike": 23600,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2623800PE": {
+    "token": "61535",
+    "symbol": "NIFTY25AUG2623800PE",
+    "expiry": "25AUG2026",
+    "strike": 23800,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2624150CE": {
+    "token": "61623",
+    "symbol": "NIFTY25AUG2624150CE",
+    "expiry": "25AUG2026",
+    "strike": 24150,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2624200PE": {
+    "token": "61670",
+    "symbol": "NIFTY25AUG2624200PE",
+    "expiry": "25AUG2026",
+    "strike": 24200,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2624550CE": {
+    "token": "61772",
+    "symbol": "NIFTY25AUG2624550CE",
+    "expiry": "25AUG2026",
+    "strike": 24550,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2624850PE": {
+    "token": "61856",
+    "symbol": "NIFTY25AUG2624850PE",
+    "expiry": "25AUG2026",
+    "strike": 24850,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2626150PE": {
+    "token": "62054",
+    "symbol": "NIFTY25AUG2626150PE",
+    "expiry": "25AUG2026",
+    "strike": 26150,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2626450PE": {
+    "token": "62120",
+    "symbol": "NIFTY25AUG2626450PE",
+    "expiry": "25AUG2026",
+    "strike": 26450,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2626550CE": {
+    "token": "62135",
+    "symbol": "NIFTY25AUG2626550CE",
+    "expiry": "25AUG2026",
+    "strike": 26550,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2626600PE": {
+    "token": "62168",
+    "symbol": "NIFTY25AUG2626600PE",
+    "expiry": "25AUG2026",
+    "strike": 26600,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2626750CE": {
+    "token": "62195",
+    "symbol": "NIFTY25AUG2626750CE",
+    "expiry": "25AUG2026",
+    "strike": 26750,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2626850PE": {
+    "token": "62221",
+    "symbol": "NIFTY25AUG2626850PE",
+    "expiry": "25AUG2026",
+    "strike": 26850,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2626950CE": {
+    "token": "62227",
+    "symbol": "NIFTY25AUG2626950CE",
+    "expiry": "25AUG2026",
+    "strike": 26950,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2621200CE": {
+    "token": "61148",
+    "symbol": "NIFTY25AUG2621200CE",
+    "expiry": "25AUG2026",
+    "strike": 21200,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2621200PE": {
+    "token": "61153",
+    "symbol": "NIFTY25AUG2621200PE",
+    "expiry": "25AUG2026",
+    "strike": 21200,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2621250PE": {
+    "token": "61155",
+    "symbol": "NIFTY25AUG2621250PE",
+    "expiry": "25AUG2026",
+    "strike": 21250,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2621350CE": {
+    "token": "61173",
+    "symbol": "NIFTY25AUG2621350CE",
+    "expiry": "25AUG2026",
+    "strike": 21350,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2621550PE": {
+    "token": "61333",
+    "symbol": "NIFTY25AUG2621550PE",
+    "expiry": "25AUG2026",
+    "strike": 21550,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2621750PE": {
+    "token": "61341",
+    "symbol": "NIFTY25AUG2621750PE",
+    "expiry": "25AUG2026",
+    "strike": 21750,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2621850CE": {
+    "token": "61344",
+    "symbol": "NIFTY25AUG2621850CE",
+    "expiry": "25AUG2026",
+    "strike": 21850,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2622550PE": {
+    "token": "61400",
+    "symbol": "NIFTY25AUG2622550PE",
+    "expiry": "25AUG2026",
+    "strike": 22550,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2622600CE": {
+    "token": "61401",
+    "symbol": "NIFTY25AUG2622600CE",
+    "expiry": "25AUG2026",
+    "strike": 22600,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2622900CE": {
+    "token": "61424",
+    "symbol": "NIFTY25AUG2622900CE",
+    "expiry": "25AUG2026",
+    "strike": 22900,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2623650PE": {
+    "token": "61529",
+    "symbol": "NIFTY25AUG2623650PE",
+    "expiry": "25AUG2026",
+    "strike": 23650,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2623700CE": {
+    "token": "61530",
+    "symbol": "NIFTY25AUG2623700CE",
+    "expiry": "25AUG2026",
+    "strike": 23700,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2623750CE": {
+    "token": "61532",
+    "symbol": "NIFTY25AUG2623750CE",
+    "expiry": "25AUG2026",
+    "strike": 23750,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2624050PE": {
+    "token": "61609",
+    "symbol": "NIFTY25AUG2624050PE",
+    "expiry": "25AUG2026",
+    "strike": 24050,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2624500CE": {
+    "token": "61734",
+    "symbol": "NIFTY25AUG2624500CE",
+    "expiry": "25AUG2026",
+    "strike": 24500,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2624500PE": {
+    "token": "61771",
+    "symbol": "NIFTY25AUG2624500PE",
+    "expiry": "25AUG2026",
+    "strike": 24500,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2624650PE": {
+    "token": "61786",
+    "symbol": "NIFTY25AUG2624650PE",
+    "expiry": "25AUG2026",
+    "strike": 24650,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2625150PE": {
+    "token": "61922",
+    "symbol": "NIFTY25AUG2625150PE",
+    "expiry": "25AUG2026",
+    "strike": 25150,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2625400PE": {
+    "token": "61956",
+    "symbol": "NIFTY25AUG2625400PE",
+    "expiry": "25AUG2026",
+    "strike": 25400,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2625800PE": {
+    "token": "62000",
+    "symbol": "NIFTY25AUG2625800PE",
+    "expiry": "25AUG2026",
+    "strike": 25800,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2625850PE": {
+    "token": "62003",
+    "symbol": "NIFTY25AUG2625850PE",
+    "expiry": "25AUG2026",
+    "strike": 25850,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2625900CE": {
+    "token": "62022",
+    "symbol": "NIFTY25AUG2625900CE",
+    "expiry": "25AUG2026",
+    "strike": 25900,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2626200CE": {
+    "token": "62055",
+    "symbol": "NIFTY25AUG2626200CE",
+    "expiry": "25AUG2026",
+    "strike": 26200,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2626250CE": {
+    "token": "62058",
+    "symbol": "NIFTY25AUG2626250CE",
+    "expiry": "25AUG2026",
+    "strike": 26250,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2626300PE": {
+    "token": "62068",
+    "symbol": "NIFTY25AUG2626300PE",
+    "expiry": "25AUG2026",
+    "strike": 26300,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2626900CE": {
+    "token": "62222",
+    "symbol": "NIFTY25AUG2626900CE",
+    "expiry": "25AUG2026",
+    "strike": 26900,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2627100CE": {
+    "token": "62236",
+    "symbol": "NIFTY25AUG2627100CE",
+    "expiry": "25AUG2026",
+    "strike": 27100,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2621650CE": {
+    "token": "61336",
+    "symbol": "NIFTY25AUG2621650CE",
+    "expiry": "25AUG2026",
+    "strike": 21650,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2622050CE": {
+    "token": "61354",
+    "symbol": "NIFTY25AUG2622050CE",
+    "expiry": "25AUG2026",
+    "strike": 22050,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2622100CE": {
+    "token": "61356",
+    "symbol": "NIFTY25AUG2622100CE",
+    "expiry": "25AUG2026",
+    "strike": 22100,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2622200PE": {
+    "token": "61367",
+    "symbol": "NIFTY25AUG2622200PE",
+    "expiry": "25AUG2026",
+    "strike": 22200,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2622300PE": {
+    "token": "61377",
+    "symbol": "NIFTY25AUG2622300PE",
+    "expiry": "25AUG2026",
+    "strike": 22300,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2622650PE": {
+    "token": "61408",
+    "symbol": "NIFTY25AUG2622650PE",
+    "expiry": "25AUG2026",
+    "strike": 22650,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2622700CE": {
+    "token": "61409",
+    "symbol": "NIFTY25AUG2622700CE",
+    "expiry": "25AUG2026",
+    "strike": 22700,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2622750CE": {
+    "token": "61411",
+    "symbol": "NIFTY25AUG2622750CE",
+    "expiry": "25AUG2026",
+    "strike": 22750,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2622850CE": {
+    "token": "61422",
+    "symbol": "NIFTY25AUG2622850CE",
+    "expiry": "25AUG2026",
+    "strike": 22850,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2622900PE": {
+    "token": "61425",
+    "symbol": "NIFTY25AUG2622900PE",
+    "expiry": "25AUG2026",
+    "strike": 22900,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2623250CE": {
+    "token": "61450",
+    "symbol": "NIFTY25AUG2623250CE",
+    "expiry": "25AUG2026",
+    "strike": 23250,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2623550PE": {
+    "token": "61514",
+    "symbol": "NIFTY25AUG2623550PE",
+    "expiry": "25AUG2026",
+    "strike": 23550,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2624050CE": {
+    "token": "61605",
+    "symbol": "NIFTY25AUG2624050CE",
+    "expiry": "25AUG2026",
+    "strike": 24050,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2624100PE": {
+    "token": "61622",
+    "symbol": "NIFTY25AUG2624100PE",
+    "expiry": "25AUG2026",
+    "strike": 24100,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2624400PE": {
+    "token": "61726",
+    "symbol": "NIFTY25AUG2624400PE",
+    "expiry": "25AUG2026",
+    "strike": 24400,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2624800CE": {
+    "token": "61845",
+    "symbol": "NIFTY25AUG2624800CE",
+    "expiry": "25AUG2026",
+    "strike": 24800,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2625350PE": {
+    "token": "61954",
+    "symbol": "NIFTY25AUG2625350PE",
+    "expiry": "25AUG2026",
+    "strike": 25350,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2625500CE": {
+    "token": "61975",
+    "symbol": "NIFTY25AUG2625500CE",
+    "expiry": "25AUG2026",
+    "strike": 25500,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2625500PE": {
+    "token": "61976",
+    "symbol": "NIFTY25AUG2625500PE",
+    "expiry": "25AUG2026",
+    "strike": 25500,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2625950CE": {
+    "token": "62036",
+    "symbol": "NIFTY25AUG2625950CE",
+    "expiry": "25AUG2026",
+    "strike": 25950,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2626600CE": {
+    "token": "62166",
+    "symbol": "NIFTY25AUG2626600CE",
+    "expiry": "25AUG2026",
+    "strike": 26600,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2626950PE": {
+    "token": "62228",
+    "symbol": "NIFTY25AUG2626950PE",
+    "expiry": "25AUG2026",
+    "strike": 26950,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2627150PE": {
+    "token": "62241",
+    "symbol": "NIFTY25AUG2627150PE",
+    "expiry": "25AUG2026",
+    "strike": 27150,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  },
+  "NIFTY25AUG2627200CE": {
+    "token": "62242",
+    "symbol": "NIFTY25AUG2627200CE",
+    "expiry": "25AUG2026",
+    "strike": 27200,
+    "lotsize": "65",
+    "exch_seg": "NFO"
+  }
+}
