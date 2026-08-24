@@ -47,13 +47,13 @@ class AuditLogger {
 
       await prisma.auditLog.create({
         data: {
-          userId: userId || 'SYSTEM',
-          category,
+          userId: userId || null,
+          category: category || CATEGORIES.ALGO,
           action,
-          detail: detail || '',
-          meta: meta ? JSON.stringify(meta) : null,
+          detail: detail || null,
+          meta: meta ? (typeof meta === 'string' ? meta : JSON.stringify(meta)) : null,
           ipAddress,
-        }
+        },
       });
     } catch (err) {
       // Audit logging must never crash the main flow

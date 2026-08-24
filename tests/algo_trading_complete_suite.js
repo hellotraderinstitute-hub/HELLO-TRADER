@@ -121,18 +121,18 @@ async function runTestSuite() {
     );
   } catch (e) { record('Test H: Failed Order -> 0 Token Deduction', false, e.message); }
 
-  // --- TEST I: Admin Tiered Brokerage Deduction (1 lot = 10, 5 lots = 12, 5 lots entry+exit = 24) ---
+  // --- TEST I: Admin Per-Lot Tiered Brokerage (1 lot = 10, 5 lots = 60, 5 lots entry+exit = 120) ---
   try {
     const oneLotEntry = await AlgoTokenBillingService.calculateEntryTokens(1);
     const fiveLotEntry = await AlgoTokenBillingService.calculateEntryTokens(5);
     const fiveLotExit = await AlgoTokenBillingService.calculateExitTokens(5);
     const fiveLotRoundTrip = fiveLotEntry + fiveLotExit;
 
-    record('Test I: Admin Tiered Brokerage Deduction (1 Lot=10, 5 Lots=12, 5 Lots Round-Trip=24)',
-      oneLotEntry === 10 && fiveLotEntry === 12 && fiveLotExit === 12 && fiveLotRoundTrip === 24,
+    record('Test I: Admin Per-Lot Tiered Brokerage (1 Lot=10, 5 Lots=60, 5 Lots Round-Trip=120)',
+      oneLotEntry === 10 && fiveLotEntry === 60 && fiveLotExit === 60 && fiveLotRoundTrip === 120,
       `1 Lot: ${oneLotEntry} tokens | 5 Lots BUY: ${fiveLotEntry} tokens | 5 Lots SELL: ${fiveLotExit} tokens | 5 Lots Round-Trip: ${fiveLotRoundTrip} tokens`
     );
-  } catch (e) { record('Test I: Admin Tiered Brokerage Deduction (1 Lot=10, 5 Lots=12, 5 Lots Round-Trip=24)', false, e.message); }
+  } catch (e) { record('Test I: Admin Per-Lot Tiered Brokerage (1 Lot=10, 5 Lots=60, 5 Lots Round-Trip=120)', false, e.message); }
 
   // --- TEST J: Same Webhook Replay -> Idempotency Check ---
   try {

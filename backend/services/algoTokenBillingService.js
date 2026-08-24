@@ -99,7 +99,10 @@ class AlgoTokenBillingService {
     }
 
     const lotCount = lots || Math.max(1, Math.round((quantity || 65) / (symbol?.includes('BANKNIFTY') ? 15 : (symbol?.includes('FINNIFTY') ? 40 : 65))));
-    const amount = await this.calculateEntryTokens(lotCount);
+    const tiers = await this.getActiveBrokerageTiers();
+    const brokerage = getAlgoBrokerageForLots(lotCount, tiers);
+    const amount = brokerage.buyTokens;
+    const ratePerLot = brokerage.ratePerLotBuy;
 
     const balanceBefore = await this.getUserTokenBalance(userId);
     const balanceAfter = Math.max(0, balanceBefore - amount);
@@ -112,6 +115,7 @@ class AlgoTokenBillingService {
       symbol,
       optionType,
       lots: lotCount,
+      ratePerLot,
       quantity: quantity || (lotCount * 65),
       brokerOrderId,
       tradeId: tradeId || null,
@@ -137,7 +141,7 @@ class AlgoTokenBillingService {
     // 4. Audit Log
     await AuditLogger.log({
       userId, category: CATEGORIES.SETTINGS, action: 'TOKEN_DEBITED',
-      detail: `Algo BUY Brokerage: Debited ${amount} tokens (${lotCount} lot(s) tier) for ${orderAction || 'BUY'} ${symbol} (OrderID: ${brokerOrderId}). Balance: ${balanceBefore} -> ${balanceAfter}.`,
+      detail: `Algo BUY Brokerage: Debited ${amount} tokens (${lotCount} lot(s) @ ${ratePerLot}/lot) for ${orderAction || 'BUY'} ${symbol} (OrderID: ${brokerOrderId}). Balance: ${balanceBefore} -> ${balanceAfter}.`,
       meta: { ...ledgerMetadata, ledgerId: ledgerEntry.id }, req
     });
 
@@ -145,6 +149,7 @@ class AlgoTokenBillingService {
       success: true,
       deducted: amount,
       lots: lotCount,
+      ratePerLot,
       balanceBefore,
       balanceAfter,
       ledgerId: ledgerEntry.id,
@@ -177,7 +182,10 @@ class AlgoTokenBillingService {
     }
 
     const lotCount = lots || Math.max(1, Math.round((quantity || 65) / (symbol?.includes('BANKNIFTY') ? 15 : (symbol?.includes('FINNIFTY') ? 40 : 65))));
-    const amount = await this.calculateExitTokens(lotCount);
+    const tiers = await this.getActiveBrokerageTiers();
+    const brokerage = getAlgoBrokerageForLots(lotCount, tiers);
+    const amount = brokerage.sellTokens;
+    const ratePerLot = brokerage.ratePerLotSell;
 
     const balanceBefore = await this.getUserTokenBalance(userId);
     const balanceAfter = Math.max(0, balanceBefore - amount);
@@ -190,6 +198,7 @@ class AlgoTokenBillingService {
       symbol,
       optionType,
       lots: lotCount,
+      ratePerLot,
       quantity: quantity || (lotCount * 65),
       brokerOrderId,
       tradeId: tradeId || null,
@@ -216,7 +225,7 @@ class AlgoTokenBillingService {
     // 4. Audit Log
     await AuditLogger.log({
       userId, category: CATEGORIES.SETTINGS, action: 'TOKEN_DEBITED',
-      detail: `Algo SELL Brokerage: Debited ${amount} tokens (${lotCount} lot(s) tier) for EXIT on ${symbol} (OrderID: ${brokerOrderId}). Balance: ${balanceBefore} -> ${balanceAfter}.`,
+      detail: `Algo SELL Brokerage: Debited ${amount} tokens (${lotCount} lot(s) @ ${ratePerLot}/lot) for EXIT on ${symbol} (OrderID: ${brokerOrderId}). Balance: ${balanceBefore} -> ${balanceAfter}.`,
       meta: { ...ledgerMetadata, ledgerId: ledgerEntry.id }, req
     });
 
@@ -224,6 +233,7 @@ class AlgoTokenBillingService {
       success: true,
       deducted: amount,
       lots: lotCount,
+      ratePerLot,
       balanceBefore,
       balanceAfter,
       ledgerId: ledgerEntry.id,
