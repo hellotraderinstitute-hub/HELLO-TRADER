@@ -20,26 +20,55 @@ function getBackupStatus() {
     } catch (_) {}
   }
 
-  const countBackups = (category) => {
+  const getCategoryDetails = (category, limit) => {
     const p = path.join(BACKUP_ROOT, category);
-    if (!fs.existsSync(p)) return 0;
-    return fs.readdirSync(p).filter(f => f.startsWith('backup_')).length;
+    if (!fs.existsSync(p)) return { count: 0, limit, backups: [] };
+    const entries = fs.readdirSync(p)
+      .filter(f => f.startsWith('backup_') && fs.statSync(path.join(p, f)).isDirectory())
+      .map(f => {
+        const manifestPath = path.join(p, f, 'manifest.json');
+        let m = null;
+        if (fs.existsSync(manifestPath)) {
+          try { m = JSON.parse(fs.readFileSync(manifestPath, 'utf8')); } catch (_) {}
+        }
+        return {
+          id: f,
+          createdAt: m?.createdAt || fs.statSync(path.join(p, f)).mtime.toISOString(),
+          status: m?.verification?.status || 'UNKNOWN',
+          dbSize: m?.database?.sizeBytes || 0,
+          appSize: m?.archives?.appSourceBytes || 0
+        };
+      })
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    return {
+      count: entries.length,
+      limit,
+      latest: entries[0] || null,
+      oldest: entries[entries.length - 1] || null,
+      backups: entries.slice(0, 3)
+    };
+  };
+
+  const categories = {
+    daily: getCategoryDetails('daily', 7),
+    weekly: getCategoryDetails('weekly', 4),
+    monthly: getCategoryDetails('monthly', 3),
+    predeploy: getCategoryDetails('predeploy', 5)
   };
 
   const retentionCounts = {
-    daily: countBackups('daily'),
-    weekly: countBackups('weekly'),
-    monthly: countBackups('monthly'),
-    predeploy: countBackups('predeploy')
+    daily: categories.daily.count,
+    weekly: categories.weekly.count,
+    monthly: categories.monthly.count,
+    predeploy: categories.predeploy.count
   };
 
-  // Next scheduled backup: 03:00 AM IST daily (21:30 UTC)
+  // Next scheduled backup calculation (Asia/Kolkata timezone aware)
   const now = new Date();
-  const nextScheduled = new Date();
-  nextScheduled.setUTCHours(21, 30, 0, 0);
-  if (nextScheduled <= now) {
-    nextScheduled.setUTCDate(nextScheduled.getUTCDate() + 1);
-  }
+  const nextDaily = new Date();
+  nextDaily.setUTCHours(21, 30, 0, 0); // 3:00 AM IST next
+  if (nextDaily <= now) nextDaily.setUTCDate(nextDaily.getUTCDate() + 1);
 
   return {
     healthy: hasLatest && latestManifest?.verification?.status === 'VERIFIED_SUCCESS',
@@ -57,8 +86,13 @@ function getBackupStatus() {
       checksums: latestManifest.checksums
     } : null,
     retention: retentionCounts,
-    nextScheduledBackup: nextScheduled.toISOString(),
-    scheduleCron: '0 3 * * * (Asia/Kolkata daily 3:00 AM)',
+    categories,
+    schedules: {
+      daily: '0 3 * * * IST / 21:30 UTC daily (Keep 7)',
+      weekly: 'Sunday 3:30 AM IST / Saturday 22:00 UTC (Keep 4)',
+      monthly: '1st of Month 4:00 AM IST / 22:30 UTC (Keep 3)'
+    },
+    nextScheduledBackup: nextDaily.toISOString(),
     backupRoot: BACKUP_ROOT
   };
 }
