@@ -4,6 +4,10 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const router = express.Router();
 const { N } = require('../services/notifier');
+const { AuditLogger, CATEGORIES } = require('../services/auditLogger');
+const { agentTunnelServer } = require('../services/agentTunnelServer');
+const { encryptCredential, decryptCredential } = require('../services/crypto');
+const { ProxyTransportFactory } = require('../../packages/agent/lib/network/ProxyTransportFactory');
 
 // Admin Middleware
 const isAdmin = (req, res, next) => {
@@ -35,10 +39,44 @@ router.get('/dashboard', async (req, res) => {
       return { ...req, isDuplicateIp };
     }));
 
-    const students = await prisma.user.findMany({ 
+    const studentsRaw = await prisma.user.findMany({ 
       where: { role: 'USER' },
-      include: { wallets: true, trades: true }
+      include: { 
+        wallets: true, 
+        trades: true,
+        memberships: { orderBy: { expiresAt: 'desc' }, take: 1 },
+        brokerConnections: true,
+        auditLogs: {
+          where: { category: 'AUTH', action: 'USER_LOGIN' },
+          orderBy: { timestamp: 'desc' },
+          take: 1
+        }
+      },
+      orderBy: { createdAt: 'desc' }
     });
+
+    const students = studentsRaw.map(u => {
+      const activeMembership = u.memberships.find(m => m.status === 'ACTIVE' && m.expiresAt > new Date());
+      const activeConnection = u.brokerConnections.find(b => b.isActive);
+      const lastLogin = u.auditLogs[0]?.timestamp || null;
+      const lastSeen = u.lastSeenAt ? new Date(u.lastSeenAt).getTime() : null;
+      const isOnline = lastSeen && (Date.now() - lastSeen) < 90000;
+
+      return {
+        ...u,
+        membershipStatus: activeMembership ? 'ACTIVE' : 'EXPIRED',
+        membershipExpiry: activeMembership ? activeMembership.expiresAt : (u.memberships[0]?.expiresAt || null),
+        algoStatus: activeConnection ? `CONNECTED (${activeConnection.broker})` : 'DISCONNECTED',
+        copyTradingStatus: 'LOCKED',
+        lastLoginDate: lastLogin ? new Date(lastLogin).toLocaleDateString('en-IN') : 'Never',
+        lastLoginTime: lastLogin ? new Date(lastLogin).toLocaleTimeString('en-IN') : 'Never',
+        lastLoginTimestamp: lastLogin,
+        lastSeenDate: u.lastSeenAt ? new Date(u.lastSeenAt).toLocaleDateString('en-IN') : 'Never',
+        lastSeenTime: u.lastSeenAt ? new Date(u.lastSeenAt).toLocaleTimeString('en-IN') : 'Never',
+        isOnline: !!isOnline
+      };
+    });
+
     const payments = await prisma.paymentRequest.findMany({
       include: { user: true },
       orderBy: { timestamp: 'desc' }
@@ -60,6 +98,50 @@ router.get('/settings', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+// ── Admin Live Dashboard Telemetry (Filtered by accountMode) ────────────
+router.get('/dashboard-telemetry', async (req, res) => {
+  try {
+    const includeTest = req.query.includeTest === 'true';
+    const modeFilter = includeTest ? undefined : 'PRODUCTION';
+    const userWhere = modeFilter ? { accountMode: modeFilter } : {};
+
+    const totalUsers = await prisma.user.count({ where: { role: 'USER', ...userWhere } });
+    const totalPayments = await prisma.paymentRequest.count({ where: { user: userWhere } });
+    const approvedPayments = await prisma.paymentRequest.count({ where: { status: 'APPROVED', user: userWhere } });
+    const activeMemberships = await prisma.membership.count({ where: { status: 'ACTIVE', expiresAt: { gt: new Date() }, user: userWhere } });
+    const activeAlgoConnections = await prisma.algoBrokerConnection.count({ where: { isActive: true, user: userWhere } });
+
+    const tokenLedgers = await prisma.ledger.findMany({
+      where: {
+        walletType: { in: ['TOKEN', 'RECHARGE', 'BONUS'] },
+        reason: { not: 'QA_TEST_CREDIT_EXCLUDED' },
+        user: userWhere
+      }
+    });
+
+    const tokenCredits = tokenLedgers.filter(l => l.type === 'CREDIT').reduce((acc, l) => acc + l.amount, 0);
+    const tokenDebits = tokenLedgers.filter(l => l.type === 'DEBIT').reduce((acc, l) => acc + l.amount, 0);
+    const netTokenBalance = tokenCredits - tokenDebits;
+
+    res.json({
+      success: true,
+      filteredByMode: includeTest ? 'ALL' : 'PRODUCTION',
+      telemetry: {
+        totalUsers,
+        totalPayments,
+        approvedPayments,
+        activeMemberships,
+        activeAlgoConnections,
+        tokenCredits,
+        tokenDebits,
+        netTokenBalance
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 
 // ── Admin Payment Manager Endpoints ─────────────────────────────────────
 router.get('/payment-settings', async (req, res) => {
@@ -361,14 +443,17 @@ router.post('/approve-signup', async (req, res) => {
 
     const effectivePassword = tempPassword || `HT@${Math.floor(1000 + Math.random() * 9000)}`;
 
-    // Generate unique student ID (HT0786, HT0787, ...)
-    let count = await prisma.user.count({ where: { role: 'USER' } });
-    let studentId = `HT${String(count + 786).padStart(4, '0')}`;
-    let existingId = await prisma.user.findUnique({ where: { studentId } });
-    while (existingId) {
-      count++;
+    // Generate unique student ID (HT0786, HT0787, ...) unless explicitly provided
+    let studentId = req.body.studentId || request.studentId;
+    if (!studentId) {
+      let count = await prisma.user.count({ where: { role: 'USER' } });
       studentId = `HT${String(count + 786).padStart(4, '0')}`;
-      existingId = await prisma.user.findUnique({ where: { studentId } });
+      let existingId = await prisma.user.findUnique({ where: { studentId } });
+      while (existingId) {
+        count++;
+        studentId = `HT${String(count + 786).padStart(4, '0')}`;
+        existingId = await prisma.user.findUnique({ where: { studentId } });
+      }
     }
 
     const hash = await bcrypt.hash(effectivePassword, 10);
@@ -392,6 +477,7 @@ router.post('/approve-signup', async (req, res) => {
         password: hash,
         referralCode: `REF${studentId}`,
         referredBy: referrer && !isInvalidReferral ? request.referralCode : null,
+        accountMode: 'PRODUCTION'
       }
     });
 
@@ -440,6 +526,14 @@ router.post('/approve-signup', async (req, res) => {
         });
       }
     }
+
+    // Check for Active Partner Attribution
+    const partnerService = require('../services/partnerService');
+    await partnerService.recordPartnerAttribution({
+      userId: newUser.id,
+      studentId: newUser.studentId,
+      referralCode: request.referralCode
+    }, prisma);
 
     await prisma.signupRequest.update({
       where: { id: requestId },
@@ -538,6 +632,18 @@ router.post('/approve-payment', async (req, res) => {
         throw new Error('CONCURRENT_APPROVAL_BLOCKED: Payment request was already processed by another request.');
       }
 
+      // Check for duplicate ledger credit
+      const existingCredit = await tx.ledger.findFirst({
+        where: {
+          userId: request.userId,
+          walletType: 'TOKEN',
+          reason: `RECHARGE_CREDIT_PAYMENT_${request.id.slice(0, 8)}`
+        }
+      });
+      if (existingCredit) {
+        throw new Error('CONCURRENT_APPROVAL_BLOCKED: Token credit already created for this payment.');
+      }
+
       // Base recharge token credit
       await tx.ledger.create({
         data: {
@@ -588,6 +694,13 @@ router.post('/approve-payment', async (req, res) => {
           }
         });
       }
+
+      // Check for Partner Attribution & Qualify Fixed ₹200 Partner Benefit
+      const partnerService = require('../services/partnerService');
+      await partnerService.qualifyPartnerBenefit({
+        userId: request.userId,
+        paymentReqId: request.id
+      }, tx);
 
       return true;
     });
@@ -674,16 +787,27 @@ router.post('/reverse-payment', async (req, res) => {
         }
       });
 
-      // 2. Create separate Ledger reversal entry (DEBIT / RECHARGE_REVERSAL)
-      await tx.ledger.create({
-        data: {
+      // 2. Calculate current token balance to enforce floor guard (reversal must never create a negative token balance)
+      const userLedgers = await tx.ledger.findMany({
+        where: {
           userId: request.userId,
-          walletType: 'TOKEN',
-          amount: totalTokensToReverse,
-          type: 'DEBIT',
-          reason: `RECHARGE_REVERSAL_PAYMENT_${request.id.slice(0, 8)}`
+          walletType: { in: ['TOKEN', 'RECHARGE', 'BONUS'] }
         }
       });
+      const currentTokenBalance = userLedgers.reduce((acc, curr) => curr.type === 'CREDIT' ? acc + curr.amount : acc - curr.amount, 0);
+      const safeReversalAmount = Math.max(0, Math.min(totalTokensToReverse, currentTokenBalance));
+
+      if (safeReversalAmount > 0) {
+        await tx.ledger.create({
+          data: {
+            userId: request.userId,
+            walletType: 'TOKEN',
+            amount: safeReversalAmount,
+            type: 'DEBIT',
+            reason: `RECHARGE_REVERSAL_PAYMENT_${request.id.slice(0, 8)}`
+          }
+        });
+      }
 
       // 2b. Check if a referral reward was credited for this specific payment
       const rewardLedgerReason = `RECHARGE_REFERRAL_REWARD_PAYMENT_${request.id.slice(0, 8)}`;
@@ -713,6 +837,13 @@ router.post('/reverse-payment', async (req, res) => {
           data: { status: 'PENDING' }
         });
       }
+
+      // Revert Partner Benefit if applicable
+      const partnerService = require('../services/partnerService');
+      await partnerService.reversePartnerBenefit({
+        userId: request.userId,
+        paymentReqId: request.id
+      }, tx);
 
       // 3. Recalculate net token balance from Ledger
       const ledgers = await tx.ledger.findMany({
@@ -1009,27 +1140,48 @@ router.patch('/student/:id/trial', async (req, res) => {
     const student = await prisma.user.findFirst({ where: { id, role: 'USER' } });
     if (!student) return res.status(404).json({ error: 'Student not found' });
 
-    const updateData = {
-      trialDaysOverride: resetToDefault ? null : (trialDays != null ? parseInt(trialDays) : student.trialDaysOverride),
-      trialOverrideNote: resetToDefault ? null : (note || student.trialOverrideNote),
-      trialOverrideAt: resetToDefault ? null : new Date(),
-    };
+    const globalSettings = await prisma.systemSettings.findUnique({ where: { id: 'CONFIG' } });
+    const globalDays = globalSettings?.trialDays ?? 4;
+
+    const now = new Date();
+
+    // KEY FIX: When resetting to default, also reset trialStartedAt to NOW so
+    // the default trial period (e.g. 4 days) starts fresh from today.
+    // Without this, users who registered > 4 days ago remain expired immediately.
+    const updateData = resetToDefault
+      ? {
+          trialDaysOverride: null,
+          trialOverrideNote: null,
+          trialOverrideAt: null,
+          trialStartedAt: now,       // <-- Reset trial start to today
+        }
+      : {
+          trialDaysOverride: trialDays != null ? parseInt(trialDays) : student.trialDaysOverride,
+          trialOverrideNote: note || student.trialOverrideNote,
+          trialOverrideAt: now,
+        };
 
     const updated = await prisma.user.update({ where: { id }, data: updateData });
 
-    // Compute what the effective trial expiry is now
-    const globalSettings = await prisma.systemSettings.findUnique({ where: { id: 'CONFIG' } });
-    const effectiveDays = updated.trialDaysOverride ?? (globalSettings?.trialDays ?? 4);
-    const trialExpiry = new Date(updated.trialStartedAt.getTime() + effectiveDays * 24 * 60 * 60 * 1000);
+    // Compute effective trial expiry after update
+    const effectiveDays = updated.trialDaysOverride ?? globalDays;
+    const trialStart = updated.trialStartedAt || updated.createdAt;
+    const trialExpiry = new Date(new Date(trialStart).getTime() + effectiveDays * 24 * 60 * 60 * 1000);
+    const daysRemaining = Math.max(0, Math.ceil((trialExpiry - new Date()) / (1000 * 60 * 60 * 24)));
+    const isExpired = new Date() > trialExpiry;
 
     res.json({
       success: true,
       message: resetToDefault
-        ? `Trial reset to global default (${globalSettings?.trialDays ?? 4} days) for ${student.name}`
+        ? `Trial reset to global default (${globalDays} days from today) for ${student.name}`
         : `Trial updated to ${trialDays} days for ${student.name}`,
       effectiveDays,
+      globalDays,
       trialStartedAt: updated.trialStartedAt,
       trialExpiry,
+      daysRemaining,
+      isExpired,
+      isOverridden: updated.trialDaysOverride !== null,
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -1045,16 +1197,25 @@ router.get('/student/:id/trial', async (req, res) => {
       where: { id, role: 'USER' },
       select: {
         id: true, studentId: true, name: true,
+        createdAt: true,
         trialStartedAt: true, trialDaysOverride: true,
         trialOverrideNote: true, trialOverrideAt: true,
       }
     });
     if (!student) return res.status(404).json({ error: 'Student not found' });
 
+    // Check active membership separately
+    const activeMembership = await prisma.membership.findFirst({
+      where: { userId: id, status: 'ACTIVE', expiresAt: { gt: new Date() } }
+    });
+
     const settings = await prisma.systemSettings.findUnique({ where: { id: 'CONFIG' } });
     const globalDays = settings?.trialDays ?? 4;
     const effectiveDays = student.trialDaysOverride ?? globalDays;
-    const trialExpiry = new Date(student.trialStartedAt.getTime() + effectiveDays * 24 * 60 * 60 * 1000);
+
+    // Safely fallback to createdAt if trialStartedAt is null
+    const trialStart = student.trialStartedAt || student.createdAt;
+    const trialExpiry = new Date(new Date(trialStart).getTime() + effectiveDays * 24 * 60 * 60 * 1000);
     const now = new Date();
     const daysRemaining = Math.max(0, Math.ceil((trialExpiry - now) / (1000 * 60 * 60 * 24)));
     const isExpired = now > trialExpiry;
@@ -1067,6 +1228,7 @@ router.get('/student/:id/trial', async (req, res) => {
       trialExpiry,
       daysRemaining,
       isExpired,
+      hasActiveMembership: !!activeMembership,
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -1224,19 +1386,695 @@ router.get('/live-market-health', async (req, res) => {
 });
 
 // POST /admin/trigger-market-health-check — Trigger immediate manual health check & Telegram alert
-router.post('/trigger-market-health-check', async (req, res) => {
+// ─── PHASE 4B: CHARGES MANAGEMENT ENDPOINTS ─────────────────
+router.get('/charges', async (req, res) => {
   try {
-    const marketHealthMonitor = require('../services/marketHealthMonitor');
-    const result = await marketHealthMonitor.dispatchMarketOpenTelegramAlert({
-      forceAlert: true,
-      dhanStreamer: req.dhanStreamer,
-      marketDataEngine: req.marketDataEngine
-    });
-    res.json({ success: true, result });
+    const { getActiveCharges } = require('../services/chargesService');
+    const charges = await getActiveCharges();
+    res.json({ success: true, charges });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
+router.put('/charges', async (req, res) => {
+  try {
+    const { monthlyCost, algoConnectionTiers, algoBrokerageTiers } = req.body || {};
+    const updates = {};
+    if (monthlyCost !== undefined) updates.monthlyCost = Number(monthlyCost);
+    if (algoConnectionTiers !== undefined) updates.algoConnectionTiersJson = JSON.stringify(algoConnectionTiers);
+    if (algoBrokerageTiers !== undefined) updates.algoBrokerageTiersJson = JSON.stringify(algoBrokerageTiers);
+
+    const settings = await prisma.systemSettings.upsert({
+      where: { id: 'CONFIG' },
+      update: updates,
+      create: { id: 'CONFIG', ...updates }
+    });
+
+    const { getActiveCharges } = require('../services/chargesService');
+    const updatedCharges = await getActiveCharges();
+    res.json({ success: true, message: 'Platform charges updated successfully', charges: updatedCharges });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ─── PHASE 4B: STUDENT REGISTER ENDPOINT ──────────────────────
+router.get('/student-register', async (req, res) => {
+  try {
+    const includeTest = req.query.includeTest === 'true';
+    const modeFilter = includeTest ? undefined : 'PRODUCTION';
+
+    const users = await prisma.user.findMany({
+      where: { role: 'USER', ...(modeFilter ? { accountMode: modeFilter } : {}) },
+      include: {
+        memberships: { orderBy: { expiresAt: 'desc' }, take: 1 },
+        brokerConnections: true,
+        copyFollowing: true,
+        ledger: true,
+        auditLogs: {
+          where: { category: 'AUTH', action: 'USER_LOGIN' },
+          orderBy: { timestamp: 'desc' },
+          take: 1
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    const studentRegister = users.map(u => {
+      const activeMembership = u.memberships.find(m => m.status === 'ACTIVE' && m.expiresAt > new Date());
+      const tokenLedgers = u.ledger.filter(l => ['TOKEN', 'RECHARGE', 'BONUS'].includes(l.walletType) && l.reason !== 'QA_TEST_CREDIT_EXCLUDED');
+      const tokenBalance = tokenLedgers.reduce((acc, curr) => curr.type === 'CREDIT' ? acc + curr.amount : acc - curr.amount, 0);
+
+      const activeConnection = u.brokerConnections.find(b => b.isActive);
+      const lastLogin = u.auditLogs[0]?.timestamp || null;
+
+      // Online status calculation (heartbeat within last 90 seconds)
+      const lastSeen = u.lastSeenAt ? new Date(u.lastSeenAt).getTime() : null;
+      const isOnline = lastSeen && (Date.now() - lastSeen) < 90000;
+
+      return {
+        id: u.id,
+        studentId: u.studentId,
+        name: u.name,
+        email: u.email,
+        accountMode: u.accountMode || 'PRODUCTION',
+        accountStatus: u.status,
+        membershipStatus: activeMembership ? 'ACTIVE' : 'EXPIRED',
+        membershipExpiry: activeMembership ? activeMembership.expiresAt : (u.memberships[0]?.expiresAt || null),
+        currentTokenBalance: tokenBalance,
+        algoStatus: activeConnection ? `CONNECTED (${activeConnection.broker})` : 'DISCONNECTED',
+        copyTradingStatus: 'LOCKED',
+        lastLoginDate: lastLogin ? new Date(lastLogin).toLocaleDateString('en-IN') : 'Never',
+        lastLoginTime: lastLogin ? new Date(lastLogin).toLocaleTimeString('en-IN') : 'Never',
+        lastLoginTimestamp: lastLogin,
+        lastSeenAt: u.lastSeenAt,
+        lastSeenDate: u.lastSeenAt ? new Date(u.lastSeenAt).toLocaleDateString('en-IN') : 'Never',
+        lastSeenTime: u.lastSeenAt ? new Date(u.lastSeenAt).toLocaleTimeString('en-IN') : 'Never',
+        isOnline: !!isOnline
+      };
+    });
+
+    res.json({ success: true, count: studentRegister.length, students: studentRegister });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ─── PHASE 4B: STUDENT REAL LOGIN HISTORY ENDPOINT ─────────────
+router.get('/students/:id/login-history', async (req, res) => {
+  try {
+    const studentId = req.params.id;
+    const user = await prisma.user.findFirst({
+      where: { OR: [{ id: studentId }, { studentId: studentId }] }
+    });
+
+    if (!user) return res.status(404).json({ success: false, error: 'Student not found' });
+
+    const loginLogs = await prisma.auditLog.findMany({
+      where: { userId: user.id, category: 'AUTH', action: 'USER_LOGIN' },
+      orderBy: { timestamp: 'desc' },
+      take: 100
+    });
+
+    const loginHistory = loginLogs.map(log => ({
+      id: log.id,
+      loginDate: new Date(log.timestamp).toLocaleDateString('en-IN'),
+      loginTime: new Date(log.timestamp).toLocaleTimeString('en-IN'),
+      timestamp: log.timestamp,
+      ipAddress: log.ipAddress || 'Unknown',
+      meta: log.meta ? (typeof log.meta === 'string' ? JSON.parse(log.meta) : log.meta) : null
+    }));
+
+    res.json({ success: true, student: { id: user.id, studentId: user.studentId, name: user.name, email: user.email }, count: loginHistory.length, loginHistory });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ─── PHASE 4B: ALGO CLIENT MONITORING & DAY-WISE P&L ENDPOINT ──
+router.get('/students/:id/algo-monitoring', async (req, res) => {
+  try {
+    const studentId = req.params.id;
+    const user = await prisma.user.findFirst({
+      where: { OR: [{ id: studentId }, { studentId: studentId }] },
+      include: {
+        brokerConnections: true,
+        algoPositions: true,
+        ledger: true
+      }
+    });
+
+    if (!user) return res.status(404).json({ success: false, error: 'Student not found' });
+
+    const activeConn = user.brokerConnections.find(b => b.isActive);
+    const maxCapacity = activeConn?.maxOpenTrades || 5;
+
+    const positions = user.algoPositions;
+    const totalTradeCount = positions.length;
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const todayPositions = positions.filter(p => p.openedAt.toISOString().slice(0, 10) === todayStr);
+
+    const totalPnl = positions.reduce((acc, p) => acc + (p.pnl || 0), 0);
+    const todayPnl = todayPositions.reduce((acc, p) => acc + (p.pnl || 0), 0);
+    const livePnl = positions.filter(p => p.status === 'OPEN').reduce((acc, p) => acc + (p.pnl || 0), 0);
+
+    const currentTradingLots = positions.filter(p => p.status === 'OPEN').reduce((acc, p) => acc + Math.max(1, Math.ceil(p.quantity / 65)), 0);
+
+    const brokerageDebits = user.ledger.filter(l => l.reason && l.reason.startsWith('ALGO_BROKERAGE'));
+    const totalBrokerageTokensUsed = brokerageDebits.reduce((acc, l) => acc + l.amount, 0);
+
+    // Group Day-wise P&L
+    const dayMap = {};
+    positions.forEach(p => {
+      const dayKey = p.openedAt.toISOString().slice(0, 10);
+      if (!dayMap[dayKey]) {
+        dayMap[dayKey] = { date: dayKey, lots: 0, tradeCount: 0, buyTrades: 0, sellTrades: 0, dayPnl: 0, brokerageTokens: 0 };
+      }
+      const lots = Math.max(1, Math.ceil(p.quantity / 65));
+      dayMap[dayKey].lots += lots;
+      dayMap[dayKey].tradeCount += 1;
+      if (p.side === 'BUY') dayMap[dayKey].buyTrades += 1;
+      if (p.side === 'SELL') dayMap[dayKey].sellTrades += 1;
+      dayMap[dayKey].dayPnl += (p.pnl || 0);
+    });
+
+    brokerageDebits.forEach(l => {
+      const dayKey = l.timestamp.toISOString().slice(0, 10);
+      if (dayMap[dayKey]) {
+        dayMap[dayKey].brokerageTokens += l.amount;
+      }
+    });
+
+    const dayWisePnlList = Object.values(dayMap).sort((a, b) => b.date.localeCompare(a.date));
+
+    res.json({
+      success: true,
+      student: { id: user.id, studentId: user.studentId, name: user.name, email: user.email },
+      algoMonitoring: {
+        algoStatus: activeConn ? `CONNECTED (${activeConn.broker})` : 'DISCONNECTED',
+        allowedLotCapacity: maxCapacity,
+        currentTradingLots,
+        todayPnl,
+        livePnl,
+        totalPnl,
+        todayTradeCount: todayPositions.length,
+        totalTradeCount,
+        brokerageTokensUsed: totalBrokerageTokensUsed,
+        dayWisePnl: dayWisePnlList
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────
+// 🖥️ ADMIN TRADING VPS FLEET MANAGEMENT & AUDIT LOGS
+// ─────────────────────────────────────────────────────────────
+router.get('/vps/fleet', async (req, res) => {
+  try {
+    const vpsList = await prisma.userTradingVps.findMany({
+      include: {
+        user: { select: { id: true, studentId: true, name: true, email: true, phone: true } },
+        billingInvoices: { orderBy: { createdAt: 'desc' }, take: 5 },
+        auditLogs: { orderBy: { timestamp: 'desc' }, take: 5 },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const activeCount = vpsList.filter(v => v.status === 'ACTIVE_SIMULATION' || v.status === 'ACTIVE_VERIFIED').length;
+    const graceCount = vpsList.filter(v => v.status === 'GRACE_PERIOD').length;
+    const totalMonthlyRevenue = vpsList.filter(v => v.status !== 'TERMINATED').reduce((acc, v) => acc + v.monthlyAmount, 0);
+
+    res.json({
+      success: true,
+      stats: {
+        totalInstances: vpsList.length,
+        activeInstances: activeCount,
+        graceInstances: graceCount,
+        totalMonthlyRevenue,
+      },
+      fleet: vpsList,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+router.post('/vps/:id/terminate', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { reason = 'Admin manual termination' } = req.body;
+    const { VpsLifecycleManager } = require('../../packages/agent/lib/vps/VpsLifecycleManager');
+    const vpsManager = new VpsLifecycleManager({ prisma });
+    const terminated = await vpsManager.terminateAndRelease(id, reason);
+    res.json({ success: true, vps: terminated });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────
+// 🌐 ADMIN CLIENT STATIC IP ASSIGNMENT & INFRASTRUCTURE ROUTES
+// ─────────────────────────────────────────────────────────────
+
+function isValidIpv4(ip) {
+  if (typeof ip !== 'string') return false;
+  const parts = ip.trim().split('.');
+  if (parts.length !== 4) return false;
+  return parts.every(part => {
+    if (!/^\d+$/.test(part)) return false;
+    const num = parseInt(part, 10);
+    return num >= 0 && num <= 255 && (part === '0' || !part.startsWith('0'));
+  });
+}
+
+// 1. GET /static-ip/assignments — List all client static IP and Proxy assignments
+router.get('/static-ip/assignments', async (req, res) => {
+  try {
+    const assignments = await prisma.clientStaticIpAssignment.findMany({
+      include: {
+        user: { select: { id: true, studentId: true, name: true, email: true, phone: true } },
+        brokerConnection: {
+          select: { id: true, broker: true, displayName: true, clientId: true, isActive: true }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    const enriched = assignments.map(a => {
+      const isOnline = agentTunnelServer.isAgentOnline(a.userId);
+      const session = agentTunnelServer.activeSessions.get(a.userId);
+      const observedIp = a.connectionType === 'DIRECT_IP'
+        ? (session?.agentIp || a.lastObservedOutboundIp || null)
+        : (a.lastObservedOutboundIp || null);
+
+      const masked = ProxyTransportFactory.maskAssignment(a);
+      return {
+        ...masked,
+        isAgentOnline: isOnline,
+        currentObservedOutboundIp: observedIp,
+        agentLatencyMs: session?.latencyMs || null,
+        agentVersion: session?.version || null,
+      };
+    });
+
+    res.json({ success: true, assignments: enriched });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 2. POST /static-ip/assign — Assign Dedicated Static IPv4 or Proxy to Client / Broker Connection
+router.post('/static-ip/assign', async (req, res) => {
+  try {
+    const {
+      userId,
+      broker = 'ALL',
+      connectionType = 'DIRECT_IP',
+      ipAddress,
+      proxyHost,
+      proxyPort,
+      proxyUsername,
+      proxyPassword,
+      brokerConnectionId,
+      notes
+    } = req.body;
+    const adminId = req.user.id;
+
+    if (!userId) {
+      return res.status(400).json({ success: false, error: 'MISSING_USER_ID', message: 'Target client user ID is required.' });
+    }
+
+    const cleanConnType = (connectionType || 'DIRECT_IP').toUpperCase();
+
+    // Validate based on connection type
+    if (cleanConnType === 'DIRECT_IP') {
+      if (!ipAddress || !isValidIpv4(ipAddress)) {
+        return res.status(400).json({
+          success: false,
+          error: 'INVALID_IPV4_FORMAT',
+          message: 'Invalid IPv4 address format for DIRECT_IP. Must be a valid public IPv4 (e.g. 103.212.121.207).'
+        });
+      }
+    } else if (['HTTP_PROXY', 'HTTPS_PROXY', 'SOCKS5'].includes(cleanConnType)) {
+      if (!proxyHost || typeof proxyHost !== 'string' || !proxyHost.trim()) {
+        return res.status(400).json({
+          success: false,
+          error: 'MISSING_PROXY_HOST',
+          message: 'Proxy Host / IP is required for proxy connection.'
+        });
+      }
+      const portNum = Number(proxyPort);
+      if (!portNum || portNum < 1 || portNum > 65535) {
+        return res.status(400).json({
+          success: false,
+          error: 'INVALID_PROXY_PORT',
+          message: 'Proxy Port must be a valid port number between 1 and 65535.'
+        });
+      }
+      if (ipAddress && !isValidIpv4(ipAddress)) {
+        return res.status(400).json({
+          success: false,
+          error: 'INVALID_IPV4_FORMAT',
+          message: 'Expected Public Egress IP must be a valid IPv4 address.'
+        });
+      }
+    } else {
+      return res.status(400).json({
+        success: false,
+        error: 'INVALID_CONNECTION_TYPE',
+        message: 'Invalid connectionType. Allowed: DIRECT_IP, HTTP_PROXY, HTTPS_PROXY, SOCKS5.'
+      });
+    }
+
+    const targetEgressIp = ipAddress ? ipAddress.trim() : (isValidIpv4(proxyHost) ? proxyHost.trim() : '0.0.0.0');
+
+    // Verify target user exists
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'USER_NOT_FOUND', message: 'Client not found.' });
+    }
+
+    // Active uniqueness check
+    if (cleanConnType === 'DIRECT_IP') {
+      const existingActive = await prisma.clientStaticIpAssignment.findFirst({
+        where: {
+          ipAddress: targetEgressIp,
+          connectionType: 'DIRECT_IP',
+          status: { in: ['ASSIGNED', 'VERIFYING', 'VERIFIED', 'BLOCKED'] },
+        },
+        include: { user: { select: { studentId: true, name: true, email: true } } }
+      });
+      if (existingActive) {
+        return res.status(400).json({
+          success: false,
+          error: 'IP_ALREADY_ASSIGNED',
+          message: `Static IP ${targetEgressIp} is already actively assigned to client ${existingActive.user?.studentId} (${existingActive.user?.name}). Release the IP before reassigning.`
+        });
+      }
+    } else {
+      // Check proxy host + port uniqueness
+      const existingProxy = await prisma.clientStaticIpAssignment.findFirst({
+        where: {
+          proxyHost: proxyHost.trim(),
+          proxyPort: Number(proxyPort),
+          status: { in: ['ASSIGNED', 'VERIFYING', 'VERIFIED', 'BLOCKED'] },
+        },
+        include: { user: { select: { studentId: true, name: true, email: true } } }
+      });
+      if (existingProxy) {
+        return res.status(400).json({
+          success: false,
+          error: 'PROXY_ALREADY_ASSIGNED',
+          message: `Proxy ${proxyHost.trim()}:${proxyPort} is already actively assigned to client ${existingProxy.user?.studentId} (${existingProxy.user?.name}). Release the proxy before reassigning.`
+        });
+      }
+    }
+
+    // Encrypt proxy credentials at rest
+    const encryptedUser = proxyUsername ? encryptCredential(proxyUsername.trim()) : null;
+    const encryptedPass = proxyPassword ? encryptCredential(proxyPassword.trim()) : null;
+
+    // Create assignment
+    const assignment = await prisma.clientStaticIpAssignment.create({
+      data: {
+        userId,
+        brokerConnectionId: brokerConnectionId || null,
+        broker: broker.toUpperCase(),
+        connectionType: cleanConnType,
+        ipAddress: targetEgressIp,
+        proxyHost: proxyHost ? proxyHost.trim() : null,
+        proxyPort: proxyPort ? Number(proxyPort) : null,
+        encryptedProxyUsername: encryptedUser,
+        encryptedProxyPassword: encryptedPass,
+        status: 'ASSIGNED',
+        notes: notes || null,
+        assignedByAdminId: adminId,
+      },
+      include: {
+        user: { select: { id: true, studentId: true, name: true, email: true } }
+      }
+    });
+
+    await AuditLogger.log({
+      userId, category: CATEGORIES.BROKER, action: cleanConnType === 'DIRECT_IP' ? 'STATIC_IP_ASSIGNED' : 'PROXY_ASSIGNED',
+      detail: `Admin assigned ${cleanConnType} (${cleanConnType === 'DIRECT_IP' ? targetEgressIp : `${proxyHost}:${proxyPort}`}) for Broker ${broker.toUpperCase()} to client ${user.studentId} (${user.name})`,
+      meta: { assignmentId: assignment.id, connectionType: cleanConnType, egressIp: targetEgressIp, broker, adminId },
+      req,
+    });
+
+    res.json({
+      success: true,
+      message: `${cleanConnType} assigned to ${user.name} successfully. Status: ASSIGNED.`,
+      assignment: ProxyTransportFactory.maskAssignment(assignment),
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 3. POST /static-ip/:id/verify — Verify Configured Static IP or Proxy Outbound Egress
+router.post('/static-ip/:id/verify', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const adminId = req.user.id;
+
+    const assignment = await prisma.clientStaticIpAssignment.findUnique({
+      where: { id },
+      include: { user: { select: { id: true, studentId: true, name: true } } }
+    });
+
+    if (!assignment) {
+      return res.status(404).json({ success: false, error: 'ASSIGNMENT_NOT_FOUND', message: 'Assignment not found.' });
+    }
+
+    const connType = assignment.connectionType || 'DIRECT_IP';
+
+    if (connType === 'DIRECT_IP') {
+      const session = agentTunnelServer.activeSessions.get(assignment.userId);
+      const observedIp = session?.agentIp || assignment.lastObservedOutboundIp;
+
+      if (!observedIp) {
+        return res.status(400).json({
+          success: false,
+          error: 'AGENT_OFFLINE',
+          message: `Client Execution Agent for ${assignment.user.name} is currently offline. Start the agent to perform live outbound IP verification.`
+        });
+      }
+
+      const isMatch = (assignment.ipAddress === observedIp);
+      const newStatus = isMatch ? 'VERIFIED' : 'BLOCKED';
+
+      const updated = await prisma.clientStaticIpAssignment.update({
+        where: { id },
+        data: {
+          status: newStatus,
+          lastObservedOutboundIp: observedIp,
+          verifiedAt: isMatch ? new Date() : assignment.verifiedAt,
+        }
+      });
+
+      await AuditLogger.log({
+        userId: assignment.userId, category: CATEGORIES.BROKER,
+        action: isMatch ? 'STATIC_IP_VERIFIED' : 'STATIC_IP_MISMATCH',
+        detail: isMatch
+          ? `Dedicated Static IP ${assignment.ipAddress} verified against Agent Outbound IP ${observedIp} (Match confirmed)`
+          : `Static IP Mismatch: Configured ${assignment.ipAddress} != Observed Agent Outbound ${observedIp}. Status set to BLOCKED.`,
+        meta: { assignmentId: id, configuredIp: assignment.ipAddress, observedIp, adminId },
+        req,
+      });
+
+      return res.json({
+        success: true,
+        verified: isMatch,
+        status: newStatus,
+        configuredIp: assignment.ipAddress,
+        observedIp,
+        message: isMatch
+          ? `Dedicated Static IP ${assignment.ipAddress} is VERIFIED and matches Agent Outbound IP.`
+          : `MISMATCH: Configured IP ${assignment.ipAddress} does not match Agent Outbound IP ${observedIp}. Marked BLOCKED.`,
+        assignment: ProxyTransportFactory.maskAssignment(updated),
+      });
+    }
+
+    // Proxy Egress Verification (HTTP_PROXY / HTTPS_PROXY / SOCKS5)
+    const decryptedUser = assignment.encryptedProxyUsername ? decryptCredential(assignment.encryptedProxyUsername) : null;
+    const decryptedPass = assignment.encryptedProxyPassword ? decryptCredential(assignment.encryptedProxyPassword) : null;
+
+    const proxyConfig = {
+      connectionType: connType,
+      proxyHost: assignment.proxyHost,
+      proxyPort: assignment.proxyPort,
+      proxyUsername: decryptedUser,
+      proxyPassword: decryptedPass,
+      ipAddress: assignment.ipAddress,
+    };
+
+    const verifyRes = await ProxyTransportFactory.verifyEgress(proxyConfig, assignment.ipAddress);
+    const isMatch = verifyRes.success && verifyRes.isMatch;
+    const newStatus = isMatch ? 'VERIFIED' : 'BLOCKED';
+    const observedIp = verifyRes.observedIp || 'ERROR';
+
+    const updated = await prisma.clientStaticIpAssignment.update({
+      where: { id },
+      data: {
+        status: newStatus,
+        lastObservedOutboundIp: observedIp,
+        verifiedAt: isMatch ? new Date() : assignment.verifiedAt,
+      }
+    });
+
+    await AuditLogger.log({
+      userId: assignment.userId, category: CATEGORIES.BROKER,
+      action: isMatch ? 'PROXY_VERIFIED' : 'PROXY_IP_MISMATCH',
+      detail: isMatch
+        ? `Proxy (${connType} ${assignment.proxyHost}:${assignment.proxyPort}) verified with public egress IP ${observedIp}`
+        : `Proxy Verification ${verifyRes.success ? `Mismatch (Expected: ${assignment.ipAddress}, Observed: ${observedIp})` : `Failed (${verifyRes.error})`}. Status set to BLOCKED.`,
+      meta: { assignmentId: id, connectionType: connType, expectedIp: assignment.ipAddress, observedIp, adminId },
+      req,
+    });
+
+    return res.json({
+      success: true,
+      verified: isMatch,
+      status: newStatus,
+      connectionType: connType,
+      configuredIp: assignment.ipAddress,
+      observedIp: verifyRes.observedIp,
+      error: verifyRes.error || null,
+      latencyMs: verifyRes.latencyMs || null,
+      message: isMatch
+        ? `Proxy (${connType}) verified successfully! Public egress IP matches ${assignment.ipAddress}.`
+        : verifyRes.observedIp
+          ? `MISMATCH: Proxy connected but public egress IP (${verifyRes.observedIp}) does not match expected IP (${assignment.ipAddress}). Live execution BLOCKED.`
+          : `PROXY ERROR: ${verifyRes.error || 'Failed to reach public IP echo service'}. Live execution BLOCKED.`,
+      assignment: ProxyTransportFactory.maskAssignment(updated),
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 4. POST /static-ip/:id/release — Release Static IP / Proxy Assignment
+router.post('/static-ip/:id/release', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { reason = 'Admin manual release' } = req.body;
+    const adminId = req.user.id;
+
+    const assignment = await prisma.clientStaticIpAssignment.findUnique({
+      where: { id },
+      include: { user: { select: { id: true, studentId: true, name: true } } }
+    });
+
+    if (!assignment) {
+      return res.status(404).json({ success: false, error: 'ASSIGNMENT_NOT_FOUND', message: 'Assignment not found.' });
+    }
+
+    const released = await prisma.clientStaticIpAssignment.update({
+      where: { id },
+      data: {
+        status: 'RELEASED',
+        releasedAt: new Date(),
+        notes: assignment.notes ? `${assignment.notes} | Released: ${reason}` : `Released: ${reason}`,
+      }
+    });
+
+    await AuditLogger.log({
+      userId: assignment.userId, category: CATEGORIES.BROKER, action: 'STATIC_IP_RELEASED',
+      detail: `Admin released ${assignment.connectionType} (${assignment.ipAddress}) from client ${assignment.user.studentId} (${assignment.user.name}) — Reason: ${reason}`,
+      meta: { assignmentId: id, ipAddress: assignment.ipAddress, connectionType: assignment.connectionType, reason, adminId },
+      req,
+    });
+
+    res.json({
+      success: true,
+      message: `Assignment (${assignment.connectionType} ${assignment.ipAddress}) released successfully.`,
+      assignment: ProxyTransportFactory.maskAssignment(released),
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 5. GET /static-ip/diagnostics/:id — Technical Diagnostic & Routing Report
+router.get('/static-ip/diagnostics/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const assignment = await prisma.clientStaticIpAssignment.findUnique({
+      where: { id },
+      include: { user: { select: { id: true, studentId: true, name: true, email: true } } }
+    });
+
+    if (!assignment) {
+      return res.status(404).json({ success: false, error: 'ASSIGNMENT_NOT_FOUND', message: 'Assignment not found.' });
+    }
+
+    const session = agentTunnelServer.activeSessions.get(assignment.userId);
+    const isOnline = agentTunnelServer.isAgentOnline(assignment.userId);
+    const observedIp = assignment.connectionType === 'DIRECT_IP'
+      ? (session?.agentIp || assignment.lastObservedOutboundIp || null)
+      : (assignment.lastObservedOutboundIp || null);
+
+    res.json({
+      success: true,
+      diagnostics: {
+        assignmentId: assignment.id,
+        client: {
+          id: assignment.user.id,
+          studentId: assignment.user.studentId,
+          name: assignment.user.name,
+        },
+        broker: assignment.broker,
+        connectionType: assignment.connectionType,
+        configuredClientIp: assignment.ipAddress,
+        proxyHost: assignment.proxyHost || null,
+        proxyPort: assignment.proxyPort || null,
+        hasProxyAuth: !!assignment.encryptedProxyUsername,
+        currentVpsPrimaryIp: '103.212.121.207',
+        agentObservedOutboundIp: observedIp,
+        isAgentOnline: isOnline,
+        status: assignment.status,
+        verificationResult: assignment.status === 'VERIFIED' ? 'MATCH' : (assignment.status === 'BLOCKED' ? 'MISMATCH' : 'PENDING'),
+        routingInformation: {
+          transportModel: assignment.connectionType,
+          notes: assignment.connectionType === 'DIRECT_IP'
+            ? 'Socket-level localAddress binding'
+            : `Client-specific ${assignment.connectionType} proxy tunnel`
+        }
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ─── GET /backup-status ─────────────────────────────────────────
+router.get('/backup-status', async (req, res) => {
+  try {
+    const { getBackupStatus } = require('../../scripts/backup_status');
+    const status = getBackupStatus();
+    res.json({ success: true, ...status });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ─── POST /trigger-backup ───────────────────────────────────────
+router.post('/trigger-backup', async (req, res) => {
+  try {
+    const { runBackup } = require('../../scripts/backup');
+    const type = req.body?.type || 'daily';
+    const result = await runBackup({ type });
+    res.json({ success: true, ...result });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 module.exports = router;
+
+
 
