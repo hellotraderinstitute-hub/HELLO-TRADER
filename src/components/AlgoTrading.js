@@ -642,12 +642,12 @@ export default function AlgoTrading({ user, onBack }) {
                     {algoPositions.map((pos, idx) => (
                       <tr key={pos.id || idx} className="hover:bg-white/5">
                         <td className="p-2 font-bold text-white">{pos.symbol}</td>
-                        <td className={`p-2 font-bold ${pos.orderSide === 'BUY' ? 'text-green-400' : 'text-red-400'}`}>{pos.orderSide}</td>
-                        <td className="p-2">{pos.lots || 1}</td>
-                        <td className="p-2">₹{pos.entryPrice || 0}</td>
-                        <td className="p-2">₹{pos.ltp || pos.entryPrice || 0}</td>
-                        <td className={`p-2 font-bold ${(pos.pnl || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                          ₹{(pos.pnl || 0).toFixed(2)}
+                        <td className={`p-2 font-bold ${(pos.orderSide || pos.side) === 'BUY' ? 'text-green-400' : 'text-red-400'}`}>{pos.orderSide || pos.side}</td>
+                        <td className="p-2">{pos.lots || 1} <span className="text-gray-400 text-[10px]">({pos.quantity || pos.netqty || 65})</span></td>
+                        <td className="p-2 font-mono">₹{typeof pos.entryPrice === 'number' && pos.entryPrice > 0 ? pos.entryPrice.toFixed(2) : (pos.buyavgprice ? Number(pos.buyavgprice).toFixed(2) : '0.00')}</td>
+                        <td className="p-2 font-mono">₹{typeof pos.ltp === 'number' && pos.ltp > 0 ? pos.ltp.toFixed(2) : '0.00'}</td>
+                        <td className={`p-2 font-bold font-mono ${(pos.pnl || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                          {(pos.pnl || 0) >= 0 ? '+' : ''}₹{(pos.pnl || 0).toFixed(2)}
                         </td>
                         <td className="p-2 text-cyan-400 font-bold">{pos.status || 'OPEN'}</td>
                       </tr>

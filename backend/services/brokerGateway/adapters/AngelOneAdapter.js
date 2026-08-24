@@ -257,15 +257,37 @@ class AngelOneAdapter extends IBrokerAdapter {
         `${ANGEL_BASE_URL}/rest/secure/angelbroking/order/v1/getPosition`,
         this._axiosOpts({ headers: this._headers(), timeout: 8000 })
       );
-      return (res.data?.data || []).map(p => ({
-        symbol: p.tradingsymbol,
-        side: parseInt(p.netqty) > 0 ? 'BUY' : 'SELL',
-        qty: Math.abs(parseInt(p.netqty)),
-        avgPrice: parseFloat(p.averageprice),
-        ltp: parseFloat(p.ltp),
-        pnl: parseFloat(p.unrealised),
-        raw: p,
-      }));
+      return (res.data?.data || []).map(p => {
+        const netQty = parseInt(p.netqty || 0);
+        const buyAvg = parseFloat(p.buyavgprice || p.avgnetprice || p.totalbuyavgprice || p.netprice || 0);
+        const sellAvg = parseFloat(p.sellavgprice || 0);
+        const ltp = parseFloat(p.ltp || 0);
+        const unrealised = parseFloat(p.unrealised || 0);
+        const realised = parseFloat(p.realised || 0);
+        const pnl = parseFloat(p.pnl || p.unrealised || 0);
+
+        return {
+          symbol: p.tradingsymbol,
+          symbolToken: p.symboltoken,
+          symboltoken: p.symboltoken,
+          exchange: p.exchange || 'NFO',
+          side: netQty >= 0 ? 'BUY' : 'SELL',
+          qty: Math.abs(netQty),
+          quantity: Math.abs(netQty),
+          netqty: netQty,
+          buyqty: parseInt(p.buyqty || 0),
+          sellqty: parseInt(p.sellqty || 0),
+          avgPrice: buyAvg,
+          buyavgprice: buyAvg,
+          sellavgprice: sellAvg,
+          ltp: ltp,
+          unrealised: unrealised,
+          realised: realised,
+          pnl: pnl,
+          productType: p.producttype || 'INTRADAY',
+          raw: p,
+        };
+      });
     } catch (err) { return []; }
   }
 

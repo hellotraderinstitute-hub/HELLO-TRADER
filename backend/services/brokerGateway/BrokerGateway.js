@@ -264,6 +264,36 @@ class BrokerGateway {
   }
 
   /**
+   * Get live positions from a broker connection with proxy resolution.
+   *
+   * @param {Object} connection - AlgoBrokerConnection record from Prisma
+   * @returns {Promise<Array>} Normalized position list
+   */
+  static async getPositions(connection) {
+    try {
+      const credentials = decryptCredentials(connection);
+      const proxyOpts = await resolveProxyOptions(connection);
+      const adapter = createAdapter(connection.broker, credentials, proxyOpts);
+      return await adapter.getPositions();
+    } catch (err) {
+      console.error(`[BrokerGateway] getPositions() error for ${connection.broker}:`, err.message);
+      return [];
+    }
+  }
+
+  /**
+   * Get an instantiated, proxy-configured adapter for a broker connection.
+   *
+   * @param {Object} connection - AlgoBrokerConnection record from Prisma
+   * @returns {Promise<Object>} Broker adapter instance
+   */
+  static async getAdapter(connection) {
+    const credentials = decryptCredentials(connection);
+    const proxyOpts = await resolveProxyOptions(connection);
+    return createAdapter(connection.broker, credentials, proxyOpts);
+  }
+
+  /**
    * Get today's full order book from a broker connection.
    * Used exclusively by MasterOrderPoller (Copy Trading source-of-truth).
    * Returns [] if broker doesn't support order polling yet.
@@ -274,7 +304,8 @@ class BrokerGateway {
   static async getOrders(connection) {
     try {
       const credentials = decryptCredentials(connection);
-      const adapter = createAdapter(connection.broker, credentials);
+      const proxyOpts = await resolveProxyOptions(connection);
+      const adapter = createAdapter(connection.broker, credentials, proxyOpts);
       return await adapter.getOrders();
     } catch (err) {
       console.error(`[BrokerGateway] getOrders() error for ${connection.broker}:`, err.message);

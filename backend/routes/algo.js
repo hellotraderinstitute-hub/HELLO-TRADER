@@ -669,8 +669,9 @@ router.post('/connections/:id/kill', async (req, res) => {
 // ─── POST /kill-all ───────────────────────────────────────────
 router.post('/kill-all', async (req, res) => {
   const userId = req.user.id;
-  const { reason } = req.body;
+  const { reason, dryRun } = req.body;
   try {
+    // 1. Arm kill switch on all broker connections for the user
     await prisma.algoBrokerConnection.updateMany({
       where: { userId },
       data: {
@@ -681,13 +682,188 @@ router.post('/kill-all', async (req, res) => {
       }
     });
 
-    await AuditLogger.log({
-      userId, category: CATEGORIES.KILL, action: 'EMERGENCY_STOP_ALL',
-      detail: `EMERGENCY STOP activated — all broker connections killed`,
-      meta: { reason }, req,
+    // 2. Fetch all DB positions currently marked OPEN
+    const openDbPositions = await prisma.algoPosition.findMany({
+      where: { userId, status: 'OPEN' },
+      include: { connection: true }
     });
 
-    res.json({ success: true, message: '🛑 Emergency stop activated. All automation halted.' });
+    const positionResults = [];
+    const connectionsMap = {};
+
+    for (const pos of openDbPositions) {
+      if (pos.connection && !connectionsMap[pos.connectionId]) {
+        connectionsMap[pos.connectionId] = {
+          conn: pos.connection,
+          livePositions: await BrokerGateway.getPositions(pos.connection)
+        };
+      }
+    }
+
+    for (const pos of openDbPositions) {
+      const connData = connectionsMap[pos.connectionId];
+      const livePositions = connData ? connData.livePositions : [];
+
+      const matchingBrokerPos = livePositions.find(bp =>
+        bp.symbol === pos.symbol ||
+        (bp.symboltoken && bp.symboltoken === pos.symbolToken) ||
+        (bp.symbolToken && bp.symbolToken === pos.symbolToken)
+      );
+
+      const brokerNetQty = matchingBrokerPos ? parseInt(matchingBrokerPos.netqty || matchingBrokerPos.quantity || 0) : 0;
+      const beforeNetQty = brokerNetQty;
+
+      if (brokerNetQty === 0) {
+        // Broker confirms position is already 0: safely update DB to CLOSED without sending extra orders
+        await prisma.algoPosition.update({
+          where: { id: pos.id },
+          data: { status: 'MANUALLY_CLOSED', closedAt: new Date() }
+        }).catch(() => {});
+
+        await AuditLogger.log({
+          userId,
+          category: CATEGORIES.KILL,
+          action: 'POSITION_KILL_RECONCILED',
+          detail: `Kill All: Reconciled DB position ${pos.symbol} (ID: ${pos.id}) to CLOSED (Broker netqty is already 0)`,
+          meta: {
+            positionId: pos.id,
+            symbol: pos.symbol,
+            beforeNetQty: 0,
+            finalBrokerNetQty: 0,
+            finalDbStatus: 'MANUALLY_CLOSED',
+            reason: 'BROKER_ALREADY_ZERO'
+          },
+          req
+        });
+
+        positionResults.push({
+          positionId: pos.id,
+          symbol: pos.symbol,
+          action: 'RECONCILED_CLOSED',
+          beforeNetQty: 0,
+          finalBrokerNetQty: 0,
+          dbStatus: 'MANUALLY_CLOSED',
+          success: true
+        });
+        continue;
+      }
+
+      // If dryRun mode requested, do not submit actual broker order
+      if (dryRun) {
+        positionResults.push({
+          positionId: pos.id,
+          symbol: pos.symbol,
+          action: 'DRY_RUN_SQUARE_OFF_DETECTED',
+          beforeNetQty,
+          exitTransactionType: brokerNetQty > 0 ? 'SELL' : 'BUY',
+          quantity: Math.abs(brokerNetQty),
+          dbStatus: 'OPEN',
+          success: true,
+          dryRun: true
+        });
+        continue;
+      }
+
+      // If broker netqty > 0 (or < 0), submit opposite MARKET square-off order
+      const exitSide = brokerNetQty > 0 ? 'SELL' : 'BUY';
+      const exitQty = Math.abs(brokerNetQty);
+      const exitOrder = {
+        symbol: pos.symbol,
+        securityId: pos.symbolToken || matchingBrokerPos.symboltoken || '',
+        symbolToken: pos.symbolToken || matchingBrokerPos.symboltoken || '',
+        exchange: pos.exchange || matchingBrokerPos.exchange || 'NFO',
+        side: exitSide,
+        quantity: exitQty,
+        orderType: 'MARKET',
+        productType: pos.productType || matchingBrokerPos.productType || 'INTRADAY'
+      };
+
+      const execResult = await BrokerGateway.executeOrder(exitOrder, pos.connection);
+
+      if (execResult.success && execResult.orderId) {
+        // Query live positions again to verify broker confirmation
+        const postPositions = await BrokerGateway.getPositions(pos.connection);
+        const postMatch = postPositions.find(bp =>
+          bp.symbol === pos.symbol || (bp.symboltoken && bp.symboltoken === pos.symbolToken)
+        );
+        const finalNetQty = postMatch ? parseInt(postMatch.netqty || 0) : 0;
+
+        await prisma.algoPosition.update({
+          where: { id: pos.id },
+          data: {
+            status: 'MANUALLY_CLOSED',
+            closedAt: new Date(),
+            exitOrderId: execResult.orderId
+          }
+        }).catch(() => {});
+
+        await AuditLogger.log({
+          userId,
+          category: CATEGORIES.KILL,
+          action: 'POSITION_EMERGENCY_SQUARED_OFF',
+          detail: `Kill All: Squared off ${pos.symbol} (OrderID: ${execResult.orderId}, Exited: ${exitQty})`,
+          meta: {
+            positionId: pos.id,
+            symbol: pos.symbol,
+            beforeNetQty,
+            exitTransactionType: exitSide,
+            quantity: exitQty,
+            brokerOrderId: execResult.orderId,
+            brokerResponse: execResult.rawResponse,
+            finalBrokerNetQty: finalNetQty,
+            finalDbStatus: 'MANUALLY_CLOSED'
+          },
+          req
+        });
+
+        positionResults.push({
+          positionId: pos.id,
+          symbol: pos.symbol,
+          action: 'SQUARED_OFF',
+          brokerOrderId: execResult.orderId,
+          beforeNetQty,
+          finalBrokerNetQty: finalNetQty,
+          dbStatus: 'MANUALLY_CLOSED',
+          success: true
+        });
+      } else {
+        await AuditLogger.log({
+          userId,
+          category: CATEGORIES.KILL,
+          action: 'POSITION_KILL_FAILED',
+          detail: `Kill All: Failed to square off ${pos.symbol}: ${execResult.message}`,
+          meta: {
+            positionId: pos.id,
+            symbol: pos.symbol,
+            beforeNetQty,
+            error: execResult.message
+          },
+          req
+        });
+
+        positionResults.push({
+          positionId: pos.id,
+          symbol: pos.symbol,
+          action: 'SQUARE_OFF_FAILED',
+          beforeNetQty,
+          error: execResult.message,
+          dbStatus: 'OPEN',
+          success: false
+        });
+      }
+    }
+
+    await AuditLogger.log({
+      userId, category: CATEGORIES.KILL, action: 'EMERGENCY_STOP_ALL',
+      detail: `EMERGENCY STOP executed — all automation killed. Processed ${openDbPositions.length} positions.`,
+      meta: { reason, positionResults, dryRun: !!dryRun }, req,
+    });
+
+    res.json({
+      success: true,
+      message: '🛑 Emergency stop executed. All automation halted.',
+      positionResults
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -695,13 +871,80 @@ router.post('/kill-all', async (req, res) => {
 
 // ─── GET /positions ───────────────────────────────────────────
 router.get('/positions', async (req, res) => {
+  const userId = req.user.id;
   try {
-    const positions = await prisma.algoPosition.findMany({
-      where: { userId: req.user.id, status: 'OPEN' },
-      include: { connection: { select: { broker: true, displayName: true } } },
+    const dbPositions = await prisma.algoPosition.findMany({
+      where: { userId, status: 'OPEN' },
+      include: { connection: { select: { id: true, broker: true, displayName: true, clientId: true } } },
       orderBy: { openedAt: 'desc' },
     });
-    res.json({ success: true, positions });
+
+    // Hydrate open positions with live broker position book
+    const connections = await prisma.algoBrokerConnection.findMany({
+      where: { userId, isActive: true, testStatus: 'SUCCESS' }
+    });
+
+    const livePositionsByConn = {};
+    for (const conn of connections) {
+      livePositionsByConn[conn.id] = await BrokerGateway.getPositions(conn);
+    }
+
+    const hydratedPositions = [];
+
+    for (const pos of dbPositions) {
+      const livePositions = livePositionsByConn[pos.connectionId] || [];
+      const match = livePositions.find(lp =>
+        lp.symbol === pos.symbol ||
+        (lp.symboltoken && lp.symboltoken === pos.symbolToken) ||
+        (lp.symbolToken && lp.symbolToken === pos.symbolToken)
+      );
+
+      if (match) {
+        const netQty = match.netqty !== undefined ? match.netqty : match.quantity;
+        if (netQty === 0) {
+          // Reconcile stale DB position to CLOSED
+          await prisma.algoPosition.update({
+            where: { id: pos.id },
+            data: { status: 'CLOSED', closedAt: new Date() }
+          }).catch(() => {});
+          continue;
+        }
+
+        const entryPrice = match.buyavgprice || match.avgPrice || pos.entryPrice || 0;
+        const ltp = match.ltp || 0;
+        const pnl = match.pnl || match.unrealised || (entryPrice > 0 && ltp > 0 ? (ltp - entryPrice) * netQty : 0);
+
+        // Update DB position entry price if it was 0
+        if ((!pos.entryPrice || pos.entryPrice === 0) && entryPrice > 0) {
+          await prisma.algoPosition.update({
+            where: { id: pos.id },
+            data: { entryPrice }
+          }).catch(() => {});
+        }
+
+        hydratedPositions.push({
+          ...pos,
+          entryPrice: entryPrice,
+          ltp: ltp,
+          pnl: pnl,
+          quantity: netQty,
+          netqty: netQty,
+          orderSide: pos.side,
+          lots: Math.max(1, Math.round(netQty / (pos.symbol.includes('BANKNIFTY') ? 15 : 65)))
+        });
+      } else {
+        // Fallback to DB values
+        hydratedPositions.push({
+          ...pos,
+          orderSide: pos.side,
+          lots: Math.max(1, Math.round(pos.quantity / (pos.symbol.includes('BANKNIFTY') ? 15 : 65))),
+          ltp: pos.entryPrice || 0,
+          pnl: 0
+        });
+      }
+    }
+
+    res.json({ success: true, positions: hydratedPositions });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
