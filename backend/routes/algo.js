@@ -1544,30 +1544,19 @@ router.post('/agent/resume-today', async (req, res) => {
 // ─────────────────────────────────────────────────────────────
 const { MarketPreflightService, getISTDateString } = require('../services/compliance/MarketPreflightService');
 
-// GET /api/algo/preflight/status — Get today's pre-flight check state
+// GET /api/algo/preflight/status — Automatic Daily Pre-Flight Lifecycle
+// Automatically executes once per new trading day (Asia/Kolkata) with concurrency locking.
+// On page refresh/reload, returns the stored VERIFIED / READY state without resetting to PENDING.
 router.get('/preflight/status', async (req, res) => {
   const userId = await resolveTargetUserId(req);
   try {
-    const today = getISTDateString();
-    const cached = MarketPreflightService.getCachedPreflight(userId);
-    if (cached) {
-      return res.json({ success: true, ...cached.result, isCached: true });
-    }
-    res.json({
-      success: true,
-      readyForLiveTrading: false,
-      status: 'NOT_RUN',
-      message: 'Pre-flight check has not been run for today yet.',
-      dateStr: today,
-      safeSummary: {
-        broker: 'Angel One',
-        proxy: 'PENDING',
-        riskControls: 'PENDING',
-        killSwitch: 'PENDING',
-        algo: 'NOT_RUN',
-        tradingDate: today,
-      }
+    const result = await MarketPreflightService.getOrRunDailyPreflight(userId, {
+      prismaClient: prisma,
+      decryptFn: decryptCredential,
+      AuditLogger,
+      forceRefresh: false,
     });
+    res.json({ success: true, ...result });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

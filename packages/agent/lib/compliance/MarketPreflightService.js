@@ -32,6 +32,9 @@ const ANGEL_BASE_URL = 'https://apiconnect.angelbroking.com';
 // In-memory cache for daily preflight status per user { [userId]: { dateStr, passed, result, timestamp } }
 const preflightCache = new Map();
 
+// In-flight concurrency lock to prevent duplicate simultaneous executions on same user
+const inFlightPreflightPromises = new Map();
+
 /**
  * Get current date string in Asia/Kolkata (IST) timezone
  * @returns {string} "YYYY-MM-DD"
@@ -44,6 +47,19 @@ function getISTDateString() {
     day: '2-digit'
   });
   return formatter.format(new Date());
+}
+
+/**
+ * Check if current IST time is on a weekend (Saturday / Sunday)
+ * @returns {boolean}
+ */
+function isISTWeekend() {
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Kolkata',
+    weekday: 'short'
+  });
+  const day = formatter.format(new Date());
+  return day === 'Sat' || day === 'Sun';
 }
 
 /**
@@ -108,15 +124,55 @@ class MarketPreflightService {
   }
 
   /**
-   * Clear preflight cache (used for testing or forced re-checks)
+   * Clear preflight cache (used for testing or deliberate re-checks)
    * @param {string} [userId]
    */
   static clearCache(userId) {
     if (userId) {
       preflightCache.delete(userId);
+      inFlightPreflightPromises.delete(userId);
     } else {
       preflightCache.clear();
+      inFlightPreflightPromises.clear();
     }
+  }
+
+  /**
+   * Automatic daily pre-flight check:
+   * Returns cached result if already evaluated for today;
+   * otherwise runs the complete read-only checks automatically with concurrency protection.
+   *
+   * @param {string} userId
+   * @param {object} [options]
+   * @returns {Promise<object>}
+   */
+  static async getOrRunDailyPreflight(userId, options = {}) {
+    const today = getISTDateString();
+    const cached = this.getCachedPreflight(userId);
+    if (cached && !options.forceRefresh) {
+      return {
+        ...cached.result,
+        isCached: true,
+        cachedAt: cached.timestamp,
+      };
+    }
+
+    // Mutex concurrency lock to prevent duplicate executions from simultaneous requests
+    if (inFlightPreflightPromises.has(userId) && !options.forceRefresh) {
+      return inFlightPreflightPromises.get(userId);
+    }
+
+    const runPromise = (async () => {
+      try {
+        const res = await this.runAngelOnePreflight(userId, options);
+        return res;
+      } finally {
+        inFlightPreflightPromises.delete(userId);
+      }
+    })();
+
+    inFlightPreflightPromises.set(userId, runPromise);
+    return runPromise;
   }
 
   /**
@@ -156,11 +212,21 @@ class MarketPreflightService {
       prisma = new PrismaClient();
     }
 
-    const decrypt = decryptFn || ((val) => {
-      if (!val) return val;
-      const { decryptCredential } = require('../../../../backend/services/crypto');
-      return decryptCredential(val);
-    });
+    let decrypt = decryptFn;
+    if (!decrypt) {
+      try {
+        const { decryptCredential } = require('../../../../backend/services/crypto');
+        decrypt = decryptCredential;
+      } catch (_) {
+        try {
+          const { decryptCredential } = require('../../../backend/services/crypto');
+          decrypt = decryptCredential;
+        } catch (e) {
+          const { decryptCredential } = require('../../backend/services/crypto');
+          decrypt = decryptCredential;
+        }
+      }
+    }
 
     const checks = {
       clientConfig: { status: 'PENDING', message: '' },
@@ -221,9 +287,14 @@ class MarketPreflightService {
       checks.credentialsPresence = { status: 'PASS', message: 'All required Angel One credentials present and decryptable.' };
 
       // ── CHECK 3 & 4: Static IP Proxy Assignment & Egress Probe ──────────────
-      assignment = await prisma.clientStaticIpAssignment.findFirst({
-        where: { userId, broker: 'ANGELONE', status: 'VERIFIED' }
-      });
+      const staticIpModel = prisma.clientStaticIpAssignment || prisma.ClientStaticIpAssignment;
+      assignment = staticIpModel ? (
+        await staticIpModel.findFirst({
+          where: { userId, broker: { in: ['ANGELONE', 'ANGEL_ONE'] }, status: 'VERIFIED' }
+        }) || await staticIpModel.findFirst({
+          where: { userId, status: 'VERIFIED' }
+        })
+      ) : null;
 
       if (!assignment) {
         checks.proxyVerification = { status: 'FAIL', message: 'No VERIFIED static-IP proxy assigned for Angel One.' };
@@ -486,5 +557,6 @@ class MarketPreflightService {
 module.exports = {
   MarketPreflightService,
   getISTDateString,
+  isISTWeekend,
   preflightCache,
 };

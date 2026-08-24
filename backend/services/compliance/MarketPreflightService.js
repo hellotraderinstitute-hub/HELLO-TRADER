@@ -12,11 +12,13 @@ try {
 const {
   MarketPreflightService,
   getISTDateString,
+  isISTWeekend,
   preflightCache,
 } = preflightLib;
 
 module.exports = {
   MarketPreflightService,
   getISTDateString,
+  isISTWeekend,
   preflightCache,
 };
