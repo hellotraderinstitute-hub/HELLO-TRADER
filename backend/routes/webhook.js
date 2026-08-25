@@ -73,11 +73,41 @@ function normalizeBrokerRejectionReason(rawMessage) {
   };
 }
 
+// Scoped text parser middleware for TradingView webhooks (accepts both JSON and text/plain)
+const tradingViewBodyParser = express.text({ type: '*/*', limit: '10mb' });
+
 // ─── POST /webhook/tv/:webhookToken ──────────────────────────
-router.post('/tv/:webhookToken', async (req, res) => {
+router.post('/tv/:webhookToken', tradingViewBodyParser, async (req, res) => {
   const { webhookToken } = req.params;
-  const rawPayload = JSON.stringify(req.body);
   const receivedAt = new Date();
+
+  // Safely extract and stringify payload for audit & persistence (guaranteed non-empty string)
+  let rawBody = req.body;
+  let parsedBody = {};
+  let rawPayloadStr = '{}';
+
+  if (typeof rawBody === 'string') {
+    const trimmed = rawBody.trim();
+    rawPayloadStr = trimmed || '{}';
+    try {
+      parsedBody = JSON.parse(trimmed);
+      if (typeof parsedBody !== 'object' || parsedBody === null) {
+        parsedBody = { action: trimmed, message: trimmed };
+      }
+    } catch (_) {
+      parsedBody = { action: trimmed, message: trimmed };
+    }
+  } else if (typeof rawBody === 'object' && rawBody !== null) {
+    parsedBody = rawBody;
+    try {
+      rawPayloadStr = JSON.stringify(rawBody) || '{}';
+    } catch (_) {
+      rawPayloadStr = '{}';
+    }
+  } else {
+    parsedBody = {};
+    rawPayloadStr = '{}';
+  }
 
   // Immediately ACK TradingView (must respond within 10s)
   res.status(200).json({ status: 'received', timestamp: receivedAt.toISOString() });
@@ -109,7 +139,7 @@ router.post('/tv/:webhookToken', async (req, res) => {
         data: {
           userId,
           connectionId: connection.id,
-          rawPayload,
+          rawPayload: rawPayloadStr,
           executionStatus: 'PENDING',
           receivedAt,
         }
@@ -118,12 +148,12 @@ router.post('/tv/:webhookToken', async (req, res) => {
       await AuditLogger.log({
         userId, category: CATEGORIES.WEBHOOK, action: 'WEBHOOK_RECEIVED',
         detail: `Webhook received for ${connection.broker} (${connection.displayName})`,
-        meta: { connectionId: connection.id, webhookLogId: webhookLog.id, rawPayload },
+        meta: { connectionId: connection.id, webhookLogId: webhookLog.id, rawPayload: rawPayloadStr },
       });
 
       emitUpdate('algo_webhook', {
         id: webhookLog.id, broker: connection.broker,
-        status: 'RECEIVED', receivedAt, rawPayload: req.body,
+        status: 'RECEIVED', receivedAt, rawPayload: parsedBody,
       });
 
       // 3. Global kill switch check
@@ -156,13 +186,13 @@ router.post('/tv/:webhookToken', async (req, res) => {
         return;
       }
 
-      // 5. Parse payload & determine Mode (Mode A: Explicit Symbol vs Mode B: Saved User Configuration)
       // 5. Parse payload & determine Signal Direction vs Mode
-      const body = req.body;
+      const body = parsedBody;
+      const rawText = (body.message || body.alert_message || body.text || '').toUpperCase().trim();
       const rawEvent = (body.event || body.type || '').toUpperCase().trim();
       const rawDirection = (body.direction || body.dir || '').toUpperCase().trim();
       const rawOptionType = (body.option_type || body.optionType || body.optType || '').toUpperCase().trim();
-      const rawAction = (body.action || body.signal || body.side || '').toUpperCase().trim();
+      const rawAction = (body.action || body.signal || body.side || rawText || '').toUpperCase().trim();
       const rawMarketPosition = (body.market_position || body.marketPosition || body.position || '').toUpperCase().trim();
       const rawPrevMarketPosition = (body.prev_market_position || body.prevMarketPosition || '').toUpperCase().trim();
       const rawReason = (body.exit_reason || body.exitReason || body.reason || body.comment || body.order_comment || body.order_id || '').toUpperCase().trim();
@@ -179,8 +209,8 @@ router.post('/tv/:webhookToken', async (req, res) => {
       const trailSL     = !!(body.trail_sl || body.trailSL);
       const trailOffset = parseFloat(body.trail_offset || body.trailOffset || 0) || null;
 
-      if (!rawEvent && !rawAction && !rawDirection && !rawMarketPosition) {
-        await updateLog(webhookLog.id, 'FAILED', null, 'MISSING_REQUIRED_FIELD: event/action/direction/market_position');
+      if (!rawEvent && !rawAction && !rawDirection && !rawMarketPosition && !rawText && !rawOptionType) {
+        await updateLog(webhookLog.id, 'FAILED', null, 'MISSING_REQUIRED_FIELD: event/action/direction/market_position/option_type');
         return;
       }
 
@@ -191,18 +221,17 @@ router.post('/tv/:webhookToken', async (req, res) => {
         'SL', 'STOP_LOSS', 'STOPLOSS', 'SL_EXIT', 'TARGET', 'TP',
         'TAKE_PROFIT', 'TARGET_EXIT', 'TRAIL_SL', 'TRAILING_STOP',
         'TRAILING_STOP_LOSS', 'EXIT_SL', 'EXIT_TARGET', 'EXIT_TRAIL_SL',
-        'P1', 'P2', 'PARTIAL_EXIT', 'SESSION_CLOSE', 'CLOSE_ALL'
+        'P1', 'P2', 'PARTIAL_EXIT', 'SESSION_CLOSE', 'CLOSE_ALL',
+        'HTX PRIME EXIT', 'UP-X', 'DOWN-X'
       ];
 
       const isExplicitExitFlag = body.is_exit === true || body.exit === true || body.isExit === true || body.close === true || rawEvent === 'EXIT';
 
-      // An order is an EXIT if:
-      // 1. Explicit event === 'EXIT'
-      // 2. is_exit === true
-      // 3. market_position === 'FLAT'
-      // 4. Action or Reason contains an exit keyword
       const isExitSignal = isExplicitExitFlag ||
                            rawMarketPosition === 'FLAT' ||
+                           rawAction.includes('EXIT') ||
+                           rawAction.includes('CLOSE') ||
+                           rawAction.includes('-X') ||
                            exitActionKeywords.includes(rawAction) ||
                            exitActionKeywords.includes(rawReason) ||
                            (rawReason.includes('SL') || rawReason.includes('TARGET') || rawReason.includes('STOP') || rawReason.includes('TRAIL') || rawReason.includes('EXIT') || rawReason.includes('SESSION_CLOSE') || rawReason.includes('CLOSE_ALL') || rawReason.includes('P1') || rawReason.includes('P2'));
@@ -217,20 +246,12 @@ router.post('/tv/:webhookToken', async (req, res) => {
       else if (rawReason.includes('REVERSAL') || rawAction.includes('REVERSAL')) exitReason = 'REVERSAL';
       else if (rawReason) exitReason = rawReason;
 
-      // Determine Signal Direction for Directional Entries (NEVER use broker action alone for exit/direction confusion)
+      // Determine Signal Direction for Directional Entries
       let signalDirection = null;
       if (!isExitSignal) {
-        if (rawDirection === 'UP' || rawDirection === 'UPSIDE' || rawOptionType === 'CE') {
+        if (rawDirection === 'UP' || rawDirection === 'UPSIDE' || rawOptionType === 'CE' || rawAction.includes('UP') || rawAction.includes('BUY') || rawAction.includes('LONG') || rawMarketPosition === 'LONG') {
           signalDirection = 'UPSIDE';
-        } else if (rawDirection === 'DOWN' || rawDirection === 'DOWNSIDE' || rawOptionType === 'PE') {
-          signalDirection = 'DOWNSIDE';
-        } else if (rawMarketPosition === 'LONG') {
-          signalDirection = 'UPSIDE';
-        } else if (rawMarketPosition === 'SHORT') {
-          signalDirection = 'DOWNSIDE';
-        } else if (['UP', 'UPSIDE', 'BUY', 'LONG', 'CALL', 'BULL', 'BUY_SIGNAL'].includes(rawAction)) {
-          signalDirection = 'UPSIDE';
-        } else if (['DOWN', 'DOWNSIDE', 'SELL', 'SHORT', 'PUT', 'BEAR', 'SELL_SIGNAL'].includes(rawAction)) {
+        } else if (rawDirection === 'DOWN' || rawDirection === 'DOWNSIDE' || rawOptionType === 'PE' || rawAction.includes('DOWN') || rawAction.includes('SELL') || rawAction.includes('SHORT') || rawMarketPosition === 'SHORT') {
           signalDirection = 'DOWNSIDE';
         }
       }

@@ -35,15 +35,47 @@ function test(name, condition, details = '') {
   }
 }
 
-function parseSemanticEvent(body) {
+function normalizeRawPayload(rawBody) {
+  let parsedBody = {};
+  let rawPayloadStr = '{}';
+
+  if (typeof rawBody === 'string') {
+    const trimmed = rawBody.trim();
+    rawPayloadStr = trimmed || '{}';
+    try {
+      parsedBody = JSON.parse(trimmed);
+      if (typeof parsedBody !== 'object' || parsedBody === null) {
+        parsedBody = { action: trimmed, message: trimmed };
+      }
+    } catch (_) {
+      parsedBody = { action: trimmed, message: trimmed };
+    }
+  } else if (typeof rawBody === 'object' && rawBody !== null) {
+    parsedBody = rawBody;
+    try {
+      rawPayloadStr = JSON.stringify(rawBody) || '{}';
+    } catch (_) {
+      rawPayloadStr = '{}';
+    }
+  } else {
+    parsedBody = {};
+    rawPayloadStr = '{}';
+  }
+
+  return { parsedBody, rawPayloadStr };
+}
+
+function parseSemanticEvent(rawInput) {
+  const { parsedBody: body } = normalizeRawPayload(rawInput);
+  const rawText = (body.message || body.alert_message || body.text || '').toUpperCase().trim();
   const rawEvent = (body.event || body.type || '').toUpperCase().trim();
   const rawDirection = (body.direction || body.dir || '').toUpperCase().trim();
   const rawOptionType = (body.option_type || body.optionType || body.optType || '').toUpperCase().trim();
-  const rawAction = (body.action || body.signal || body.side || '').toUpperCase().trim();
+  const rawAction = (body.action || body.signal || body.side || rawText || '').toUpperCase().trim();
   const rawMarketPosition = (body.market_position || body.marketPosition || body.position || '').toUpperCase().trim();
   const rawReason = (body.exit_reason || body.exitReason || body.reason || body.comment || body.order_comment || body.order_id || '').toUpperCase().trim();
 
-  if (!rawEvent && !rawAction && !rawDirection && !rawMarketPosition) {
+  if (!rawEvent && !rawAction && !rawDirection && !rawMarketPosition && !rawText && !rawOptionType) {
     return { valid: false, reason: 'MISSING_REQUIRED_FIELD' };
   }
 
@@ -53,13 +85,17 @@ function parseSemanticEvent(body) {
     'SL', 'STOP_LOSS', 'STOPLOSS', 'SL_EXIT', 'TARGET', 'TP',
     'TAKE_PROFIT', 'TARGET_EXIT', 'TRAIL_SL', 'TRAILING_STOP',
     'TRAILING_STOP_LOSS', 'EXIT_SL', 'EXIT_TARGET', 'EXIT_TRAIL_SL',
-    'P1', 'P2', 'PARTIAL_EXIT', 'SESSION_CLOSE', 'CLOSE_ALL'
+    'P1', 'P2', 'PARTIAL_EXIT', 'SESSION_CLOSE', 'CLOSE_ALL',
+    'HTX PRIME EXIT', 'UP-X', 'DOWN-X'
   ];
 
   const isExplicitExitFlag = body.is_exit === true || body.exit === true || body.isExit === true || body.close === true || rawEvent === 'EXIT';
 
   const isExitSignal = isExplicitExitFlag ||
                        rawMarketPosition === 'FLAT' ||
+                       rawAction.includes('EXIT') ||
+                       rawAction.includes('CLOSE') ||
+                       rawAction.includes('-X') ||
                        exitActionKeywords.includes(rawAction) ||
                        exitActionKeywords.includes(rawReason) ||
                        (rawReason.includes('SL') || rawReason.includes('TARGET') || rawReason.includes('STOP') || rawReason.includes('TRAIL') || rawReason.includes('EXIT') || rawReason.includes('SESSION_CLOSE') || rawReason.includes('CLOSE_ALL') || rawReason.includes('P1') || rawReason.includes('P2'));
@@ -78,22 +114,10 @@ function parseSemanticEvent(body) {
   let targetOptionType = null;
 
   if (!isExitSignal) {
-    if (rawDirection === 'UP' || rawDirection === 'UPSIDE' || rawOptionType === 'CE') {
+    if (rawDirection === 'UP' || rawDirection === 'UPSIDE' || rawOptionType === 'CE' || rawAction.includes('UP') || rawAction.includes('BUY') || rawAction.includes('LONG') || rawMarketPosition === 'LONG') {
       signalDirection = 'UPSIDE';
       targetOptionType = 'CE';
-    } else if (rawDirection === 'DOWN' || rawDirection === 'DOWNSIDE' || rawOptionType === 'PE') {
-      signalDirection = 'DOWNSIDE';
-      targetOptionType = 'PE';
-    } else if (rawMarketPosition === 'LONG') {
-      signalDirection = 'UPSIDE';
-      targetOptionType = 'CE';
-    } else if (rawMarketPosition === 'SHORT') {
-      signalDirection = 'DOWNSIDE';
-      targetOptionType = 'PE';
-    } else if (['UP', 'UPSIDE', 'BUY', 'LONG', 'CALL', 'BULL', 'BUY_SIGNAL'].includes(rawAction)) {
-      signalDirection = 'UPSIDE';
-      targetOptionType = 'CE';
-    } else if (['DOWN', 'DOWNSIDE', 'SELL', 'SHORT', 'PUT', 'BEAR', 'SELL_SIGNAL'].includes(rawAction)) {
+    } else if (rawDirection === 'DOWN' || rawDirection === 'DOWNSIDE' || rawOptionType === 'PE' || rawAction.includes('DOWN') || rawAction.includes('SELL') || rawAction.includes('SHORT') || rawMarketPosition === 'SHORT') {
       signalDirection = 'DOWNSIDE';
       targetOptionType = 'PE';
     }
@@ -343,6 +367,113 @@ async function runSemanticTestSuite() {
     test('18. Empty alert_message -> safely rejected with 0 broker orders',
       res.valid === false,
       `Payload: {} -> Rejected (valid=false) | Zero broker orders placed`
+    );
+  }
+
+  // Case 19: JSON HTX PRIME UP -> BUY CE
+  {
+    const payload = { action: 'HTX PRIME UP' };
+    const res = parseSemanticEvent(payload);
+    test('19. JSON HTX PRIME UP -> ALGO BUY CE',
+      !res.isExitSignal && res.signalDirection === 'UPSIDE' && res.targetOptionType === 'CE',
+      `Payload: ${JSON.stringify(payload)} -> Resolved: BUY CE`
+    );
+  }
+
+  // Case 20: JSON HTX PRIME DOWN -> BUY PE (Strictly 0 CE BUY)
+  {
+    const payload = { action: 'HTX PRIME DOWN' };
+    const res = parseSemanticEvent(payload);
+    test('20. JSON HTX PRIME DOWN -> ALGO BUY PE (Zero CE BUY)',
+      !res.isExitSignal && res.signalDirection === 'DOWNSIDE' && res.targetOptionType === 'PE',
+      `Payload: ${JSON.stringify(payload)} -> Resolved: BUY PE | Zero CE BUY`
+    );
+  }
+
+  // Case 21: Plain-Text HTX PRIME UP -> BUY CE
+  {
+    const textBody = 'HTX PRIME UP';
+    const res = parseSemanticEvent(textBody);
+    test('21. Plain-text HTX PRIME UP -> ALGO BUY CE',
+      !res.isExitSignal && res.signalDirection === 'UPSIDE' && res.targetOptionType === 'CE',
+      `Raw Body: "${textBody}" -> Resolved: BUY CE`
+    );
+  }
+
+  // Case 22: Plain-Text HTX PRIME DOWN -> BUY PE (Strictly 0 CE BUY)
+  {
+    const textBody = 'HTX PRIME DOWN';
+    const res = parseSemanticEvent(textBody);
+    test('22. Plain-text HTX PRIME DOWN -> ALGO BUY PE (Zero CE BUY)',
+      !res.isExitSignal && res.signalDirection === 'DOWNSIDE' && res.targetOptionType === 'PE',
+      `Raw Body: "${textBody}" -> Resolved: BUY PE | Zero CE BUY`
+    );
+  }
+
+  // Case 23: Plain-Text HTX PRIME EXIT -> EXIT strictly (0 opposite BUY)
+  {
+    const textBody = 'HTX PRIME EXIT';
+    const res = parseSemanticEvent(textBody);
+    test('23. Plain-text HTX PRIME EXIT -> ALGO STRATEGY EXIT (Zero opposite BUY)',
+      res.isExitSignal && res.exitReason === 'STRATEGY_EXIT' && res.signalDirection === null,
+      `Raw Body: "${textBody}" -> Resolved: STRATEGY_EXIT | Zero opposite BUY`
+    );
+  }
+
+  // Case 24: Missing / Empty Body -> Safely rejected with 0 orders
+  {
+    const emptyString = '';
+    const res1 = parseSemanticEvent(emptyString);
+    const nullInput = null;
+    const res2 = parseSemanticEvent(nullInput);
+    test('24. Missing / Empty / Null body -> Safely rejected with 0 broker orders',
+      res1.valid === false && res2.valid === false,
+      `Empty string: valid=${res1.valid} | Null input: valid=${res2.valid}`
+    );
+  }
+
+  // Case 25: rawPayload is always persisted as valid string (Never undefined)
+  {
+    const samples = [
+      'HTX PRIME DOWN',
+      'HTX PRIME UP',
+      'HTX PRIME EXIT',
+      { event: 'ENTRY', direction: 'DOWN' },
+      '',
+      null,
+      undefined
+    ];
+    let allStrings = true;
+    for (const s of samples) {
+      const { rawPayloadStr } = normalizeRawPayload(s);
+      if (typeof rawPayloadStr !== 'string' || rawPayloadStr.length === 0) {
+        allStrings = false;
+      }
+    }
+    test('25. AlgoWebhookLog.rawPayload is ALWAYS a non-empty string (Never undefined)',
+      allStrings,
+      `Tested across 7 diverse inputs (plain text, JSON, empty, null, undefined) -> 100% valid strings`
+    );
+  }
+
+  // Case 26: DOWN results strictly in PE BUY and NEVER CE BUY
+  {
+    const downInputs = [
+      'HTX PRIME DOWN',
+      { action: 'DOWN' },
+      { event: 'ENTRY', direction: 'DOWN' },
+      { option_type: 'PE' }
+    ];
+    let allPE = true;
+    for (const inp of downInputs) {
+      const parsed = parseSemanticEvent(inp);
+      if (parsed.targetOptionType !== 'PE' || parsed.signalDirection !== 'DOWNSIDE') {
+        allPE = false;
+      }
+    }
+    test('26. DOWN signals result strictly in PE BUY and NEVER CE BUY',
+      allPE,
+      `All 4 DOWN variations correctly resolved to targetOptionType='PE'`
     );
   }
 
