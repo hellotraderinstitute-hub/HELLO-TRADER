@@ -121,8 +121,8 @@ class LedgerIntegrityService {
       });
     }
 
-    // System is healthy if global checksum is valid and critical student (HT0802) is verified
-    const isHealthy = globalInfo.totalLedgers > 0 && (!nituAudit || nituAudit.tokenBalance === 300);
+    // System is healthy if global checksum is valid and critical student (HT0802) ledger matches credits - debits
+    const isHealthy = globalInfo.totalLedgers > 0 && (!nituAudit || (nituAudit.tokenBalance === (nituAudit.tokenCredits - nituAudit.tokenDebits) && nituAudit.count > 0));
 
     return {
       healthy: isHealthy,

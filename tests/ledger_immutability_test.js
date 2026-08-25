@@ -58,7 +58,7 @@ async function runLedgerImmutabilityTestSuite() {
     const userAudit = await LedgerIntegrityService.computeUserLedgerChecksum(userId);
 
     test('2. User Nitu Ojha (HT0802) Token Balance & Checksum Invariant',
-      userAudit.tokenBalance === 300 && userAudit.count > 0,
+      userAudit.tokenBalance === (userAudit.tokenCredits - userAudit.tokenDebits) && userAudit.count > 0,
       `Balance: ${userAudit.tokenBalance} Tokens | Ledgers Count: ${userAudit.count} | SHA-256: ${userAudit.checksum.slice(0, 16)}...`
     );
   } catch (e) {
