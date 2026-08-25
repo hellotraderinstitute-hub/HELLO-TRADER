@@ -159,7 +159,14 @@ router.post('/tv/:webhookToken', async (req, res) => {
       // 5. Parse payload & determine Mode (Mode A: Explicit Symbol vs Mode B: Saved User Configuration)
       // 5. Parse payload & determine Signal Direction vs Mode
       const body = req.body;
-      const rawInput = (body.direction || body.action || body.signal || body.side || '').toUpperCase().trim();
+      const rawEvent = (body.event || body.type || '').toUpperCase().trim();
+      const rawDirection = (body.direction || body.dir || '').toUpperCase().trim();
+      const rawOptionType = (body.option_type || body.optionType || body.optType || '').toUpperCase().trim();
+      const rawAction = (body.action || body.signal || body.side || '').toUpperCase().trim();
+      const rawMarketPosition = (body.market_position || body.marketPosition || body.position || '').toUpperCase().trim();
+      const rawPrevMarketPosition = (body.prev_market_position || body.prevMarketPosition || '').toUpperCase().trim();
+      const rawReason = (body.exit_reason || body.exitReason || body.reason || body.comment || body.order_comment || body.order_id || '').toUpperCase().trim();
+
       let rawSymbol = body.symbol || body.ticker || '';
       let qty       = parseInt(body.qty || body.quantity || 0);
       let sl        = parseFloat(body.sl || body.stoploss || 0) || null;
@@ -172,8 +179,8 @@ router.post('/tv/:webhookToken', async (req, res) => {
       const trailSL     = !!(body.trail_sl || body.trailSL);
       const trailOffset = parseFloat(body.trail_offset || body.trailOffset || 0) || null;
 
-      if (!rawInput) {
-        await updateLog(webhookLog.id, 'FAILED', null, 'MISSING_REQUIRED_FIELD: action/signal/direction');
+      if (!rawEvent && !rawAction && !rawDirection && !rawMarketPosition) {
+        await updateLog(webhookLog.id, 'FAILED', null, 'MISSING_REQUIRED_FIELD: event/action/direction/market_position');
         return;
       }
 
@@ -183,29 +190,47 @@ router.post('/tv/:webhookToken', async (req, res) => {
         'EXIT_LONG', 'EXIT_SHORT', 'CLOSE_BUY', 'CLOSE_SELL',
         'SL', 'STOP_LOSS', 'STOPLOSS', 'SL_EXIT', 'TARGET', 'TP',
         'TAKE_PROFIT', 'TARGET_EXIT', 'TRAIL_SL', 'TRAILING_STOP',
-        'TRAILING_STOP_LOSS', 'EXIT_SL', 'EXIT_TARGET', 'EXIT_TRAIL_SL'
+        'TRAILING_STOP_LOSS', 'EXIT_SL', 'EXIT_TARGET', 'EXIT_TRAIL_SL',
+        'P1', 'P2', 'PARTIAL_EXIT', 'SESSION_CLOSE', 'CLOSE_ALL'
       ];
 
-      const isExplicitExitFlag = body.is_exit === true || body.exit === true || body.isExit === true || body.close === true;
-      const rawReason = (body.exit_reason || body.exitReason || body.reason || body.comment || '').toUpperCase().trim();
+      const isExplicitExitFlag = body.is_exit === true || body.exit === true || body.isExit === true || body.close === true || rawEvent === 'EXIT';
 
-      const isExitSignal = exitActionKeywords.includes(rawInput) ||
-                           isExplicitExitFlag ||
-                           (rawInput === 'SELL' && (rawReason.includes('SL') || rawReason.includes('TARGET') || rawReason.includes('STOP') || rawReason.includes('TRAIL') || rawReason.includes('EXIT') || isExplicitExitFlag));
+      // An order is an EXIT if:
+      // 1. Explicit event === 'EXIT'
+      // 2. is_exit === true
+      // 3. market_position === 'FLAT'
+      // 4. Action or Reason contains an exit keyword
+      const isExitSignal = isExplicitExitFlag ||
+                           rawMarketPosition === 'FLAT' ||
+                           exitActionKeywords.includes(rawAction) ||
+                           exitActionKeywords.includes(rawReason) ||
+                           (rawReason.includes('SL') || rawReason.includes('TARGET') || rawReason.includes('STOP') || rawReason.includes('TRAIL') || rawReason.includes('EXIT') || rawReason.includes('SESSION_CLOSE') || rawReason.includes('CLOSE_ALL') || rawReason.includes('P1') || rawReason.includes('P2'));
 
       let exitReason = 'STRATEGY_EXIT';
-      if (rawReason.includes('TRAIL') || rawInput.includes('TRAIL')) exitReason = 'TRAIL_SL';
-      else if (rawReason.includes('SL') || rawReason.includes('STOP') || rawInput.includes('SL') || rawInput.includes('STOP')) exitReason = 'SL';
-      else if (rawReason.includes('TARGET') || rawReason.includes('TP') || rawReason.includes('PROFIT') || rawInput.includes('TARGET') || rawInput.includes('TP')) exitReason = 'TARGET';
-      else if (rawReason.includes('REVERSAL') || rawInput.includes('REVERSAL')) exitReason = 'REVERSAL';
+      if (rawReason.includes('TRAIL') || rawAction.includes('TRAIL')) exitReason = 'TRAIL_SL';
+      else if (rawReason.includes('SL') || rawReason.includes('STOP') || rawAction.includes('SL') || rawAction.includes('STOP')) exitReason = 'SL';
+      else if (rawReason.includes('TARGET') || rawReason.includes('TP') || rawReason.includes('PROFIT') || rawAction.includes('TARGET') || rawAction.includes('TP')) exitReason = 'TARGET';
+      else if (rawReason.includes('SESSION') || rawReason.includes('CLOSE_ALL') || rawAction.includes('SESSION') || rawAction.includes('CLOSE_ALL')) exitReason = 'SESSION_CLOSE';
+      else if (rawReason.includes('P1') || rawAction.includes('P1')) exitReason = 'PARTIAL_P1';
+      else if (rawReason.includes('P2') || rawAction.includes('P2')) exitReason = 'PARTIAL_P2';
+      else if (rawReason.includes('REVERSAL') || rawAction.includes('REVERSAL')) exitReason = 'REVERSAL';
       else if (rawReason) exitReason = rawReason;
 
-      // Determine Signal Direction for Directional Entries
+      // Determine Signal Direction for Directional Entries (NEVER use broker action alone for exit/direction confusion)
       let signalDirection = null;
       if (!isExitSignal) {
-        if (['UP', 'UPSIDE', 'BUY', 'LONG', 'CALL', 'BULL', 'BUY_SIGNAL'].includes(rawInput)) {
+        if (rawDirection === 'UP' || rawDirection === 'UPSIDE' || rawOptionType === 'CE') {
           signalDirection = 'UPSIDE';
-        } else if (['DOWN', 'DOWNSIDE', 'SELL', 'SHORT', 'PUT', 'BEAR', 'SELL_SIGNAL'].includes(rawInput)) {
+        } else if (rawDirection === 'DOWN' || rawDirection === 'DOWNSIDE' || rawOptionType === 'PE') {
+          signalDirection = 'DOWNSIDE';
+        } else if (rawMarketPosition === 'LONG') {
+          signalDirection = 'UPSIDE';
+        } else if (rawMarketPosition === 'SHORT') {
+          signalDirection = 'DOWNSIDE';
+        } else if (['UP', 'UPSIDE', 'BUY', 'LONG', 'CALL', 'BULL', 'BUY_SIGNAL'].includes(rawAction)) {
+          signalDirection = 'UPSIDE';
+        } else if (['DOWN', 'DOWNSIDE', 'SELL', 'SHORT', 'PUT', 'BEAR', 'SELL_SIGNAL'].includes(rawAction)) {
           signalDirection = 'DOWNSIDE';
         }
       }
@@ -213,7 +238,7 @@ router.post('/tv/:webhookToken', async (req, res) => {
       // Trigger non-blocking webhook received notification
       try {
         N.algoWebhookReceived({
-          action: isExitSignal ? `EXIT (${exitReason})` : rawInput,
+          action: isExitSignal ? `EXIT (${exitReason})` : (rawEvent ? `${rawEvent} ${signalDirection || rawAction}` : rawAction),
           symbol: rawSymbol || 'NIFTY',
           strike: body.strike || 'ATM',
           spotPrice: body.price || body.spotPrice || null,
@@ -238,11 +263,29 @@ router.post('/tv/:webhookToken', async (req, res) => {
 
       // ─── 7. HANDLE STRATEGY EXIT SIGNALS (STRICTLY CLOSES EXISTING POSITIONS, NEVER BUYS) ───
       if (isExitSignal) {
-        const openPositions = await prisma.algoPosition.findMany({
+        let openPositions = await prisma.algoPosition.findMany({
           where: { userId, connectionId: connection.id, status: 'OPEN' }
         });
 
-        if (openPositions.length > 0) {
+        // Direction / Option Type filtering for EXIT:
+        // If event specifies direction="UP" or option_type="CE", close only CE positions
+        // If event specifies direction="DOWN" or option_type="PE", close only PE positions
+        if (rawDirection === 'UP' || rawOptionType === 'CE') {
+          openPositions = openPositions.filter(p => p.symbol.endsWith('CE') || p.symbol.includes('CE'));
+        } else if (rawDirection === 'DOWN' || rawOptionType === 'PE') {
+          openPositions = openPositions.filter(p => p.symbol.endsWith('PE') || p.symbol.includes('PE'));
+        }
+
+        if (openPositions.length === 0) {
+          const noPosReason = `NO_ALGO_POSITION_TO_EXIT: No matching open ALGO position found for EXIT (${exitReason}${rawOptionType ? ' ' + rawOptionType : ''}). Zero broker orders placed.`;
+          await updateLog(webhookLog.id, 'SKIPPED', null, noPosReason);
+          await AuditLogger.log({
+            userId, category: CATEGORIES.POSITION, action: 'EXIT_SKIPPED_NO_POSITION',
+            detail: noPosReason, meta: { rawPayload: body, exitReason }
+          });
+          emitUpdate('algo_webhook', { id: webhookLog.id, status: 'SKIPPED', reason: 'NO_ALGO_POSITION_TO_EXIT', message: noPosReason });
+          return;
+        }
           const AngelScripMaster = require('../services/angelScripMaster');
           for (const openPos of openPositions) {
             const exitSide = openPos.side === 'BUY' ? 'SELL' : 'BUY';
@@ -261,13 +304,16 @@ router.post('/tv/:webhookToken', async (req, res) => {
               continue;
             }
 
+            const closeQty = (qty > 0 && qty < openPos.quantity) ? qty : openPos.quantity;
+            const isPartial = closeQty < openPos.quantity;
+
             const exitOrder = {
               symbol: openPos.symbol,
               securityId: exitToken || '',
               symbolToken: exitToken || '',
               exchange: openPos.exchange || 'NFO',
               side: exitSide,
-              quantity: openPos.quantity,
+              quantity: closeQty,
               orderType: 'MARKET',
               productType: openPos.productType || 'INTRADAY',
             };
@@ -278,20 +324,30 @@ router.post('/tv/:webhookToken', async (req, res) => {
               let realizedPnl = null;
               if (exitFillPrice && openPos.entryPrice) {
                 realizedPnl = openPos.side === 'BUY'
-                  ? (exitFillPrice - openPos.entryPrice) * openPos.quantity
-                  : (openPos.entryPrice - exitFillPrice) * openPos.quantity;
+                  ? (exitFillPrice - openPos.entryPrice) * closeQty
+                  : (openPos.entryPrice - exitFillPrice) * closeQty;
               }
 
-              await prisma.algoPosition.update({
-                where: { id: openPos.id },
-                data: {
-                  status: 'CLOSED',
-                  exitOrderId: exitResult.orderId,
-                  exitPrice: exitFillPrice,
-                  pnl: realizedPnl != null ? Math.round(realizedPnl * 100) / 100 : null,
-                  closedAt: new Date()
-                }
-              }).catch(() => {});
+              if (isPartial) {
+                await prisma.algoPosition.update({
+                  where: { id: openPos.id },
+                  data: {
+                    quantity: openPos.quantity - closeQty,
+                    pnl: realizedPnl != null ? Math.round(((openPos.pnl || 0) + realizedPnl) * 100) / 100 : openPos.pnl,
+                  }
+                }).catch(() => {});
+              } else {
+                await prisma.algoPosition.update({
+                  where: { id: openPos.id },
+                  data: {
+                    status: 'CLOSED',
+                    exitOrderId: exitResult.orderId,
+                    exitPrice: exitFillPrice,
+                    pnl: realizedPnl != null ? Math.round(realizedPnl * 100) / 100 : null,
+                    closedAt: new Date()
+                  }
+                }).catch(() => {});
+              }
 
               await AuditLogger.log({
                 userId,
