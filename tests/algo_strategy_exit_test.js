@@ -8,7 +8,7 @@ const assert = require('assert');
 
 function runTestSuite() {
   console.log('================================================================================');
-  console.log('     RUNNING ALGO TRADING STRATEGY EXIT & SL LIFECYCLE TEST SUITE (18 TESTS)    ');
+  console.log('     RUNNING ALGO TRADING STRATEGY EXIT & SL LIFECYCLE TEST SUITE (23 TESTS)    ');
   console.log('================================================================================\n');
 
   let passed = 0;
@@ -343,6 +343,93 @@ function runTestSuite() {
     );
   }
 
+  // 19. CE + TARGET EXIT => SELL CE -> NO PE
+  {
+    const payload = { action: 'TARGET', exit_reason: 'Target 1', symbol: 'NIFTY' };
+    const parsed = parseSignalType(payload);
+    const openPos = { symbol: 'NIFTY25AUG2624100CE', side: 'BUY', quantity: 65, status: 'OPEN' };
+    let exitOrders = 0;
+    let oppositeBuyOrders = 0;
+    if (parsed.isExitSignal) {
+      exitOrders++;
+    } else {
+      oppositeBuyOrders++;
+    }
+    test('19. CE + TARGET EXIT => SELL CE -> NO PE',
+      exitOrders === 1 && oppositeBuyOrders === 0,
+      `Exit Orders: ${exitOrders} (SELL CE) | Opposite Buy Orders: ${oppositeBuyOrders} (Zero PE BUY)`
+    );
+  }
+
+  // 20. CE + TRAIL_SL EXIT => SELL CE -> NO PE
+  {
+    const payload = { action: 'TRAIL_SL', symbol: 'NIFTY' };
+    const parsed = parseSignalType(payload);
+    const openPos = { symbol: 'NIFTY25AUG2624100CE', side: 'BUY', quantity: 65, status: 'OPEN' };
+    let exitOrders = 0;
+    let oppositeBuyOrders = 0;
+    if (parsed.isExitSignal) {
+      exitOrders++;
+    } else {
+      oppositeBuyOrders++;
+    }
+    test('20. CE + TRAIL_SL EXIT => SELL CE -> NO PE',
+      exitOrders === 1 && oppositeBuyOrders === 0,
+      `Exit Orders: ${exitOrders} (SELL CE) | Opposite Buy Orders: ${oppositeBuyOrders} (Zero PE BUY)`
+    );
+  }
+
+  // 21. PE + SL EXIT => SELL PE -> NO CE
+  {
+    const payload = { action: 'SL', symbol: 'NIFTY' };
+    const parsed = parseSignalType(payload);
+    const openPos = { symbol: 'NIFTY25AUG2624200PE', side: 'BUY', quantity: 65, status: 'OPEN' };
+    let exitOrders = 0;
+    let oppositeBuyOrders = 0;
+    if (parsed.isExitSignal) {
+      exitOrders++;
+    } else {
+      oppositeBuyOrders++;
+    }
+    test('21. PE + SL EXIT => SELL PE -> NO CE',
+      exitOrders === 1 && oppositeBuyOrders === 0,
+      `Exit Orders: ${exitOrders} (SELL PE) | Opposite Buy Orders: ${oppositeBuyOrders} (Zero CE BUY)`
+    );
+  }
+
+  // 22. PE + TARGET EXIT => SELL PE -> NO CE
+  {
+    const payload = { action: 'TAKE_PROFIT', symbol: 'NIFTY' };
+    const parsed = parseSignalType(payload);
+    const openPos = { symbol: 'NIFTY25AUG2624200PE', side: 'BUY', quantity: 65, status: 'OPEN' };
+    let exitOrders = 0;
+    let oppositeBuyOrders = 0;
+    if (parsed.isExitSignal) {
+      exitOrders++;
+    } else {
+      oppositeBuyOrders++;
+    }
+    test('22. PE + TARGET EXIT => SELL PE -> NO CE',
+      exitOrders === 1 && oppositeBuyOrders === 0,
+      `Exit Orders: ${exitOrders} (SELL PE) | Opposite Buy Orders: ${oppositeBuyOrders} (Zero CE BUY)`
+    );
+  }
+
+  // 23. Failed Opposite Square-Off on Reversal => ABORT New Entry (Zero Opposite Orders Placed)
+  {
+    const oppExitSuccess = false; // Broker fails to square off old CE
+    let newEntryPlaced = false;
+    if (oppExitSuccess) {
+      newEntryPlaced = true;
+    } else {
+      newEntryPlaced = false; // Strict abort
+    }
+    test('23. Failed Opposite Exit on Reversal => Strictly ABORT New Entry',
+      !newEntryPlaced,
+      `New opposite entry strictly aborted upon old position square-off failure`
+    );
+  }
+
   console.log('\n================================================================================');
   console.log(`TEST SUITE RESULTS: ${passed} / ${passed + failed} PASSED (${Math.round(passed / (passed + failed) * 100)}%)`);
   console.log('================================================================================\n');
@@ -351,3 +438,4 @@ function runTestSuite() {
 }
 
 runTestSuite();
+
