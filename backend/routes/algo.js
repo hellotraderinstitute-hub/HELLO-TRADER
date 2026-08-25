@@ -970,6 +970,15 @@ async function calculateTodayRealizedPnl(userId, cachedLivePositionsByConn = nul
     }
   });
 
+  const openPositions = await prisma.algoPosition.findMany({
+    where: { userId, status: 'OPEN' }
+  });
+
+  const algoSymbolSet = new Set([
+    ...closedPositions.map(p => p.symbol),
+    ...openPositions.map(p => p.symbol)
+  ]);
+
   let dbRealizedPnl = 0;
   closedPositions.forEach(pos => {
     let pnl = 0;
@@ -993,7 +1002,7 @@ async function calculateTodayRealizedPnl(userId, cachedLivePositionsByConn = nul
     });
   });
 
-  // 2. Fetch live broker positions for today (Angel One SmartAPI position book)
+  // 2. Fetch live broker positions for today (Angel One SmartAPI position book) — ALGO SYMBOLS ONLY
   let brokerRealizedPnl = 0;
   let brokerUnrealizedPnl = 0;
   let hasBrokerData = false;
@@ -1012,8 +1021,14 @@ async function calculateTodayRealizedPnl(userId, cachedLivePositionsByConn = nul
 
     for (const livePositions of Object.values(positionsByConn)) {
       if (Array.isArray(livePositions) && livePositions.length > 0) {
-        hasBrokerData = true;
         for (const lp of livePositions) {
+          const sym = lp.symbol || lp.tradingsymbol;
+          // CRITICAL ISOLATION: Ignore manual broker positions not belonging to Algo
+          if (!algoSymbolSet.has(sym)) {
+            continue;
+          }
+
+          hasBrokerData = true;
           const r = parseFloat(lp.realised !== undefined ? lp.realised : (lp.realizedPnl !== undefined ? lp.realizedPnl : 0));
           const u = parseFloat(lp.unrealised !== undefined ? lp.unrealised : (lp.unrealizedPnl !== undefined ? lp.unrealizedPnl : 0));
           const realized = isNaN(r) ? 0 : r;
