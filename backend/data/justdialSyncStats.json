@@ -1,0 +1,443 @@
+{
+  "emailsReceived": 79,
+  "emailsAccepted": 54,
+  "importedToday": 37,
+  "duplicatesSkipped": 30,
+  "failedParsing": 5,
+  "rejectedSender": 7,
+  "lastSyncAt": "2026-08-14T08:48:58.914Z",
+  "recentLogs": [
+    {
+      "timestamp": "2026-08-14T08:48:58.914Z",
+      "type": "REPLAY_PREVENTED",
+      "hash": "71c0e68b"
+    },
+    {
+      "timestamp": "2026-08-14T08:48:58.913Z",
+      "type": "IMPORTED",
+      "leadNumber": "HT-LD-2026-0013",
+      "externalLeadId": "JD-OAUTH-DUP-1786697338871"
+    },
+    {
+      "timestamp": "2026-08-14T08:48:58.869Z",
+      "type": "IMPORTED",
+      "leadNumber": "HT-LD-2026-0012",
+      "externalLeadId": "JD-OAUTH-1786697338689"
+    },
+    {
+      "timestamp": "2026-08-13T14:39:50.664Z",
+      "type": "REPLAY_PREVENTED",
+      "hash": "2ac621e0"
+    },
+    {
+      "timestamp": "2026-08-13T14:39:50.663Z",
+      "type": "DUPLICATE_P2002",
+      "phone": "99******55"
+    },
+    {
+      "timestamp": "2026-08-13T13:17:54.638Z",
+      "type": "IMPORTED",
+      "leadNumber": "HT-LD-2026-0016",
+      "externalLeadId": "JD-REAL-9988"
+    },
+    {
+      "timestamp": "2026-08-13T13:17:54.620Z",
+      "type": "IMPORTED",
+      "leadNumber": "HT-LD-2026-0015",
+      "externalLeadId": "JD-TEST-1015"
+    },
+    {
+      "timestamp": "2026-08-13T13:17:54.603Z",
+      "type": "DUPLICATE_EXT_ID",
+      "externalLeadId": "JD-TEST-1001"
+    },
+    {
+      "timestamp": "2026-08-13T13:17:54.593Z",
+      "type": "IMPORTED",
+      "leadNumber": "HT-LD-2026-0014",
+      "externalLeadId": "JD-TEST-1005"
+    },
+    {
+      "timestamp": "2026-08-13T13:17:54.580Z",
+      "type": "FAILED_PARSING",
+      "error": "MALFORMED_EMAIL: Could not extract valid 10-digit Indian phone number from email."
+    },
+    {
+      "timestamp": "2026-08-13T13:17:54.578Z",
+      "type": "REJECTED_SENDER",
+      "error": "REJECTED_SENDER: Email sender 'h***@spoofed-domain.com' is not in approved Justdial allowlist."
+    },
+    {
+      "timestamp": "2026-08-13T13:17:54.577Z",
+      "type": "REPLAY_PREVENTED",
+      "hash": "1df0f30b"
+    },
+    {
+      "timestamp": "2026-08-13T13:17:54.576Z",
+      "type": "DUPLICATE_PHONE",
+      "phone": "98******10"
+    },
+    {
+      "timestamp": "2026-08-13T13:17:54.565Z",
+      "type": "DUPLICATE_EXT_ID",
+      "externalLeadId": "JD-TEST-1001"
+    },
+    {
+      "timestamp": "2026-08-13T13:17:54.557Z",
+      "type": "IMPORTED",
+      "leadNumber": "HT-LD-2026-0013",
+      "externalLeadId": "JD-TEST-1003"
+    },
+    {
+      "timestamp": "2026-08-13T13:17:54.542Z",
+      "type": "IMPORTED",
+      "leadNumber": "HT-LD-2026-0012",
+      "externalLeadId": "JD-TEST-1002"
+    },
+    {
+      "timestamp": "2026-08-13T13:17:54.503Z",
+      "type": "IMPORTED",
+      "leadNumber": "HT-LD-2026-0011",
+      "externalLeadId": "JD-TEST-1001"
+    },
+    {
+      "timestamp": "2026-08-13T13:15:21.891Z",
+      "type": "REJECTED_SENDER",
+      "error": "REJECTED_SENDER: Email sender 'h***@unauthorized-domain.com' is not in approved Justdial allowlist."
+    },
+    {
+      "timestamp": "2026-08-13T13:15:21.889Z",
+      "type": "REPLAY_PREVENTED",
+      "hash": "986db762"
+    },
+    {
+      "timestamp": "2026-08-13T13:15:21.888Z",
+      "type": "DUPLICATE_EXT_ID",
+      "externalLeadId": "JD-UNIT-1001"
+    },
+    {
+      "timestamp": "2026-08-13T13:14:58.758Z",
+      "type": "REJECTED_SENDER",
+      "error": "REJECTED_SENDER: Email sender 'h***@unauthorized-domain.com' is not in approved Justdial allowlist."
+    },
+    {
+      "timestamp": "2026-08-13T13:14:58.757Z",
+      "type": "REPLAY_PREVENTED",
+      "hash": "986db762"
+    },
+    {
+      "timestamp": "2026-08-13T13:14:58.755Z",
+      "type": "IMPORTED",
+      "leadNumber": "HT-LD-2026-0010",
+      "externalLeadId": "JD-UNIT-1001"
+    },
+    {
+      "timestamp": "2026-08-13T11:58:00.172Z",
+      "type": "IMPORTED",
+      "leadNumber": "HT-LD-2026-0015",
+      "externalLeadId": "JD-REAL-9988"
+    },
+    {
+      "timestamp": "2026-08-13T11:58:00.155Z",
+      "type": "IMPORTED",
+      "leadNumber": "HT-LD-2026-0014",
+      "externalLeadId": "JD-TEST-1015"
+    },
+    {
+      "timestamp": "2026-08-13T11:58:00.137Z",
+      "type": "DUPLICATE_EXT_ID",
+      "externalLeadId": "JD-TEST-1001"
+    },
+    {
+      "timestamp": "2026-08-13T11:58:00.127Z",
+      "type": "IMPORTED",
+      "leadNumber": "HT-LD-2026-0013",
+      "externalLeadId": "JD-TEST-1005"
+    },
+    {
+      "timestamp": "2026-08-13T11:58:00.112Z",
+      "type": "FAILED_PARSING",
+      "error": "MALFORMED_EMAIL: Could not extract valid 10-digit Indian phone number from email."
+    },
+    {
+      "timestamp": "2026-08-13T11:58:00.109Z",
+      "type": "REJECTED_SENDER",
+      "error": "REJECTED_SENDER: Email sender 'h***@spoofed-domain.com' is not in approved Justdial allowlist."
+    },
+    {
+      "timestamp": "2026-08-13T11:58:00.108Z",
+      "type": "REPLAY_PREVENTED",
+      "hash": "1df0f30b"
+    },
+    {
+      "timestamp": "2026-08-13T11:58:00.107Z",
+      "type": "DUPLICATE_PHONE",
+      "phone": "98******10"
+    },
+    {
+      "timestamp": "2026-08-13T11:58:00.093Z",
+      "type": "DUPLICATE_EXT_ID",
+      "externalLeadId": "JD-TEST-1001"
+    },
+    {
+      "timestamp": "2026-08-13T11:58:00.065Z",
+      "type": "IMPORTED",
+      "leadNumber": "HT-LD-2026-0012",
+      "externalLeadId": "JD-TEST-1003"
+    },
+    {
+      "timestamp": "2026-08-13T11:58:00.047Z",
+      "type": "IMPORTED",
+      "leadNumber": "HT-LD-2026-0011",
+      "externalLeadId": "JD-TEST-1002"
+    },
+    {
+      "timestamp": "2026-08-13T11:58:00.007Z",
+      "type": "IMPORTED",
+      "leadNumber": "HT-LD-2026-0010",
+      "externalLeadId": "JD-TEST-1001"
+    },
+    {
+      "timestamp": "2026-08-13T11:22:56.806Z",
+      "type": "IMPORTED",
+      "leadNumber": "HT-LD-2026-0015",
+      "externalLeadId": "JD-REAL-9988"
+    },
+    {
+      "timestamp": "2026-08-13T11:22:56.793Z",
+      "type": "IMPORTED",
+      "leadNumber": "HT-LD-2026-0014",
+      "externalLeadId": "JD-TEST-1015"
+    },
+    {
+      "timestamp": "2026-08-13T11:22:56.776Z",
+      "type": "DUPLICATE_EXT_ID",
+      "externalLeadId": "JD-TEST-1001"
+    },
+    {
+      "timestamp": "2026-08-13T11:22:56.768Z",
+      "type": "IMPORTED",
+      "leadNumber": "HT-LD-2026-0013",
+      "externalLeadId": "JD-TEST-1005"
+    },
+    {
+      "timestamp": "2026-08-13T11:22:56.755Z",
+      "type": "FAILED_PARSING",
+      "error": "MALFORMED_EMAIL: Could not extract valid 10-digit Indian phone number from email."
+    },
+    {
+      "timestamp": "2026-08-13T11:22:56.754Z",
+      "type": "REJECTED_SENDER",
+      "error": "REJECTED_SENDER: Email sender 'h***@spoofed-domain.com' is not in approved Justdial allowlist."
+    },
+    {
+      "timestamp": "2026-08-13T11:22:56.753Z",
+      "type": "REPLAY_PREVENTED",
+      "hash": "1df0f30b"
+    },
+    {
+      "timestamp": "2026-08-13T11:22:56.752Z",
+      "type": "DUPLICATE_PHONE",
+      "phone": "98******10"
+    },
+    {
+      "timestamp": "2026-08-13T11:22:56.742Z",
+      "type": "DUPLICATE_EXT_ID",
+      "externalLeadId": "JD-TEST-1001"
+    },
+    {
+      "timestamp": "2026-08-13T11:22:56.731Z",
+      "type": "IMPORTED",
+      "leadNumber": "HT-LD-2026-0012",
+      "externalLeadId": "JD-TEST-1003"
+    },
+    {
+      "timestamp": "2026-08-13T11:22:56.718Z",
+      "type": "IMPORTED",
+      "leadNumber": "HT-LD-2026-0011",
+      "externalLeadId": "JD-TEST-1002"
+    },
+    {
+      "timestamp": "2026-08-13T11:22:56.674Z",
+      "type": "IMPORTED",
+      "leadNumber": "HT-LD-2026-0010",
+      "externalLeadId": "JD-TEST-1001"
+    },
+    {
+      "timestamp": "2026-08-13T10:48:48.378Z",
+      "type": "REPLAY_PREVENTED",
+      "hash": "6f79d2e9"
+    },
+    {
+      "timestamp": "2026-08-13T10:48:48.362Z",
+      "type": "IMPORTED",
+      "leadNumber": "HT-LD-2026-0010",
+      "externalLeadId": "JD-PROD-LIVE-2002"
+    },
+    {
+      "timestamp": "2026-08-13T10:43:56.851Z",
+      "type": "IMPORTED",
+      "leadNumber": "HT-LD-2026-0015",
+      "externalLeadId": "JD-REAL-9988"
+    },
+    {
+      "timestamp": "2026-08-13T10:43:56.838Z",
+      "type": "IMPORTED",
+      "leadNumber": "HT-LD-2026-0014",
+      "externalLeadId": "JD-TEST-1015"
+    },
+    {
+      "timestamp": "2026-08-13T10:43:56.818Z",
+      "type": "DUPLICATE_EXT_ID",
+      "externalLeadId": "JD-TEST-1001"
+    },
+    {
+      "timestamp": "2026-08-13T10:43:56.809Z",
+      "type": "IMPORTED",
+      "leadNumber": "HT-LD-2026-0013",
+      "externalLeadId": "JD-TEST-1005"
+    },
+    {
+      "timestamp": "2026-08-13T10:43:56.793Z",
+      "type": "FAILED_PARSING",
+      "error": "MALFORMED_EMAIL: Could not extract valid 10-digit Indian phone number from email."
+    },
+    {
+      "timestamp": "2026-08-13T10:43:56.791Z",
+      "type": "REJECTED_SENDER",
+      "error": "REJECTED_SENDER: Email sender 'h***@spoofed-domain.com' is not in approved Justdial allowlist."
+    },
+    {
+      "timestamp": "2026-08-13T10:43:56.790Z",
+      "type": "REPLAY_PREVENTED",
+      "hash": "1df0f30b"
+    },
+    {
+      "timestamp": "2026-08-13T10:43:56.789Z",
+      "type": "DUPLICATE_PHONE",
+      "phone": "98******10"
+    },
+    {
+      "timestamp": "2026-08-13T10:43:56.777Z",
+      "type": "DUPLICATE_EXT_ID",
+      "externalLeadId": "JD-TEST-1001"
+    },
+    {
+      "timestamp": "2026-08-13T10:43:56.766Z",
+      "type": "IMPORTED",
+      "leadNumber": "HT-LD-2026-0012",
+      "externalLeadId": "JD-TEST-1003"
+    },
+    {
+      "timestamp": "2026-08-13T10:43:56.752Z",
+      "type": "IMPORTED",
+      "leadNumber": "HT-LD-2026-0011",
+      "externalLeadId": "JD-TEST-1002"
+    },
+    {
+      "timestamp": "2026-08-13T10:43:56.701Z",
+      "type": "IMPORTED",
+      "leadNumber": "HT-LD-2026-0010",
+      "externalLeadId": "JD-TEST-1001"
+    },
+    {
+      "timestamp": "2026-08-13T10:27:22.826Z",
+      "type": "REPLAY_PREVENTED",
+      "hash": "43eb6019"
+    },
+    {
+      "timestamp": "2026-08-13T10:27:22.813Z",
+      "type": "IMPORTED",
+      "leadNumber": "HT-LD-2026-0010",
+      "externalLeadId": "JD-PROD-LIVE-1001"
+    },
+    {
+      "timestamp": "2026-08-13T10:14:08.240Z",
+      "type": "REPLAY_PREVENTED",
+      "hash": "96ad2190"
+    },
+    {
+      "timestamp": "2026-08-13T10:14:08.214Z",
+      "type": "IMPORTED",
+      "leadNumber": "HT-LD-2026-0010",
+      "externalLeadId": "JD-REAL-9988-PRODTEST"
+    },
+    {
+      "timestamp": "2026-08-13T10:13:39.975Z",
+      "type": "REPLAY_PREVENTED",
+      "hash": "96ad2190"
+    },
+    {
+      "timestamp": "2026-08-13T10:13:39.943Z",
+      "type": "IMPORTED",
+      "leadNumber": "HT-LD-2026-0010",
+      "externalLeadId": "JD-REAL-9988-PRODTEST"
+    },
+    {
+      "timestamp": "2026-08-13T10:09:16.728Z",
+      "type": "IMPORTED",
+      "leadNumber": "HT-LD-2026-0015",
+      "externalLeadId": "JD-REAL-9988"
+    },
+    {
+      "timestamp": "2026-08-13T10:09:16.711Z",
+      "type": "IMPORTED",
+      "leadNumber": "HT-LD-2026-0014",
+      "externalLeadId": "JD-TEST-1015"
+    },
+    {
+      "timestamp": "2026-08-13T10:09:16.693Z",
+      "type": "DUPLICATE_EXT_ID",
+      "externalLeadId": "JD-TEST-1001"
+    },
+    {
+      "timestamp": "2026-08-13T10:09:16.682Z",
+      "type": "IMPORTED",
+      "leadNumber": "HT-LD-2026-0013",
+      "externalLeadId": "JD-TEST-1005"
+    },
+    {
+      "timestamp": "2026-08-13T10:09:16.664Z",
+      "type": "FAILED_PARSING",
+      "error": "MALFORMED_EMAIL: Could not extract valid 10-digit Indian phone number from email."
+    },
+    {
+      "timestamp": "2026-08-13T10:09:16.662Z",
+      "type": "REJECTED_SENDER",
+      "error": "REJECTED_SENDER: Email sender 'h***@spoofed-domain.com' is not in approved Justdial allowlist."
+    },
+    {
+      "timestamp": "2026-08-13T10:09:16.662Z",
+      "type": "REPLAY_PREVENTED",
+      "hash": "1df0f30b"
+    },
+    {
+      "timestamp": "2026-08-13T10:09:16.661Z",
+      "type": "DUPLICATE_PHONE",
+      "phone": "98******10"
+    },
+    {
+      "timestamp": "2026-08-13T10:09:16.650Z",
+      "type": "DUPLICATE_EXT_ID",
+      "externalLeadId": "JD-TEST-1001"
+    },
+    {
+      "timestamp": "2026-08-13T10:09:16.641Z",
+      "type": "IMPORTED",
+      "leadNumber": "HT-LD-2026-0012",
+      "externalLeadId": "JD-TEST-1003"
+    },
+    {
+      "timestamp": "2026-08-13T10:09:16.627Z",
+      "type": "IMPORTED",
+      "leadNumber": "HT-LD-2026-0011",
+      "externalLeadId": "JD-TEST-1002"
+    },
+    {
+      "timestamp": "2026-08-13T10:09:16.586Z",
+      "type": "IMPORTED",
+      "leadNumber": "HT-LD-2026-0010",
+      "externalLeadId": "JD-TEST-1001"
+    }
+  ]
+}

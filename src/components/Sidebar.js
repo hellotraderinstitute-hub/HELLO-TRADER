@@ -13,7 +13,8 @@ import {
   HelpCircle,
   ShieldCheck,
   Zap,
-  Globe
+  Globe,
+  Share2
 } from 'lucide-react';
 
 import { useTrading } from '../context/TradingContext';
@@ -38,9 +39,35 @@ export default function Sidebar({ activeTab, setActiveTab, handleLogout, isAdmin
   if (isAdmin) {
     mainNav.push({ id: 'guardian', label: 'Guardian Monitor v1', icon: ShieldCheck });
     mainNav.push({ id: 'admin', label: 'Admin Portal', icon: ShieldCheck });
+    mainNav.push({ id: 'static-ip', label: '🌐 Static IP Fleet', icon: Globe });
+    mainNav.push({ id: 'social-media', label: 'AI Social Manager', icon: Share2 });
   }
 
   const handleNavClick = (item) => {
+    if (item.id === 'social-media') {
+      window.location.href = '/admin/social-media';
+      return;
+    }
+    if (item.id === 'static-ip') {
+      if (typeof window !== 'undefined' && window.location.pathname !== '/') {
+        window.location.href = '/admin/static-ip';
+        return;
+      }
+      setActiveTab('static-ip');
+      return;
+    }
+    if (item.id === 'admin') {
+      if (typeof window !== 'undefined' && window.location.pathname !== '/') {
+        window.location.href = '/admin';
+        return;
+      }
+      setActiveTab('admin');
+      return;
+    }
+    if (typeof window !== 'undefined' && window.location.pathname !== '/') {
+      window.location.href = '/';
+      return;
+    }
     if (isExpiredTrial && item.isLocked) {
       openRechargeModal();
     } else {
@@ -114,7 +141,14 @@ export default function Sidebar({ activeTab, setActiveTab, handleLogout, isAdmin
         <div className="px-1 py-1">
           <InstallPwaModal variant="sidebar" />
         </div>
-        <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[#bbc9cf] hover:text-white hover:bg-[#1d2026]/50">
+        <button 
+          onClick={() => setActiveTab('settings')}
+          className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all ${
+            activeTab === 'settings'
+              ? 'bg-[#1d2026] text-[#00d4ff] border-r-2 border-[#00d4ff] shadow-[0_0_15px_rgba(0,212,255,0.2)] font-bold'
+              : 'text-[#bbc9cf] hover:text-white hover:bg-[#1d2026]/50'
+          }`}
+        >
           <Settings className="w-4 h-4 text-[#859398]" />
           <span>Settings</span>
         </button>

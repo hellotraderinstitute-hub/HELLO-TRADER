@@ -10,11 +10,13 @@ const router = express.Router();
 const { processAiLabQuery } = require('../services/aiLab/contextEngine');
 const { generateCoachInsights } = require('../services/aiLab/aiCoach');
 
+const { requireEntitlement } = require('../services/entitlementService');
+
 // ─── POST /api/ai-lab/chat ─────────────────────────────────────
-router.post('/chat', async (req, res) => {
+router.post('/chat', requireEntitlement('AI_LAB'), async (req, res) => {
   try {
     const reqId = req.headers['x-ai-lab-request-id'] || 'req_' + Date.now();
-    const userId = req.user?.id || 'demo_trader_id';
+    const userId = req.user.id;
     const { userQuery, activeMode = 'ANALYSE', conversationHistory = [] } = req.body;
 
     if (!userQuery || typeof userQuery !== 'string' || !userQuery.trim()) {
@@ -69,9 +71,9 @@ router.post('/chat', async (req, res) => {
 });
 
 // ─── GET /api/ai-lab/coach-insights ───────────────────────────
-router.get('/coach-insights', async (req, res) => {
+router.get('/coach-insights', requireEntitlement('AI_LAB'), async (req, res) => {
   try {
-    const userId = req.user?.id || 'demo_trader_id';
+    const userId = req.user.id;
     const insights = await generateCoachInsights(userId);
     res.json({ success: true, insights });
   } catch (err) {

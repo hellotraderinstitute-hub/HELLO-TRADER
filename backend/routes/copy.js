@@ -36,8 +36,10 @@ const COPY_CONSENT_TEXT_V1 = [
   'I confirm I can activate Emergency Stop or unfollow at any time to halt automated copy execution.',
 ].join(' | ');
 
+const { requireEntitlement } = require('../services/entitlementService');
+
 // ─── POST /register-master ─────────────────────────────────────
-router.post('/register-master', async (req, res) => {
+router.post('/register-master', requireEntitlement('COPY_TRADING'), async (req, res) => {
   const userId = req.user.id;
   const { connectionId, displayName, description, riskLevel, isPublic, maxFollowers } = req.body;
 
@@ -114,7 +116,7 @@ router.get('/masters', async (req, res) => {
 });
 
 // ─── POST /follow ──────────────────────────────────────────────
-router.post('/follow', async (req, res) => {
+router.post('/follow', requireEntitlement('COPY_TRADING'), async (req, res) => {
   try {
     const userId = req.user?.id;
     if (!userId) {

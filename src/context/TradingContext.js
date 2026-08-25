@@ -8,7 +8,7 @@ const TradingContext = createContext();
 export let globalServerStatus = true;
 
 export function TradingProvider({ children }) {
-  const { tickers } = useMarketProvider();
+  const { tickers, resolvePrice, updateOptionQuotes, getQuoteInfo } = useMarketProvider();
 
   const [isServerOnline, setIsServerOnline] = useState(true);
   const [currentStudentId, setCurrentStudentId] = useState(null);
@@ -33,10 +33,15 @@ export function TradingProvider({ children }) {
       return;
     }
     try {
-      const [wRes, mRes] = await Promise.all([
+      const [wRes, mRes, meRes] = await Promise.all([
         apiClient.get('/wallet').catch(() => ({ data: { tokenBalance: 0, paperBalance: 0, referralBalance: 0, ledger: [] } })),
         apiClient.get('/membership').catch(() => ({ data: { membership: null, trialStartedAt: null } })),
+        apiClient.get('/auth/me').catch(() => null)
       ]);
+
+      if (meRes?.data?.user) {
+        setUser(meRes.data.user);
+      }
 
       const safeWallet = wRes.data ? {
         ...wRes.data,
@@ -59,6 +64,15 @@ export function TradingProvider({ children }) {
         });
       } else {
         setMembership(prev => ({ ...prev, trialStartedAt: mRes.data?.trialStartedAt || null }));
+      }
+
+      // Sync global trialDays default from server (may change when admin edits system settings)
+      if (mRes.data?.trialDays != null) {
+        setSettings(s => ({ ...s, trialDays: mRes.data.trialDays }));
+      }
+      // Sync per-user trialDaysOverride from server into user state
+      if (meRes?.data?.user && mRes.data?.trialDaysOverride !== undefined) {
+        setUser(prev => prev ? { ...prev, trialDaysOverride: mRes.data.trialDaysOverride } : prev);
       }
 
       setInitError(null);
@@ -97,6 +111,45 @@ export function TradingProvider({ children }) {
     return () => clearInterval(interval);
   }, [fetchPositions]);
 
+  // Authenticated user activity heartbeat (every 30s, active tab only)
+  useEffect(() => {
+    if (!currentStudentId) return;
+
+    const sendHeartbeat = async () => {
+      try {
+        await apiClient.post('/auth/heartbeat');
+      } catch (err) {
+        console.warn('Heartbeat update failed:', err.message);
+      }
+    };
+
+    // Immediate ping on focus/load
+    sendHeartbeat();
+
+    let heartbeatInterval = setInterval(sendHeartbeat, 30000);
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        if (heartbeatInterval) {
+          clearInterval(heartbeatInterval);
+          heartbeatInterval = null;
+        }
+      } else {
+        sendHeartbeat();
+        if (!heartbeatInterval) {
+          heartbeatInterval = setInterval(sendHeartbeat, 30000);
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      if (heartbeatInterval) clearInterval(heartbeatInterval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [currentStudentId]);
+
   // Server status monitor
   useEffect(() => {
     const interval = setInterval(async () => {
@@ -132,8 +185,11 @@ export function TradingProvider({ children }) {
     if (!trialStartedAt) return false;
     const startedAt = new Date(trialStartedAt).getTime();
     if (isNaN(startedAt)) return false;
-    return (Date.now() - startedAt) < (4 * 24 * 60 * 60 * 1000);
-  }, [authLoading, user, isAdmin, trialStartedAt]);
+    const trialDays = (user?.trialDaysOverride !== null && user?.trialDaysOverride !== undefined)
+      ? user.trialDaysOverride
+      : (settings?.trialDays || 4);
+    return (Date.now() - startedAt) < (trialDays * 24 * 60 * 60 * 1000);
+  }, [authLoading, user, isAdmin, trialStartedAt, settings?.trialDays, user?.trialDaysOverride]);
 
   const isSubActive = useMemo(() => {
     if (authLoading || !user) return false;
@@ -186,6 +242,12 @@ export function TradingProvider({ children }) {
     setShowRechargeModal(true);
   }, []);
 
+  function isOptionContract(symbol) {
+    if (!symbol) return false;
+    const s = String(symbol).trim().toUpperCase();
+    return /\s+(CE|PE)$/i.test(s) || /\d+(CE|PE)$/i.test(s) || /[-_](CE|PE)$/i.test(s);
+  }
+
   // ─── Actions ──────────────────────────────────────────────────────────────
   const placeOrder = useCallback(async (orderData) => {
     if (isExpiredTrial && dailyFreeTradeCount >= 1) {
@@ -194,14 +256,22 @@ export function TradingProvider({ children }) {
     }
 
     try {
-      const tickerPrice = (tickers || []).find(t => t.symbol === orderData.symbol)?.price;
-      const currentPrice = orderData.price || tickerPrice || 100;
+      const isOption = isOptionContract(orderData.symbol);
+      const resolved = resolvePrice ? resolvePrice(orderData.symbol) : null;
+      const currentPrice = orderData.orderExecutionType === 'LIMIT'
+        ? (orderData.limitPrice || orderData.price || orderData.entryPrice || resolved || 100)
+        : (orderData.price || resolved || orderData.entryPrice || 100);
+
       const res = await apiClient.post('/trade/place', {
         symbol: orderData.symbol,
         productType: orderData.productType || 'INTRADAY',
         orderType: orderData.side || orderData.orderType || 'BUY',
         quantity: Number(orderData.quantity) || 1,
-        entryPrice: Number(currentPrice)
+        entryPrice: Number(currentPrice),
+        orderExecutionType: orderData.orderExecutionType || 'MARKET',
+        limitPrice: orderData.limitPrice ? Number(orderData.limitPrice) : null,
+        currentMarketPrice: Number(resolved || orderData.price || currentPrice),
+        type: orderData.type || (isOption ? 'OPTION' : 'EQUITY')
       });
       
       // Increment persistent daily trade count for current user
@@ -220,13 +290,13 @@ export function TradingProvider({ children }) {
     } catch (err) {
       alert(err.response?.data?.error || 'Failed to place order');
     }
-  }, [tickers, isExpiredTrial, dailyFreeTradeCount, user?.id, user?.studentId, currentStudentId, fetchPositions, fetchFinancials]);
+  }, [resolvePrice, isExpiredTrial, dailyFreeTradeCount, user?.id, user?.studentId, currentStudentId, fetchPositions, fetchFinancials]);
 
   const closePosition = useCallback(async (tradeId) => {
     try {
       const trade = positions.find(p => p.id === tradeId);
-      const tickerPrice = (tickers || []).find(t => t.symbol === trade?.symbol)?.price;
-      const exitPrice = tickerPrice || trade?.entryPrice || 100;
+      const resolved = resolvePrice ? resolvePrice(trade?.symbol, trade?.entryPrice) : null;
+      const exitPrice = resolved || trade?.entryPrice || 100;
       await apiClient.post('/trade/close', { tradeId, exitPrice: Number(exitPrice) });
       alert('Position Closed Successfully!');
       fetchPositions();
@@ -234,7 +304,7 @@ export function TradingProvider({ children }) {
     } catch (err) {
       alert(err.response?.data?.error || 'Failed to close position');
     }
-  }, [positions, tickers, fetchPositions, fetchFinancials]);
+  }, [positions, resolvePrice, fetchPositions, fetchFinancials]);
 
   const fetchPlans = useCallback(async () => {
     try {
@@ -294,28 +364,83 @@ export function TradingProvider({ children }) {
     subscriptionActive: membership.status === 'ACTIVE',
     subscriptionExpiry: membership.expiresAt,
     trialStartedAt: membership.trialStartedAt,
+    trialDaysOverride: user?.trialDaysOverride,
+    createdAt: user?.createdAt,
     autoRenew: membership.autoRenew
   }), [currentStudentId, user, membership]);
 
+  // ── Central Live Option Quotes Background Poller for Open Positions ────────
+  useEffect(() => {
+    // Check if there are any open option positions
+    const openOptionPositions = (positions || []).filter(p => isOptionContract(p.symbol) && p.status !== 'CLOSED');
+    if (openOptionPositions.length === 0) return;
+
+    // Extract unique underlying indices (e.g. 'NIFTY', 'BANKNIFTY', 'FINNIFTY', 'SENSEX')
+    const underlyings = Array.from(new Set(openOptionPositions.map(p => {
+      const match = String(p.symbol).trim().match(/^([A-Z]+)/);
+      return match ? match[1].toUpperCase() : 'NIFTY';
+    })));
+
+    let isMounted = true;
+    const pollOpenOptionQuotes = async () => {
+      for (const und of underlyings) {
+        if (!isMounted) break;
+        try {
+          // Fetch active expiries for this underlying
+          const expRes = await apiClient.get(`/trade/option-chain/expiries?symbol=${encodeURIComponent(und)}`);
+          const expiries = expRes.data?.expiries || [];
+          const activeExpiry = expiries[0] || '';
+
+          if (activeExpiry) {
+            const chainRes = await apiClient.get(`/trade/option-chain?symbol=${encodeURIComponent(und)}&expiry=${encodeURIComponent(activeExpiry)}`);
+            if (isMounted && chainRes.data?.success && Array.isArray(chainRes.data?.contracts)) {
+              updateOptionQuotes?.(chainRes.data.contracts, und, activeExpiry);
+            }
+          }
+        } catch (err) {
+          // Silently retain existing quotes on transient network hiccup
+          console.warn(`[BackgroundOptionPoller] ${und} quote sync notice:`, err.message);
+        }
+      }
+    };
+
+    // Immediate initial poll
+    pollOpenOptionQuotes();
+
+    // Poll every 3.5s
+    const pollerTimer = setInterval(pollOpenOptionQuotes, 3500);
+
+    return () => {
+      isMounted = false;
+      clearInterval(pollerTimer);
+    };
+  }, [positions, updateOptionQuotes]);
+
   const enrichedPositions = useMemo(() => (positions || []).map(p => {
-    const currentPrice = (tickers || []).find(t => t.symbol === p.symbol)?.price || p.entryPrice || 0;
+    const quoteInfo = getQuoteInfo ? getQuoteInfo(p.symbol, p.entryPrice) : { price: p.entryPrice || 0, isStale: false };
+    const currentPrice = typeof quoteInfo.price === 'number' && quoteInfo.price > 0 ? quoteInfo.price : (p.entryPrice || 0);
+    const isStale = quoteInfo.isStale || false;
+
     const isBuy = p.orderType === 'BUY';
+    const isOption = isOptionContract(p.symbol);
     const pnl = isBuy
       ? (currentPrice - (p.entryPrice || 0)) * (p.quantity || 0)
       : ((p.entryPrice || 0) - currentPrice) * (p.quantity || 0);
-    const margin = p.productType === 'INTRADAY'
-      ? ((p.entryPrice || 0) * (p.quantity || 0)) / 5
-      : ((p.entryPrice || 0) * (p.quantity || 0));
+    const leverage = isOption && isBuy ? 1 : (p.productType === 'INTRADAY' ? 5 : 1);
+    const margin = isOption && isBuy
+      ? ((p.entryPrice || 0) * (p.quantity || 0))
+      : (p.productType === 'INTRADAY' ? ((p.entryPrice || 0) * (p.quantity || 0)) / 5 : ((p.entryPrice || 0) * (p.quantity || 0)));
     return {
       ...p,
       display: p.symbol || '',
       side: p.orderType || '',
       currentPrice,
-      leverage: p.productType === 'INTRADAY' ? 5 : 1,
-      pnl,
+      isStale,
+      leverage,
+      pnl: Number(pnl.toFixed(2)),
       pnlPercent: margin > 0 ? ((pnl / margin) * 100).toFixed(2) : '0'
     };
-  }), [positions, tickers]);
+  }), [positions, getQuoteInfo]);
 
   const enrichedHistory = useMemo(() => (tradeHistory || []).map(t => ({
     ...t,

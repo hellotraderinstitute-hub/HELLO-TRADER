@@ -60,7 +60,8 @@ router.get('/', async (req, res) => {
     res.json({
       membership,
       trialStartedAt: user?.trialStartedAt || null,
-      trialDays: settings?.trialDays || 4
+      trialDays: settings?.trialDays || 4,
+      trialDaysOverride: user?.trialDaysOverride || null
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -207,85 +208,79 @@ router.post('/auto-renew', async (req, res) => {
 // In-memory idempotency cache for payment requests
 const idempotencyCache = new Map();
 
-// Unlock 30-Day Premium AI Access Pass with 299 Cash Tokens (₹299)
+// 30-Day Premium AI Access & Complete Terminal Pass (900 Tokens = 30 Days)
 router.post('/unlock-ai-pass', async (req, res) => {
   const userId = req.user.id;
   const idempotencyKey = req.headers['x-idempotency-key'] || req.body.idempotencyKey;
 
-  // 1. Idempotency Check (Prevent duplicate deduction on network retries)
   if (idempotencyKey && idempotencyCache.has(idempotencyKey)) {
     return res.json(idempotencyCache.get(idempotencyKey));
   }
 
-  const aiPassCost = 299;
-
   try {
+    const now = new Date();
+    // Check if user already has an active 30-day membership
+    const activeMem = await prisma.membership.findFirst({
+      where: { userId, status: 'ACTIVE', expiresAt: { gt: now } },
+      orderBy: { expiresAt: 'desc' }
+    });
+
+    if (activeMem) {
+      const responsePayload = {
+        success: true,
+        message: 'Complete Premium Membership is already active!',
+        expiresAt: activeMem.expiresAt,
+        alreadyActive: true
+      };
+      if (idempotencyKey) idempotencyCache.set(idempotencyKey, responsePayload);
+      return res.json(responsePayload);
+    }
+
+    // Delegate to 900-token 30-day membership activation
+    const settings = await prisma.systemSettings.findUnique({ where: { id: 'CONFIG' } });
+    const monthlyCost = Number(settings?.monthlyCost || 900);
+
     const result = await prisma.$transaction(async (tx) => {
-      // Calculate token balance atomically inside transaction from Ledger
       const ledgers = await tx.ledger.findMany({
-        where: { userId: userId, walletType: 'TOKEN' }
+        where: { userId: userId, walletType: { in: ['TOKEN', 'RECHARGE', 'BONUS'] } }
       });
       const tokenBalance = ledgers.reduce((acc, curr) => curr.type === 'CREDIT' ? acc + curr.amount : acc - curr.amount, 0);
 
-      // Negative balance guard inside atomic transaction
-      if (tokenBalance < aiPassCost) {
-        throw new Error(`INSUFFICIENT_TOKENS: Current balance ₹${tokenBalance.toFixed(2)} is below required ₹${aiPassCost}`);
+      if (tokenBalance < monthlyCost) {
+        throw new Error(`INSUFFICIENT_TOKENS: Current balance ${tokenBalance.toFixed(2)} is below required ${monthlyCost} tokens for 30-Day Premium Membership`);
       }
 
-      // Record Atomic Ledger DEBIT Entry
       await tx.ledger.create({
         data: {
           userId: userId,
           walletType: 'TOKEN',
-          amount: aiPassCost,
+          amount: monthlyCost,
           type: 'DEBIT',
-          reason: 'PREMIUM_AI_PASS_ACTIVATION'
+          reason: `MEMBERSHIP_ACTIVATION_${monthlyCost}_TOKENS`
         }
       });
 
-      // Extend or Create 30-Day Premium Membership
-      const existing = await tx.membership.findFirst({
-        where: { userId: userId, status: 'ACTIVE' },
-        orderBy: { expiresAt: 'desc' }
+      const newExpiry = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+      const membership = await tx.membership.create({
+        data: {
+          userId: userId,
+          status: 'ACTIVE',
+          expiresAt: newExpiry
+        }
       });
 
-      const now = new Date();
-      const currentExpiry = existing && existing.expiresAt > now ? existing.expiresAt.getTime() : now.getTime();
-      const newExpiry = new Date(currentExpiry + 30 * 24 * 60 * 60 * 1000);
-
-      let membership;
-      if (existing) {
-        membership = await tx.membership.update({
-          where: { id: existing.id },
-          data: { expiresAt: newExpiry, status: 'ACTIVE' }
-        });
-      } else {
-        membership = await tx.membership.create({
-          data: {
-            userId: userId,
-            expiresAt: newExpiry,
-            status: 'ACTIVE',
-            autoRenew: false
-          }
-        });
-      }
-
-      return {
-        success: true,
-        message: '30-Day Premium AI Access Pass Activated!',
-        newBalance: tokenBalance - aiPassCost,
-        expiresAt: newExpiry
-      };
+      return { membership, durationDays: 30, monthlyCost };
     });
 
-    // Cache idempotency response for 10 minutes
-    if (idempotencyKey) {
-      idempotencyCache.set(idempotencyKey, result);
-      setTimeout(() => idempotencyCache.delete(idempotencyKey), 10 * 60 * 1000);
-    }
+    const responsePayload = {
+      success: true,
+      message: '30-Day Complete Premium Membership Activated!',
+      membership: result.membership,
+      durationDays: 30
+    };
 
-    return res.json(result);
-
+    if (idempotencyKey) idempotencyCache.set(idempotencyKey, responsePayload);
+    return res.json(responsePayload);
   } catch (error) {
     if (error.message && error.message.startsWith('INSUFFICIENT_TOKENS')) {
       return res.status(400).json({ error: 'INSUFFICIENT_TOKENS', message: error.message });

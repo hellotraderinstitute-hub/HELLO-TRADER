@@ -72,8 +72,9 @@ class DhanOptionChainService {
       const config = await prisma.systemSettings.findUnique({ where: { id: 'CONFIG' } });
       await prisma.$disconnect();
       if (config && config.dhanClientId && config.dhanAccessToken) {
+        const { decryptCredential } = require('./crypto');
         this._clientId = config.dhanClientId;
-        this._accessToken = config.dhanAccessToken;
+        this._accessToken = decryptCredential(config.dhanAccessToken);
         this._credentialsLoaded = true;
         return true;
       }
@@ -382,6 +383,7 @@ class DhanOptionChainService {
         ceGamma:     this._safeNum(ceGreeks.gamma, 4),
         ceTheta:     this._safeNum(ceGreeks.theta, 2),
         ceVega:      this._safeNum(ceGreeks.vega, 2),
+        ceSecurityId: ce.security_id ? String(ce.security_id) : '',
 
         // PE (Put) Data
         peLtp:       this._safeNum(pe.last_price),
@@ -395,6 +397,7 @@ class DhanOptionChainService {
         peGamma:     this._safeNum(peGreeks.gamma, 4),
         peTheta:     this._safeNum(peGreeks.theta, 2),
         peVega:      this._safeNum(peGreeks.vega, 2),
+        peSecurityId: pe.security_id ? String(pe.security_id) : '',
       });
     }
 

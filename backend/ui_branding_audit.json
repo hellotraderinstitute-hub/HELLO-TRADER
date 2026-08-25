@@ -1,0 +1,2060 @@
+[
+  {
+    "file": "src\\app\\api\\dhan\\route.js",
+    "line": 13,
+    "keyword": "dhan",
+    "text": "const res = await fetch('https://api.dhan.co/v2/fundlimit', {"
+  },
+  {
+    "file": "src\\app\\layout.js",
+    "line": 2,
+    "keyword": "provider",
+    "text": "import { MarketProviderLayer } from \"../context/MarketProviderContext\";"
+  },
+  {
+    "file": "src\\app\\layout.js",
+    "line": 3,
+    "keyword": "provider",
+    "text": "import { TradingProvider } from \"../context/TradingContext\";"
+  },
+  {
+    "file": "src\\app\\layout.js",
+    "line": 4,
+    "keyword": "provider",
+    "text": "import { ReferralProvider } from \"../context/ReferralContext\";"
+  },
+  {
+    "file": "src\\app\\layout.js",
+    "line": 18,
+    "keyword": "provider",
+    "text": "<MarketProviderLayer>"
+  },
+  {
+    "file": "src\\app\\layout.js",
+    "line": 19,
+    "keyword": "provider",
+    "text": "<TradingProvider>"
+  },
+  {
+    "file": "src\\app\\layout.js",
+    "line": 20,
+    "keyword": "provider",
+    "text": "<ReferralProvider>"
+  },
+  {
+    "file": "src\\app\\layout.js",
+    "line": 24,
+    "keyword": "provider",
+    "text": "</ReferralProvider>"
+  },
+  {
+    "file": "src\\app\\layout.js",
+    "line": 25,
+    "keyword": "provider",
+    "text": "</TradingProvider>"
+  },
+  {
+    "file": "src\\app\\layout.js",
+    "line": 26,
+    "keyword": "provider",
+    "text": "</MarketProviderLayer>"
+  },
+  {
+    "file": "src\\app\\page.js",
+    "line": 5,
+    "keyword": "provider",
+    "text": "import { useMarketProvider } from '../context/MarketProviderContext';"
+  },
+  {
+    "file": "src\\app\\page.js",
+    "line": 33,
+    "keyword": "provider",
+    "text": "const { tickers, marketMode, setMarketMode } = useMarketProvider();"
+  },
+  {
+    "file": "src\\components\\AdminPortal.js",
+    "line": 11,
+    "keyword": "provider",
+    "text": "import ProviderSettings from './ProviderSettings';"
+  },
+  {
+    "file": "src\\components\\AdminPortal.js",
+    "line": 680,
+    "keyword": "provider",
+    "text": "{ id: 'PROVIDER', label: 'PROVIDER SETTINGS', icon: Settings },"
+  },
+  {
+    "file": "src\\components\\AdminPortal.js",
+    "line": 1177,
+    "keyword": "provider",
+    "text": "{adminTab === 'PROVIDER' && ("
+  },
+  {
+    "file": "src\\components\\AdminPortal.js",
+    "line": 1179,
+    "keyword": "provider",
+    "text": "<ProviderSettings />"
+  },
+  {
+    "file": "src\\components\\AILab.js",
+    "line": 5,
+    "keyword": "provider",
+    "text": "import { useMarketProvider } from '../context/MarketProviderContext';"
+  },
+  {
+    "file": "src\\components\\AILab.js",
+    "line": 10,
+    "keyword": "provider",
+    "text": "const { tickers, scannerSignals, marketMode } = useMarketProvider();"
+  },
+  {
+    "file": "src\\components\\AlgoTrading.js",
+    "line": 11,
+    "keyword": "dhan",
+    "text": "{ id: 'DHAN', name: 'Dhan HQ', icon: '⚡', fields: ['clientId', 'accessToken'] },"
+  },
+  {
+    "file": "src\\components\\AlgoTrading.js",
+    "line": 12,
+    "keyword": "angel",
+    "text": "{ id: 'ANGELONE', name: 'Angel One (SmartAPI)', icon: '👼', fields: ['apiKey', 'clientId', 'password', 'totpSecret'] },"
+  },
+  {
+    "file": "src\\components\\AlgoTrading.js",
+    "line": 13,
+    "keyword": "upstox",
+    "text": "{ id: 'UPSTOX', name: 'Upstox', icon: '📈', fields: ['apiKey', 'apiSecret', 'accessToken'] },"
+  },
+  {
+    "file": "src\\components\\AlgoTrading.js",
+    "line": 25,
+    "keyword": "dhan",
+    "text": "const [selectedBroker, setSelectedBroker] = useState('DHAN');"
+  },
+  {
+    "file": "src\\components\\AlgoTrading.js",
+    "line": 193,
+    "keyword": "dhan",
+    "text": "Connect your Dhan, Angel One, Upstox, or Shoonya account to generate your unique TradingView webhook URL."
+  },
+  {
+    "file": "src\\components\\AlgoTrading.js",
+    "line": 193,
+    "keyword": "angel",
+    "text": "Connect your Dhan, Angel One, Upstox, or Shoonya account to generate your unique TradingView webhook URL."
+  },
+  {
+    "file": "src\\components\\AlgoTrading.js",
+    "line": 193,
+    "keyword": "upstox",
+    "text": "Connect your Dhan, Angel One, Upstox, or Shoonya account to generate your unique TradingView webhook URL."
+  },
+  {
+    "file": "src\\components\\AlgoTrading.js",
+    "line": 325,
+    "keyword": "dhan",
+    "text": "placeholder=\"e.g. My Primary Dhan Account\""
+  },
+  {
+    "file": "src\\components\\Dashboard.js",
+    "line": 5,
+    "keyword": "provider",
+    "text": "import { useMarketProvider } from '../context/MarketProviderContext';"
+  },
+  {
+    "file": "src\\components\\Dashboard.js",
+    "line": 10,
+    "keyword": "provider",
+    "text": "const { marketMode } = useMarketProvider();"
+  },
+  {
+    "file": "src\\components\\GlobalLoader.js",
+    "line": 6,
+    "keyword": "provider",
+    "text": "import { useMarketProvider } from '../context/MarketProviderContext';"
+  },
+  {
+    "file": "src\\components\\GlobalLoader.js",
+    "line": 11,
+    "keyword": "provider",
+    "text": "const market = useMarketProvider();"
+  },
+  {
+    "file": "src\\components\\MarketScanner.js",
+    "line": 5,
+    "keyword": "provider",
+    "text": "import { useMarketProvider } from '../context/MarketProviderContext';"
+  },
+  {
+    "file": "src\\components\\MarketScanner.js",
+    "line": 10,
+    "keyword": "provider",
+    "text": "const { scannerSignals, setSelectedSymbol } = useMarketProvider();"
+  },
+  {
+    "file": "src\\components\\MarketScanner.js",
+    "line": 43,
+    "keyword": "provider",
+    "text": "<p className=\"text-xs text-gray-400\">Live momentum and volatility sweeps from active market providers.</p>"
+  },
+  {
+    "file": "src\\components\\MarketScanner.js",
+    "line": 81,
+    "keyword": "provider",
+    "text": "<span className=\"text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-gray-400\">{sig.provider}</span>"
+  },
+  {
+    "file": "src\\components\\OptionChain.js",
+    "line": 5,
+    "keyword": "provider",
+    "text": "import { useMarketProvider } from '../context/MarketProviderContext';"
+  },
+  {
+    "file": "src\\components\\OptionChain.js",
+    "line": 56,
+    "keyword": "provider",
+    "text": "const { tickers } = useMarketProvider();"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 4,
+    "keyword": "provider",
+    "text": "import { useMarketProvider } from '../context/MarketProviderContext';"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 8,
+    "keyword": "provider",
+    "text": "export default function ProviderSettings() {"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 10,
+    "keyword": "provider",
+    "text": "activeProvider, setActiveProvider,"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 11,
+    "keyword": "provider",
+    "text": "PROVIDERS, providerKeys, updateProviderKeys, providerStatus, providerMetrics"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 12,
+    "keyword": "provider",
+    "text": "} = useMarketProvider();"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 14,
+    "keyword": "provider",
+    "text": "const [localKeys, setLocalKeys] = useState(providerKeys);"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 17,
+    "keyword": "dhan",
+    "text": "// Fetch Dhan backend keys on mount"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 24,
+    "keyword": "dhan",
+    "text": "DHAN: {"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 25,
+    "keyword": "dhan",
+    "text": "...prev.DHAN,"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 26,
+    "keyword": "dhan",
+    "text": "clientId: res.data.dhanClientId || prev.DHAN.clientId || '',"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 27,
+    "keyword": "dhan",
+    "text": "accessToken: res.data.dhanAccessToken || prev.DHAN.accessToken || ''"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 35,
+    "keyword": "provider",
+    "text": "// Keep localKeys synced if context changes externally (for other providers)"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 37,
+    "keyword": "dhan",
+    "text": "setLocalKeys(prev => ({ ...providerKeys, DHAN: prev.DHAN }));"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 37,
+    "keyword": "provider",
+    "text": "setLocalKeys(prev => ({ ...providerKeys, DHAN: prev.DHAN }));"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 38,
+    "keyword": "provider",
+    "text": "}, [providerKeys]);"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 40,
+    "keyword": "provider",
+    "text": "const handleLocalKeyChange = (provider, field, value) => {"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 43,
+    "keyword": "provider",
+    "text": "[provider]: {"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 44,
+    "keyword": "provider",
+    "text": "...prev[provider],"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 52,
+    "keyword": "dhan",
+    "text": "const handleTestDhan = async () => {"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 53,
+    "keyword": "dhan",
+    "text": "if (!localKeys.DHAN.clientId || !localKeys.DHAN.accessToken) {"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 54,
+    "keyword": "dhan",
+    "text": "alert('Please enter both Dhan Client ID and Access Token to test.');"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 59,
+    "keyword": "dhan",
+    "text": "const res = await apiClient.post('/admin/test-dhan', {"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 60,
+    "keyword": "dhan",
+    "text": "dhanClientId: localKeys.DHAN.clientId,"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 61,
+    "keyword": "dhan",
+    "text": "dhanAccessToken: localKeys.DHAN.accessToken"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 63,
+    "keyword": "dhan",
+    "text": "alert('✅ ' + (res.data.message || 'Dhan Credentials Validated Successfully!'));"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 65,
+    "keyword": "dhan",
+    "text": "alert('❌ Dhan Connection Test Failed: ' + (err.response?.data?.error || err.message));"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 71,
+    "keyword": "provider",
+    "text": "const handleSave = async (provider) => {"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 72,
+    "keyword": "dhan",
+    "text": "if (provider === 'DHAN') {"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 72,
+    "keyword": "provider",
+    "text": "if (provider === 'DHAN') {"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 76,
+    "keyword": "dhan",
+    "text": "dhanClientId: localKeys.DHAN.clientId,"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 77,
+    "keyword": "dhan",
+    "text": "dhanAccessToken: localKeys.DHAN.accessToken"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 79,
+    "keyword": "dhan",
+    "text": "alert('Master Dhan Keys saved to Backend! Streamer restarting...');"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 81,
+    "keyword": "dhan",
+    "text": "alert('Failed to save Dhan keys to backend');"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 86,
+    "keyword": "provider",
+    "text": "updateProviderKeys(provider, localKeys[provider]);"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 88,
+    "keyword": "provider",
+    "text": "if (activeProvider !== provider) {"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 89,
+    "keyword": "provider",
+    "text": "setActiveProvider(provider);"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 97,
+    "keyword": "provider",
+    "text": "<h2 className=\"text-sm font-bold text-white\">Market Data Providers</h2>"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 100,
+    "keyword": "provider",
+    "text": "{/* Provider Selector */}"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 102,
+    "keyword": "provider",
+    "text": "{Object.values(PROVIDERS).map(provider => ("
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 104,
+    "keyword": "provider",
+    "text": "key={provider.id}"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 105,
+    "keyword": "provider",
+    "text": "onClick={() => setActiveProvider(provider.id)}"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 107,
+    "keyword": "provider",
+    "text": "activeProvider === provider.id"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 112,
+    "keyword": "provider",
+    "text": "<span className=\"text-xl\">{provider.flag}</span>"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 113,
+    "keyword": "provider",
+    "text": "<span className={`font-bold ${activeProvider === provider.id ? 'text-[#00d4ff]' : 'text-[#bbc9cf]'}`}>"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 114,
+    "keyword": "provider",
+    "text": "{provider.label}"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 118,
+    "keyword": "provider",
+    "text": "providerStatus[provider.id] === 'LIVE' ? 'bg-[#00e639]' :"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 119,
+    "keyword": "provider",
+    "text": "providerStatus[provider.id] === 'CONNECTING' ? 'bg-yellow-400' : 'bg-gray-500'"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 121,
+    "keyword": "provider",
+    "text": "<span className=\"text-gray-500\">{providerStatus[provider.id]}</span>"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 127,
+    "keyword": "provider",
+    "text": "{/* Config Panel based on selected provider */}"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 129,
+    "keyword": "provider",
+    "text": "{activeProvider === 'BINANCE' && ("
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 139,
+    "keyword": "dhan",
+    "text": "{activeProvider === 'DHAN' && ("
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 139,
+    "keyword": "provider",
+    "text": "{activeProvider === 'DHAN' && ("
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 142,
+    "keyword": "dhan",
+    "text": "<span className=\"text-xl\">🇮🇳</span> Dhan HQ API v2 (NSE / BSE)"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 144,
+    "keyword": "dhan",
+    "text": "<p className=\"text-[#859398] text-[11px] mb-2\">Requires Dhan API access token and client ID for live Indian market data."
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 150,
+    "keyword": "dhan",
+    "text": "value={localKeys.DHAN.clientId}"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 151,
+    "keyword": "dhan",
+    "text": "onChange={(e) => handleLocalKeyChange('DHAN', 'clientId', e.target.value)}"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 152,
+    "keyword": "dhan",
+    "text": "placeholder=\"Enter Dhan Client ID\""
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 160,
+    "keyword": "dhan",
+    "text": "value={localKeys.DHAN.accessToken}"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 161,
+    "keyword": "dhan",
+    "text": "onChange={(e) => handleLocalKeyChange('DHAN', 'accessToken', e.target.value)}"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 170,
+    "keyword": "dhan",
+    "text": "onClick={() => handleSave('DHAN')}"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 177,
+    "keyword": "dhan",
+    "text": "onClick={handleTestDhan}"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 186,
+    "keyword": "dhan",
+    "text": "{providerMetrics && providerMetrics.DHAN && ("
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 186,
+    "keyword": "provider",
+    "text": "{providerMetrics && providerMetrics.DHAN && ("
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 188,
+    "keyword": "dhan",
+    "text": "<h4 className=\"text-[11px] font-bold text-gray-400 mb-2 border-b border-[#3c494e]/20 pb-1\">DHAN DIAGNOSTICS</h4>"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 192,
+    "keyword": "dhan",
+    "text": "<span className={`font-bold ${providerMetrics.DHAN.authStatus === 'Success' ? 'text-[#00e639]' : providerMetrics.DHAN.au"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 192,
+    "keyword": "provider",
+    "text": "<span className={`font-bold ${providerMetrics.DHAN.authStatus === 'Success' ? 'text-[#00e639]' : providerMetrics.DHAN.au"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 193,
+    "keyword": "dhan",
+    "text": "{providerMetrics.DHAN.authStatus || 'Pending'}"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 193,
+    "keyword": "provider",
+    "text": "{providerMetrics.DHAN.authStatus || 'Pending'}"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 198,
+    "keyword": "dhan",
+    "text": "<span className=\"font-bold text-white\">{providerMetrics.DHAN.wsStatus || providerStatus.DHAN}</span>"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 198,
+    "keyword": "provider",
+    "text": "<span className=\"font-bold text-white\">{providerMetrics.DHAN.wsStatus || providerStatus.DHAN}</span>"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 201,
+    "keyword": "provider",
+    "text": "<span className=\"text-[#859398]\">Provider:</span>"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 202,
+    "keyword": "dhan",
+    "text": "<span className=\"font-bold text-[#00d4ff]\">Dhan HQ</span>"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 206,
+    "keyword": "dhan",
+    "text": "<span className=\"font-bold text-white\">{providerMetrics.DHAN.latency ? `${providerMetrics.DHAN.latency}ms` : '—'}</span>"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 206,
+    "keyword": "provider",
+    "text": "<span className=\"font-bold text-white\">{providerMetrics.DHAN.latency ? `${providerMetrics.DHAN.latency}ms` : '—'}</span>"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 210,
+    "keyword": "dhan",
+    "text": "<span className=\"font-bold text-white\">{providerMetrics.DHAN.activeSymbols || 0}</span>"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 210,
+    "keyword": "provider",
+    "text": "<span className=\"font-bold text-white\">{providerMetrics.DHAN.activeSymbols || 0}</span>"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 214,
+    "keyword": "dhan",
+    "text": "<span className=\"font-bold text-[#00e639]\">{providerMetrics.DHAN.liveTicks || 0}</span>"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 214,
+    "keyword": "provider",
+    "text": "<span className=\"font-bold text-[#00e639]\">{providerMetrics.DHAN.liveTicks || 0}</span>"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 218,
+    "keyword": "dhan",
+    "text": "<span className=\"font-bold text-white\">{providerMetrics.DHAN.lastSymbol || '—'}</span>"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 218,
+    "keyword": "provider",
+    "text": "<span className=\"font-bold text-white\">{providerMetrics.DHAN.lastSymbol || '—'}</span>"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 222,
+    "keyword": "dhan",
+    "text": "<span className=\"font-bold text-white\">{providerMetrics.DHAN.lastTickTime || '—'}</span>"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 222,
+    "keyword": "provider",
+    "text": "<span className=\"font-bold text-white\">{providerMetrics.DHAN.lastTickTime || '—'}</span>"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 224,
+    "keyword": "dhan",
+    "text": "{providerMetrics.DHAN.firstTick && ("
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 224,
+    "keyword": "provider",
+    "text": "{providerMetrics.DHAN.firstTick && ("
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 227,
+    "keyword": "dhan",
+    "text": "{providerMetrics.DHAN.firstTick}"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 227,
+    "keyword": "provider",
+    "text": "{providerMetrics.DHAN.firstTick}"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 230,
+    "keyword": "dhan",
+    "text": "{providerMetrics.DHAN.error && ("
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 230,
+    "keyword": "provider",
+    "text": "{providerMetrics.DHAN.error && ("
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 233,
+    "keyword": "dhan",
+    "text": "{providerMetrics.DHAN.error}"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 233,
+    "keyword": "provider",
+    "text": "{providerMetrics.DHAN.error}"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 242,
+    "keyword": "provider",
+    "text": "{activeProvider === 'BREEZE' && ("
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 250,
+    "keyword": "provider",
+    "text": "<input type=\"text\" value={providerKeys.BREEZE.apiKey} onChange={(e) => updateProviderKeys('BREEZE', { apiKey: e.target.v"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 254,
+    "keyword": "provider",
+    "text": "<input type=\"password\" value={providerKeys.BREEZE.apiSecret} onChange={(e) => updateProviderKeys('BREEZE', { apiSecret: "
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 258,
+    "keyword": "provider",
+    "text": "<input type=\"password\" value={providerKeys.BREEZE.sessionToken} onChange={(e) => updateProviderKeys('BREEZE', { sessionT"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 264,
+    "keyword": "upstox",
+    "text": "{(activeProvider === 'UPSTOX' || activeProvider === 'TRUEDATA') && ("
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 264,
+    "keyword": "provider",
+    "text": "{(activeProvider === 'UPSTOX' || activeProvider === 'TRUEDATA') && ("
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 268,
+    "keyword": "provider",
+    "text": "<h3 className=\"font-bold text-white mb-1\">{PROVIDERS[activeProvider].label} Integration</h3>"
+  },
+  {
+    "file": "src\\components\\ProviderSettings.js",
+    "line": 269,
+    "keyword": "provider",
+    "text": "<p className=\"text-[#859398] text-[11px]\">Provider adapter is loaded but OAuth/Login UI flow requires backend redirect. "
+  },
+  {
+    "file": "src\\components\\TickerTape.js",
+    "line": 4,
+    "keyword": "provider",
+    "text": "import { useMarketProvider } from '../context/MarketProviderContext';"
+  },
+  {
+    "file": "src\\components\\TickerTape.js",
+    "line": 8,
+    "keyword": "provider",
+    "text": "const { tickers, selectedSymbol, setSelectedSymbol } = useMarketProvider();"
+  },
+  {
+    "file": "src\\components\\TradeHub.js",
+    "line": 19,
+    "keyword": "dhan",
+    "text": "features: ['TradingView Webhook Integration', 'Multi-Broker Support (Dhan, Angel One, Upstox, Shoonya, Fyers)', 'Risk En"
+  },
+  {
+    "file": "src\\components\\TradeHub.js",
+    "line": 19,
+    "keyword": "angel",
+    "text": "features: ['TradingView Webhook Integration', 'Multi-Broker Support (Dhan, Angel One, Upstox, Shoonya, Fyers)', 'Risk En"
+  },
+  {
+    "file": "src\\components\\TradeHub.js",
+    "line": 19,
+    "keyword": "upstox",
+    "text": "features: ['TradingView Webhook Integration', 'Multi-Broker Support (Dhan, Angel One, Upstox, Shoonya, Fyers)', 'Risk En"
+  },
+  {
+    "file": "src\\components\\TradingDesk.js",
+    "line": 5,
+    "keyword": "provider",
+    "text": "import { useMarketProvider } from '../context/MarketProviderContext';"
+  },
+  {
+    "file": "src\\components\\TradingDesk.js",
+    "line": 15,
+    "keyword": "provider",
+    "text": "} = useMarketProvider();"
+  },
+  {
+    "file": "src\\components\\TradingDesk.js",
+    "line": 51,
+    "keyword": "provider",
+    "text": "// Fetch historical candles from provider"
+  },
+  {
+    "file": "src\\components\\TradingDesk.js",
+    "line": 296,
+    "keyword": "dhan",
+    "text": "Real Level-2 order depth requires an active Dhan HQ or Angel One demat socket connection."
+  },
+  {
+    "file": "src\\components\\TradingDesk.js",
+    "line": 296,
+    "keyword": "angel",
+    "text": "Real Level-2 order depth requires an active Dhan HQ or Angel One demat socket connection."
+  },
+  {
+    "file": "src\\components\\Watchlist.js",
+    "line": 4,
+    "keyword": "provider",
+    "text": "import { useMarketProvider } from '../context/MarketProviderContext';"
+  },
+  {
+    "file": "src\\components\\Watchlist.js",
+    "line": 10,
+    "keyword": "provider",
+    "text": "activeProvider, providerStatus, marketMode"
+  },
+  {
+    "file": "src\\components\\Watchlist.js",
+    "line": 11,
+    "keyword": "provider",
+    "text": "} = useMarketProvider();"
+  },
+  {
+    "file": "src\\components\\Watchlist.js",
+    "line": 73,
+    "keyword": "provider",
+    "text": "? (providerStatus[activeProvider] || 'LIVE')"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 4,
+    "keyword": "provider",
+    "text": "* MarketProviderContext.js"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 6,
+    "keyword": "provider",
+    "text": "* Unified Market Data Provider Layer"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 9,
+    "keyword": "provider",
+    "text": "*   Frontend → MarketProviderContext → [Active Adapter]"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 11,
+    "keyword": "dhan",
+    "text": "*     Binance / Dhan / Breeze / Upstox / TrueData"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 11,
+    "keyword": "upstox",
+    "text": "*     Binance / Dhan / Breeze / Upstox / TrueData"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 23,
+    "keyword": "provider",
+    "text": "import { BinanceAdapter, BINANCE_SYMBOLS } from '../providers/BinanceAdapter';"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 41,
+    "keyword": "provider",
+    "text": "// ─── Provider IDs ─────────────────────────────────────────────────"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 42,
+    "keyword": "provider",
+    "text": "export const PROVIDERS = {"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 44,
+    "keyword": "dhan",
+    "text": "DHAN:     { id: 'DHAN',     label: 'Hello Trader Pro Engine', flag: '🇮🇳', type: 'indian',  requiresAuth: true  },"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 46,
+    "keyword": "upstox",
+    "text": "UPSTOX:   { id: 'UPSTOX',  label: 'Upstox',    flag: '📈', type: 'indian',  requiresAuth: true  },"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 52,
+    "keyword": "dhan",
+    "text": "'NIFTY':     { symbol: 'NIFTY',     display: 'NIFTY 50',    name: 'NSE Nifty 50',    type: 'index',  exchange: 'IDX_I', "
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 52,
+    "keyword": "provider",
+    "text": "'NIFTY':     { symbol: 'NIFTY',     display: 'NIFTY 50',    name: 'NSE Nifty 50',    type: 'index',  exchange: 'IDX_I', "
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 53,
+    "keyword": "dhan",
+    "text": "'BANKNIFTY': { symbol: 'BANKNIFTY', display: 'BANKNIFTY',   name: 'Nifty Bank',      type: 'index',  exchange: 'IDX_I', "
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 53,
+    "keyword": "provider",
+    "text": "'BANKNIFTY': { symbol: 'BANKNIFTY', display: 'BANKNIFTY',   name: 'Nifty Bank',      type: 'index',  exchange: 'IDX_I', "
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 54,
+    "keyword": "dhan",
+    "text": "'FINNIFTY':  { symbol: 'FINNIFTY',  display: 'FIN NIFTY',   name: 'Nifty Financial', type: 'index',  exchange: 'IDX_I', "
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 54,
+    "keyword": "provider",
+    "text": "'FINNIFTY':  { symbol: 'FINNIFTY',  display: 'FIN NIFTY',   name: 'Nifty Financial', type: 'index',  exchange: 'IDX_I', "
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 55,
+    "keyword": "dhan",
+    "text": "'SENSEX':    { symbol: 'SENSEX',    display: 'SENSEX',      name: 'BSE Sensex',      type: 'index',  exchange: 'IDX_I', "
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 55,
+    "keyword": "provider",
+    "text": "'SENSEX':    { symbol: 'SENSEX',    display: 'SENSEX',      name: 'BSE Sensex',      type: 'index',  exchange: 'IDX_I', "
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 56,
+    "keyword": "dhan",
+    "text": "'RELIANCE':  { symbol: 'RELIANCE',  display: 'RELIANCE',    name: 'Reliance Ind.',   type: 'equity', exchange: 'NSE_EQ',"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 56,
+    "keyword": "provider",
+    "text": "'RELIANCE':  { symbol: 'RELIANCE',  display: 'RELIANCE',    name: 'Reliance Ind.',   type: 'equity', exchange: 'NSE_EQ',"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 57,
+    "keyword": "dhan",
+    "text": "'TCS':       { symbol: 'TCS',       display: 'TCS',         name: 'Tata Consultancy', type: 'equity', exchange: 'NSE_EQ'"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 57,
+    "keyword": "provider",
+    "text": "'TCS':       { symbol: 'TCS',       display: 'TCS',         name: 'Tata Consultancy', type: 'equity', exchange: 'NSE_EQ'"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 58,
+    "keyword": "dhan",
+    "text": "'INFY':      { symbol: 'INFY',      display: 'INFY',        name: 'Infosys',         type: 'equity', exchange: 'NSE_EQ',"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 58,
+    "keyword": "provider",
+    "text": "'INFY':      { symbol: 'INFY',      display: 'INFY',        name: 'Infosys',         type: 'equity', exchange: 'NSE_EQ',"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 59,
+    "keyword": "dhan",
+    "text": "'HDFCBANK':  { symbol: 'HDFCBANK',  display: 'HDFCBANK',    name: 'HDFC Bank',       type: 'equity', exchange: 'NSE_EQ',"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 59,
+    "keyword": "provider",
+    "text": "'HDFCBANK':  { symbol: 'HDFCBANK',  display: 'HDFCBANK',    name: 'HDFC Bank',       type: 'equity', exchange: 'NSE_EQ',"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 60,
+    "keyword": "dhan",
+    "text": "'ICICIBANK':  { symbol: 'ICICIBANK',  display: 'ICICI BANK',  name: 'ICICI Bank',      type: 'equity', exchange: 'NSE_EQ"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 60,
+    "keyword": "provider",
+    "text": "'ICICIBANK':  { symbol: 'ICICIBANK',  display: 'ICICI BANK',  name: 'ICICI Bank',      type: 'equity', exchange: 'NSE_EQ"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 61,
+    "keyword": "dhan",
+    "text": "'TATAMOTORS': { symbol: 'TATAMOTORS', display: 'TATA MOTORS', name: 'Tata Motors',     type: 'equity', exchange: 'NSE_EQ"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 61,
+    "keyword": "provider",
+    "text": "'TATAMOTORS': { symbol: 'TATAMOTORS', display: 'TATA MOTORS', name: 'Tata Motors',     type: 'equity', exchange: 'NSE_EQ"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 62,
+    "keyword": "dhan",
+    "text": "'SBIN':       { symbol: 'SBIN',       display: 'SBIN',        name: 'State Bank Ind',  type: 'equity', exchange: 'NSE_EQ"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 62,
+    "keyword": "provider",
+    "text": "'SBIN':       { symbol: 'SBIN',       display: 'SBIN',        name: 'State Bank Ind',  type: 'equity', exchange: 'NSE_EQ"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 63,
+    "keyword": "dhan",
+    "text": "'AXISBANK':   { symbol: 'AXISBANK',   display: 'AXIS BANK',   name: 'Axis Bank',       type: 'equity', exchange: 'NSE_EQ"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 63,
+    "keyword": "provider",
+    "text": "'AXISBANK':   { symbol: 'AXISBANK',   display: 'AXIS BANK',   name: 'Axis Bank',       type: 'equity', exchange: 'NSE_EQ"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 64,
+    "keyword": "dhan",
+    "text": "'WIPRO':      { symbol: 'WIPRO',      display: 'WIPRO',       name: 'Wipro Ltd.',      type: 'equity', exchange: 'NSE_EQ"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 64,
+    "keyword": "provider",
+    "text": "'WIPRO':      { symbol: 'WIPRO',      display: 'WIPRO',       name: 'Wipro Ltd.',      type: 'equity', exchange: 'NSE_EQ"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 65,
+    "keyword": "dhan",
+    "text": "'BHARTIARTL': { symbol: 'BHARTIARTL', display: 'BHARTI ARTL', name: 'Bharti Airtel',   type: 'equity', exchange: 'NSE_EQ"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 65,
+    "keyword": "provider",
+    "text": "'BHARTIARTL': { symbol: 'BHARTIARTL', display: 'BHARTI ARTL', name: 'Bharti Airtel',   type: 'equity', exchange: 'NSE_EQ"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 66,
+    "keyword": "dhan",
+    "text": "'ITC':        { symbol: 'ITC',        display: 'ITC',         name: 'ITC Ltd.',        type: 'equity', exchange: 'NSE_EQ"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 66,
+    "keyword": "provider",
+    "text": "'ITC':        { symbol: 'ITC',        display: 'ITC',         name: 'ITC Ltd.',        type: 'equity', exchange: 'NSE_EQ"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 67,
+    "keyword": "dhan",
+    "text": "'MARUTI':     { symbol: 'MARUTI',     display: 'MARUTI',      name: 'Maruti Suzuki',   type: 'equity', exchange: 'NSE_EQ"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 67,
+    "keyword": "provider",
+    "text": "'MARUTI':     { symbol: 'MARUTI',     display: 'MARUTI',      name: 'Maruti Suzuki',   type: 'equity', exchange: 'NSE_EQ"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 71,
+    "keyword": "provider",
+    "text": "'BTCUSDT':  { symbol: 'BTCUSDT',  display: 'BTC/USDT',  name: 'Bitcoin',   type: 'crypto', exchange: 'BINANCE', price: 9"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 72,
+    "keyword": "provider",
+    "text": "'ETHUSDT':  { symbol: 'ETHUSDT',  display: 'ETH/USDT',  name: 'Ethereum',  type: 'crypto', exchange: 'BINANCE', price: 3"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 73,
+    "keyword": "provider",
+    "text": "'SOLUSDT':  { symbol: 'SOLUSDT',  display: 'SOL/USDT',  name: 'Solana',    type: 'crypto', exchange: 'BINANCE', price: 1"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 74,
+    "keyword": "provider",
+    "text": "'BNBUSDT':  { symbol: 'BNBUSDT',  display: 'BNB/USDT',  name: 'BNB',       type: 'crypto', exchange: 'BINANCE', price: 5"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 75,
+    "keyword": "provider",
+    "text": "'XRPUSDT':  { symbol: 'XRPUSDT',  display: 'XRP/USDT',  name: 'Ripple',    type: 'crypto', exchange: 'BINANCE', price: 0"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 76,
+    "keyword": "provider",
+    "text": "'DOGEUSDT': { symbol: 'DOGEUSDT', display: 'DOGE/USDT', name: 'Dogecoin',  type: 'crypto', exchange: 'BINANCE', price: 0"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 84,
+    "keyword": "provider",
+    "text": "const MarketProviderContext = createContext(null);"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 86,
+    "keyword": "provider",
+    "text": "export function MarketProviderLayer({ children }) {"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 89,
+    "keyword": "provider",
+    "text": "const [activeProvider, setActiveProvider] = useState('BINANCE');"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 90,
+    "keyword": "provider",
+    "text": "const [providerKeys, setProviderKeys] = useState({"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 91,
+    "keyword": "dhan",
+    "text": "DHAN:     { clientId: '', accessToken: '' },"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 93,
+    "keyword": "upstox",
+    "text": "UPSTOX:   { accessToken: '' },"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 96,
+    "keyword": "provider",
+    "text": "const [providerStatus, setProviderStatus] = useState({"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 98,
+    "keyword": "dhan",
+    "text": "DHAN: 'IDLE', BREEZE: 'IDLE', UPSTOX: 'IDLE', TRUEDATA: 'IDLE'"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 98,
+    "keyword": "upstox",
+    "text": "DHAN: 'IDLE', BREEZE: 'IDLE', UPSTOX: 'IDLE', TRUEDATA: 'IDLE'"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 101,
+    "keyword": "provider",
+    "text": "const [providerMetrics, setProviderMetrics] = useState({"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 102,
+    "keyword": "dhan",
+    "text": "DHAN: null,"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 104,
+    "keyword": "upstox",
+    "text": "UPSTOX: null,"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 123,
+    "keyword": "provider",
+    "text": "const savedProvider = localStorage.getItem('activeProvider');"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 124,
+    "keyword": "provider",
+    "text": "const savedKeys = localStorage.getItem('providerKeys');"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 131,
+    "keyword": "provider",
+    "text": "if (savedProvider) setActiveProvider(savedProvider);"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 132,
+    "keyword": "provider",
+    "text": "if (savedKeys) setProviderKeys(JSON.parse(savedKeys));"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 156,
+    "keyword": "provider",
+    "text": "localStorage.setItem('activeProvider', activeProvider);"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 158,
+    "keyword": "provider",
+    "text": "}, [activeProvider]);"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 162,
+    "keyword": "provider",
+    "text": "localStorage.setItem('providerKeys', JSON.stringify(providerKeys));"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 164,
+    "keyword": "provider",
+    "text": "}, [providerKeys]);"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 175,
+    "keyword": "provider",
+    "text": "if (marketMode === 'INDIAN' && tick.provider === 'BINANCE') return;"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 177,
+    "keyword": "provider",
+    "text": "if (marketMode === 'FOREX' && tick.provider !== 'BINANCE') return;"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 202,
+    "keyword": "provider",
+    "text": "provider: tick.provider,"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 210,
+    "keyword": "provider",
+    "text": "const setStatus = useCallback((providerId, status, metrics = null) => {"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 211,
+    "keyword": "provider",
+    "text": "setProviderStatus(prev => ({ ...prev, [providerId]: status }));"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 213,
+    "keyword": "provider",
+    "text": "setProviderMetrics(prev => ({"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 215,
+    "keyword": "provider",
+    "text": "[providerId]: { ...(prev[providerId] || {}), ...metrics }"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 242,
+    "keyword": "dhan",
+    "text": "provider: 'DHAN'"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 242,
+    "keyword": "provider",
+    "text": "provider: 'DHAN'"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 248,
+    "keyword": "dhan",
+    "text": "setStatus('DHAN', m.wsStatus || 'LIVE', m);"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 252,
+    "keyword": "dhan",
+    "text": "socket.on('dhan_metrics', onMetrics);"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 255,
+    "keyword": "dhan",
+    "text": "socket.off('dhan_metrics', onMetrics);"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 280,
+    "keyword": "yahoo",
+    "text": "// ── NSE Yahoo Finance fallback for Indian tickers (30s polling) ──"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 282,
+    "keyword": "yahoo",
+    "text": "const YAHOO_MAP = {"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 295,
+    "keyword": "dhan",
+    "text": "// Skip fallback if Dhan is active and streaming live ticks"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 296,
+    "keyword": "dhan",
+    "text": "if (activeProvider === 'DHAN' && providerStatus.DHAN === 'LIVE') return;"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 296,
+    "keyword": "provider",
+    "text": "if (activeProvider === 'DHAN' && providerStatus.DHAN === 'LIVE') return;"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 298,
+    "keyword": "yahoo",
+    "text": "for (const [sym, yahooSym] of Object.entries(YAHOO_MAP)) {"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 301,
+    "keyword": "yahoo",
+    "text": "const encoded = encodeURIComponent(yahooSym);"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 303,
+    "keyword": "yahoo",
+    "text": "`https://query1.finance.yahoo.com/v8/finance/chart/${encoded}?interval=1d&range=1d`"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 323,
+    "keyword": "yahoo",
+    "text": "provider: 'YAHOO_FALLBACK'"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 323,
+    "keyword": "provider",
+    "text": "provider: 'YAHOO_FALLBACK'"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 332,
+    "keyword": "dhan",
+    "text": "}, [handleTick, marketMode, activeProvider, providerStatus.DHAN]);"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 332,
+    "keyword": "provider",
+    "text": "}, [handleTick, marketMode, activeProvider, providerStatus.DHAN]);"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 334,
+    "keyword": "provider",
+    "text": "// ── Switch Indian provider when user selects one ──────────────────"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 340,
+    "keyword": "provider",
+    "text": "if (activeProvider === 'BINANCE') return;"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 342,
+    "keyword": "provider",
+    "text": "const keys = providerKeys[activeProvider] || {};"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 346,
+    "keyword": "dhan",
+    "text": "if (activeProvider === 'DHAN') {"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 346,
+    "keyword": "provider",
+    "text": "if (activeProvider === 'DHAN') {"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 348,
+    "keyword": "dhan",
+    "text": "setStatus('DHAN', 'LIVE');"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 349,
+    "keyword": "dhan",
+    "text": "console.log('[DHAN] Backend stream is active');"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 350,
+    "keyword": "provider",
+    "text": "} else if (activeProvider === 'BREEZE') {"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 351,
+    "keyword": "provider",
+    "text": "const { BreezeAdapter } = await import('../providers/IndianAdapters');"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 359,
+    "keyword": "upstox",
+    "text": "} else if (activeProvider === 'UPSTOX') {"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 359,
+    "keyword": "provider",
+    "text": "} else if (activeProvider === 'UPSTOX') {"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 360,
+    "keyword": "upstox",
+    "text": "const { UpstoxAdapter } = await import('../providers/IndianAdapters');"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 360,
+    "keyword": "provider",
+    "text": "const { UpstoxAdapter } = await import('../providers/IndianAdapters');"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 361,
+    "keyword": "upstox",
+    "text": "adapter = new UpstoxAdapter({"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 364,
+    "keyword": "upstox",
+    "text": "onStatus:    (s) => setStatus('UPSTOX', s),"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 366,
+    "keyword": "provider",
+    "text": "} else if (activeProvider === 'TRUEDATA') {"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 367,
+    "keyword": "provider",
+    "text": "const { TrueDataAdapter } = await import('../providers/IndianAdapters');"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 389,
+    "keyword": "provider",
+    "text": "}, [activeProvider, providerKeys, handleTick, setStatus]);"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 403,
+    "keyword": "provider",
+    "text": "if (ticker.type === 'crypto' || ticker.provider === 'BINANCE') {"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 408,
+    "keyword": "dhan",
+    "text": "// Indian Market Live Provider (Dhan/Breeze)"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 408,
+    "keyword": "provider",
+    "text": "// Indian Market Live Provider (Dhan/Breeze)"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 409,
+    "keyword": "dhan",
+    "text": "if (activeProvider === 'DHAN' && providerStatus.DHAN === 'LIVE' && indianRef.current?.fetchKlines) {"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 409,
+    "keyword": "provider",
+    "text": "if (activeProvider === 'DHAN' && providerStatus.DHAN === 'LIVE' && indianRef.current?.fetchKlines) {"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 414,
+    "keyword": "dhan",
+    "text": "console.warn(\"Failed to fetch klines from Dhan, using Yahoo fallback:\", err);"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 414,
+    "keyword": "yahoo",
+    "text": "console.warn(\"Failed to fetch klines from Dhan, using Yahoo fallback:\", err);"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 418,
+    "keyword": "yahoo",
+    "text": "// Indian Fallback - Yahoo Finance chart proxy"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 419,
+    "keyword": "yahoo",
+    "text": "const YAHOO_MAP = {"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 430,
+    "keyword": "yahoo",
+    "text": "const yahooSym = YAHOO_MAP[symbol] || `${symbol}.NS`;"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 431,
+    "keyword": "yahoo",
+    "text": "let yahooInterval = '5m';"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 432,
+    "keyword": "yahoo",
+    "text": "let yahooRange = '5d';"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 434,
+    "keyword": "yahoo",
+    "text": "if (interval === '1m') { yahooInterval = '1m'; yahooRange = '1d'; }"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 435,
+    "keyword": "yahoo",
+    "text": "else if (interval === '5m') { yahooInterval = '5m'; yahooRange = '5d'; }"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 436,
+    "keyword": "yahoo",
+    "text": "else if (interval === '15m') { yahooInterval = '15m'; yahooRange = '5d'; }"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 437,
+    "keyword": "yahoo",
+    "text": "else if (interval === '1h') { yahooInterval = '60m'; yahooRange = '1mo'; }"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 438,
+    "keyword": "yahoo",
+    "text": "else if (interval === '1D') { yahooInterval = '1d'; yahooRange = '3mo'; }"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 441,
+    "keyword": "yahoo",
+    "text": "const encoded = encodeURIComponent(yahooSym);"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 443,
+    "keyword": "yahoo",
+    "text": "`https://query1.finance.yahoo.com/v8/finance/chart/${encoded}?interval=${yahooInterval}&range=${yahooRange}`"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 469,
+    "keyword": "yahoo",
+    "text": "console.error(\"Yahoo klines fetch error:\", err);"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 472,
+    "keyword": "dhan",
+    "text": "}, [tickers, activeProvider, providerStatus.DHAN]);"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 472,
+    "keyword": "provider",
+    "text": "}, [tickers, activeProvider, providerStatus.DHAN]);"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 489,
+    "keyword": "provider",
+    "text": "// ── Save/update provider keys ─────────────────────────────────────"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 490,
+    "keyword": "provider",
+    "text": "const updateProviderKeys = useCallback((providerId, keys) => {"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 491,
+    "keyword": "provider",
+    "text": "setProviderKeys(prev => ({ ...prev, [providerId]: { ...prev[providerId], ...keys } }));"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 509,
+    "keyword": "provider",
+    "text": "// Provider management"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 510,
+    "keyword": "provider",
+    "text": "activeProvider: activeProvider || 'BINANCE', setActiveProvider,"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 511,
+    "keyword": "provider",
+    "text": "providerKeys: providerKeys || {}, updateProviderKeys,"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 512,
+    "keyword": "provider",
+    "text": "providerStatus: providerStatus || {}, providerMetrics: providerMetrics || {},"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 513,
+    "keyword": "provider",
+    "text": "PROVIDERS,"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 527,
+    "keyword": "provider",
+    "text": "activeBinanceStatus: providerStatus?.BINANCE || 'IDLE',"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 530,
+    "keyword": "provider",
+    "text": "activeProvider, providerKeys, updateProviderKeys, providerStatus, providerMetrics,"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 537,
+    "keyword": "provider",
+    "text": "<MarketProviderContext.Provider value={ctx}>"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 539,
+    "keyword": "provider",
+    "text": "</MarketProviderContext.Provider>"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 543,
+    "keyword": "provider",
+    "text": "export function useMarketProvider() {"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 544,
+    "keyword": "provider",
+    "text": "const ctx = useContext(MarketProviderContext);"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 545,
+    "keyword": "provider",
+    "text": "if (!ctx) throw new Error('useMarketProvider must be used inside MarketProviderLayer');"
+  },
+  {
+    "file": "src\\context\\ReferralContext.js",
+    "line": 7,
+    "keyword": "provider",
+    "text": "// ReferralProvider is now a no-op wrapper."
+  },
+  {
+    "file": "src\\context\\ReferralContext.js",
+    "line": 9,
+    "keyword": "provider",
+    "text": "export function ReferralProvider({ children }) {"
+  },
+  {
+    "file": "src\\context\\ReferralContext.js",
+    "line": 11,
+    "keyword": "provider",
+    "text": "<ReferralContext.Provider value={{ initialized: true, loading: false, error: null }}>"
+  },
+  {
+    "file": "src\\context\\ReferralContext.js",
+    "line": 13,
+    "keyword": "provider",
+    "text": "</ReferralContext.Provider>"
+  },
+  {
+    "file": "src\\context\\ReferralContext.js",
+    "line": 19,
+    "keyword": "provider",
+    "text": "if (!ctx) throw new Error('useReferral must be used within ReferralProvider');"
+  },
+  {
+    "file": "src\\context\\TradingContext.js",
+    "line": 4,
+    "keyword": "provider",
+    "text": "import { useMarketProvider } from './MarketProviderContext';"
+  },
+  {
+    "file": "src\\context\\TradingContext.js",
+    "line": 10,
+    "keyword": "provider",
+    "text": "export function TradingProvider({ children }) {"
+  },
+  {
+    "file": "src\\context\\TradingContext.js",
+    "line": 11,
+    "keyword": "provider",
+    "text": "const { tickers } = useMarketProvider();"
+  },
+  {
+    "file": "src\\context\\TradingContext.js",
+    "line": 270,
+    "keyword": "provider",
+    "text": "<TradingContext.Provider value={value}>"
+  },
+  {
+    "file": "src\\context\\TradingContext.js",
+    "line": 272,
+    "keyword": "provider",
+    "text": "</TradingContext.Provider>"
+  },
+  {
+    "file": "src\\providers\\BinanceAdapter.js",
+    "line": 62,
+    "keyword": "provider",
+    "text": "provider:  'BINANCE',"
+  },
+  {
+    "file": "src\\providers\\DhanAdapter.js",
+    "line": 2,
+    "keyword": "dhan",
+    "text": "* DhanAdapter.js"
+  },
+  {
+    "file": "src\\providers\\DhanAdapter.js",
+    "line": 3,
+    "keyword": "dhan",
+    "text": "* Dhan HQ API v2 — Real-time NSE/BSE data via WebSocket"
+  },
+  {
+    "file": "src\\providers\\DhanAdapter.js",
+    "line": 4,
+    "keyword": "dhan",
+    "text": "* Docs: https://dhanhq.co/docs/v2/"
+  },
+  {
+    "file": "src\\providers\\DhanAdapter.js",
+    "line": 5,
+    "keyword": "dhan",
+    "text": "* Requires: DHAN_CLIENT_ID + DHAN_ACCESS_TOKEN"
+  },
+  {
+    "file": "src\\providers\\DhanAdapter.js",
+    "line": 8,
+    "keyword": "dhan",
+    "text": "export const DHAN_NSE_SYMBOLS = {"
+  },
+  {
+    "file": "src\\providers\\DhanAdapter.js",
+    "line": 19,
+    "keyword": "dhan",
+    "text": "export class DhanAdapter {"
+  },
+  {
+    "file": "src\\providers\\DhanAdapter.js",
+    "line": 36,
+    "keyword": "dhan",
+    "text": "/** Connect to Dhan Live Market Feed WebSocket */"
+  },
+  {
+    "file": "src\\providers\\DhanAdapter.js",
+    "line": 48,
+    "keyword": "dhan",
+    "text": "const res = await fetch('/api/dhan', {"
+  },
+  {
+    "file": "src\\providers\\DhanAdapter.js",
+    "line": 71,
+    "keyword": "dhan",
+    "text": "console.log(\"=== DHAN AUTH DEBUG RESPONSE ===\");"
+  },
+  {
+    "file": "src\\providers\\DhanAdapter.js",
+    "line": 93,
+    "keyword": "dhan",
+    "text": "// Dhan Feed WebSocket endpoint"
+  },
+  {
+    "file": "src\\providers\\DhanAdapter.js",
+    "line": 94,
+    "keyword": "dhan",
+    "text": "const url = `wss://api-feed.dhan.co?version=2&token=${this.apiKey}&clientId=${this.clientId}&authType=2`;"
+  },
+  {
+    "file": "src\\providers\\DhanAdapter.js",
+    "line": 101,
+    "keyword": "dhan",
+    "text": "const instruments = Object.entries(DHAN_NSE_SYMBOLS).map(([, meta]) => ({"
+  },
+  {
+    "file": "src\\providers\\DhanAdapter.js",
+    "line": 138,
+    "keyword": "dhan",
+    "text": "console.log(\"[DHAN WS] Subscription sent:\", subReq);"
+  },
+  {
+    "file": "src\\providers\\DhanAdapter.js",
+    "line": 144,
+    "keyword": "dhan",
+    "text": "console.warn(\"[DHAN WS] Non-binary payload received:\", e.data);"
+  },
+  {
+    "file": "src\\providers\\DhanAdapter.js",
+    "line": 150,
+    "keyword": "dhan",
+    "text": "console.log(`[DHAN WS BINARY FRAME] Length: ${e.data.byteLength} bytes`, rawBytes);"
+  },
+  {
+    "file": "src\\providers\\DhanAdapter.js",
+    "line": 156,
+    "keyword": "dhan",
+    "text": "// Audited Dhan V2 Binary Header Offsets"
+  },
+  {
+    "file": "src\\providers\\DhanAdapter.js",
+    "line": 252,
+    "keyword": "dhan",
+    "text": "console.error(\"[DHAN WS] Unpack error:\", err);"
+  },
+  {
+    "file": "src\\providers\\DhanAdapter.js",
+    "line": 273,
+    "keyword": "dhan",
+    "text": "const symbolKey = Object.keys(DHAN_NSE_SYMBOLS).find("
+  },
+  {
+    "file": "src\\providers\\DhanAdapter.js",
+    "line": 274,
+    "keyword": "dhan",
+    "text": "k => DHAN_NSE_SYMBOLS[k].securityId === String(tick.securityId)"
+  },
+  {
+    "file": "src\\providers\\DhanAdapter.js",
+    "line": 277,
+    "keyword": "dhan",
+    "text": "const meta = DHAN_NSE_SYMBOLS[symbolKey];"
+  },
+  {
+    "file": "src\\providers\\DhanAdapter.js",
+    "line": 289,
+    "keyword": "dhan",
+    "text": "provider:  'DHAN',"
+  },
+  {
+    "file": "src\\providers\\DhanAdapter.js",
+    "line": 289,
+    "keyword": "provider",
+    "text": "provider:  'DHAN',"
+  },
+  {
+    "file": "src\\providers\\DhanAdapter.js",
+    "line": 294,
+    "keyword": "dhan",
+    "text": "/** Fetch option chain from Dhan API */"
+  },
+  {
+    "file": "src\\providers\\DhanAdapter.js",
+    "line": 298,
+    "keyword": "dhan",
+    "text": "const res = await fetch(`https://api.dhan.co/v2/optionchain`, {"
+  },
+  {
+    "file": "src\\providers\\DhanAdapter.js",
+    "line": 314,
+    "keyword": "dhan",
+    "text": "const meta = DHAN_NSE_SYMBOLS[symbol];"
+  },
+  {
+    "file": "src\\providers\\DhanAdapter.js",
+    "line": 316,
+    "keyword": "dhan",
+    "text": "const res = await fetch('https://api.dhan.co/v2/charts/intraday', {"
+  },
+  {
+    "file": "src\\providers\\IndianAdapters.js",
+    "line": 70,
+    "keyword": "provider",
+    "text": "provider:  'BREEZE',"
+  },
+  {
+    "file": "src\\providers\\IndianAdapters.js",
+    "line": 105,
+    "keyword": "upstox",
+    "text": "* UpstoxAdapter.js"
+  },
+  {
+    "file": "src\\providers\\IndianAdapters.js",
+    "line": 106,
+    "keyword": "upstox",
+    "text": "* Upstox Developer API v3 — Real-time NSE data"
+  },
+  {
+    "file": "src\\providers\\IndianAdapters.js",
+    "line": 107,
+    "keyword": "upstox",
+    "text": "* Docs: https://upstox.com/developer/api-documentation/"
+  },
+  {
+    "file": "src\\providers\\IndianAdapters.js",
+    "line": 108,
+    "keyword": "upstox",
+    "text": "* Requires: UPSTOX_ACCESS_TOKEN (OAuth2)"
+  },
+  {
+    "file": "src\\providers\\IndianAdapters.js",
+    "line": 110,
+    "keyword": "upstox",
+    "text": "export class UpstoxAdapter {"
+  },
+  {
+    "file": "src\\providers\\IndianAdapters.js",
+    "line": 131,
+    "keyword": "upstox",
+    "text": "const url = 'wss://api.upstox.com/v2/feed/market-data-feed';"
+  },
+  {
+    "file": "src\\providers\\IndianAdapters.js",
+    "line": 156,
+    "keyword": "upstox",
+    "text": "// Upstox sends protobuf — decode if available"
+  },
+  {
+    "file": "src\\providers\\IndianAdapters.js",
+    "line": 178,
+    "keyword": "upstox",
+    "text": "provider: 'UPSTOX',"
+  },
+  {
+    "file": "src\\providers\\IndianAdapters.js",
+    "line": 178,
+    "keyword": "provider",
+    "text": "provider: 'UPSTOX',"
+  },
+  {
+    "file": "src\\providers\\IndianAdapters.js",
+    "line": 275,
+    "keyword": "provider",
+    "text": "provider:  'TRUEDATA',"
+  }
+]

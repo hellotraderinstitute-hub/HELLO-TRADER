@@ -100,17 +100,22 @@ export function calculateVWAP(candles) {
 }
 
 export function calculateSupertrend(candles, period = 10, multiplier = 3) {
-  if (!candles || candles.length < period) return { upper: [], lower: [], trend: [] };
+  if (!candles || candles.length < period) return { upper: [], lower: [], trend: [], line: [], upLine: [], downLine: [] };
 
   const atrList = calculateATR(candles, period);
-  if (atrList.length === 0) return { upper: [], lower: [], trend: [] };
+  if (atrList.length === 0) return { upper: [], lower: [], trend: [], line: [], upLine: [], downLine: [] };
 
   const upper = [];
   const lower = [];
   const trend = [];
+  const line = [];
+  const upLine = [];
+  const downLine = [];
 
   const startIndex = candles.length - atrList.length;
   let isUpTrend = true;
+  let prevFinalUpper = 0;
+  let prevFinalLower = 0;
 
   for (let i = 0; i < atrList.length; i++) {
     const candleIndex = startIndex + i;
@@ -118,15 +123,18 @@ export function calculateSupertrend(candles, period = 10, multiplier = 3) {
     const atr = atrList[i].value;
 
     const hl2 = (c.high + c.low) / 2;
-    let basicUpper = hl2 + multiplier * atr;
-    let basicLower = hl2 - multiplier * atr;
+    const basicUpper = hl2 + multiplier * atr;
+    const basicLower = hl2 - multiplier * atr;
 
-    const prevUpper = upper.length > 0 ? upper[upper.length - 1].value : basicUpper;
-    const prevLower = lower.length > 0 ? lower[lower.length - 1].value : basicLower;
     const prevClose = candleIndex > 0 ? candles[candleIndex - 1].close : c.close;
 
-    let finalUpper = basicUpper < prevUpper || prevClose > prevUpper ? basicUpper : prevUpper;
-    let finalLower = basicLower > prevLower || prevClose < prevLower ? basicLower : prevLower;
+    let finalUpper = basicUpper;
+    let finalLower = basicLower;
+
+    if (i > 0) {
+      finalUpper = (basicUpper < prevFinalUpper || prevClose > prevFinalUpper) ? basicUpper : prevFinalUpper;
+      finalLower = (basicLower > prevFinalLower || prevClose < prevFinalLower) ? basicLower : prevFinalLower;
+    }
 
     if (isUpTrend && c.close < finalLower) {
       isUpTrend = false;
@@ -134,16 +142,24 @@ export function calculateSupertrend(candles, period = 10, multiplier = 3) {
       isUpTrend = true;
     }
 
+    prevFinalUpper = finalUpper;
+    prevFinalLower = finalLower;
+
+    const currentVal = isUpTrend ? finalLower : finalUpper;
+    line.push({ time: c.time, value: Number(currentVal.toFixed(2)), color: isUpTrend ? '#00E676' : '#FF5252' });
+
     if (isUpTrend) {
+      upLine.push({ time: c.time, value: Number(finalLower.toFixed(2)) });
       lower.push({ time: c.time, value: Number(finalLower.toFixed(2)) });
       trend.push({ time: c.time, value: 1 });
     } else {
+      downLine.push({ time: c.time, value: Number(finalUpper.toFixed(2)) });
       upper.push({ time: c.time, value: Number(finalUpper.toFixed(2)) });
       trend.push({ time: c.time, value: -1 });
     }
   }
 
-  return { upper, lower, trend };
+  return { upper, lower, trend, line, upLine, downLine };
 }
 
 export function calculateParabolicSAR(candles, step = 0.02, maxStep = 0.2) {

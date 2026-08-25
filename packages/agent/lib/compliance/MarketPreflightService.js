@@ -27,8 +27,23 @@
 'use strict';
 
 const axios = require('axios');
-const crypto = require('crypto');
-const { ProxyTransportFactory } = require('../network/ProxyTransportFactory');
+let ProxyTransportFactory;
+try {
+  const ptfModule = require('../network/ProxyTransportFactory');
+  ProxyTransportFactory = ptfModule.ProxyTransportFactory || ptfModule;
+} catch (_) {
+  try {
+    const ptfModule = require('../../network/ProxyTransportFactory');
+    ProxyTransportFactory = ptfModule.ProxyTransportFactory || ptfModule;
+  } catch (e) {
+    try {
+      const ptfModule = require('../../../packages/agent/lib/network/ProxyTransportFactory');
+      ProxyTransportFactory = ptfModule.ProxyTransportFactory || ptfModule;
+    } catch (e2) {
+      console.error('[MarketPreflightService] Could not load ProxyTransportFactory:', e2);
+    }
+  }
+}
 const { PILOT_AUTHORIZED_CLIENT, ControlledLivePilotGate } = require('./ControlledLivePilotGate');
 
 const ANGEL_BASE_URL = 'https://apiconnect.angelbroking.com';
@@ -652,9 +667,11 @@ class MarketPreflightService {
       const staticIpModel = prisma.clientStaticIpAssignment || prisma.ClientStaticIpAssignment;
       assignment = staticIpModel ? (
         await staticIpModel.findFirst({
-          where: { userId, broker: { in: ['ANGELONE', 'ANGEL_ONE'] }, status: 'VERIFIED' }
+          where: { userId, broker: { in: ['ANGELONE', 'ANGEL_ONE', 'ALL'] }, status: { in: ['VERIFIED', 'ASSIGNED', 'VERIFYING'] } },
+          orderBy: { updatedAt: 'desc' }
         }) || await staticIpModel.findFirst({
-          where: { userId, status: 'VERIFIED' }
+          where: { userId, status: { in: ['VERIFIED', 'ASSIGNED', 'VERIFYING'] } },
+          orderBy: { updatedAt: 'desc' }
         })
       ) : null;
 
@@ -668,8 +685,8 @@ class MarketPreflightService {
 
       const proxyUsername = decrypt(assignment.encryptedProxyUsername) || 'dc-mum-007';
       const proxyPassword = decrypt(assignment.encryptedProxyPassword) || '';
-
-      const { httpsAgent } = ProxyTransportFactory.createProxyAgent({
+      const { httpsAgent } = this._createProxyAgent({
+        connectionType: assignment.connectionType || (assignment.proxyHost ? 'HTTPS_PROXY' : 'DIRECT_IP'),
         proxyHost: assignment.proxyHost || 'dc-mum-007.staticip.in',
         proxyPort: assignment.proxyPort || 443,
         proxyUsername,
@@ -696,6 +713,12 @@ class MarketPreflightService {
             return failRes;
           }
           checks.proxyEgress = { status: 'PASS', message: `Verified egress IPv4: ${observedIp}` };
+          if (assignment.status !== 'VERIFIED' && staticIpModel) {
+            await staticIpModel.update({
+              where: { id: assignment.id },
+              data: { status: 'VERIFIED', verifiedAt: new Date(), lastObservedOutboundIp: observedIp }
+            }).catch(() => {});
+          }
         } catch (probeErr) {
           checks.proxyEgress = { status: 'FAIL', message: `Proxy egress probe failed: ${probeErr.message}` };
           const failRes = this._buildFailureResult('PROXY_EGRESS_FAILED', checks, today);
@@ -920,17 +943,38 @@ class MarketPreflightService {
     }
   }
 
+  static _createProxyAgent(config) {
+    if (ProxyTransportFactory) {
+      if (typeof ProxyTransportFactory.createProxyAgent === 'function') {
+        return ProxyTransportFactory.createProxyAgent(config);
+      }
+      if (typeof ProxyTransportFactory.createAgents === 'function') {
+        return ProxyTransportFactory.createAgents(config);
+      }
+    }
+    try {
+      const { HttpsProxyAgent } = require('https-proxy-agent');
+      const auth = (config.proxyUsername && config.proxyPassword) ? `${encodeURIComponent(config.proxyUsername)}:${encodeURIComponent(config.proxyPassword)}@` : '';
+      const proxyUrl = `http://${auth}${config.proxyHost || 'dc-mum-007.staticip.in'}:${config.proxyPort || 443}`;
+      return { httpsAgent: new HttpsProxyAgent(proxyUrl), httpAgent: null, connectionType: 'HTTPS_PROXY' };
+    } catch (e) {
+      console.error('[MarketPreflightService] Error initializing proxy agent:', e);
+      return { httpsAgent: null, httpAgent: null, connectionType: 'DIRECT_IP' };
+    }
+  }
+
   static _buildFailureResult(reasonCode, checks, dateStr, extraMsg = '') {
     const result = {
       readyForLiveTrading: false,
       status: 'FAILED',
-      reason: reasonCode,
+      reason: extraMsg ? `${reasonCode}: ${extraMsg}` : reasonCode,
       message: `PRE-FLIGHT FAILED — LIVE TRADING BLOCKED (${reasonCode}${extraMsg ? `: ${extraMsg}` : ''})`,
       dateStr,
       checks,
       safeSummary: {
         broker: 'Angel One',
         proxy: checks.proxyVerification?.status === 'PASS' ? 'VERIFIED' : 'UNVERIFIED',
+        egressIp: checks.proxyEgress?.status === 'PASS' ? 'VERIFIED' : 'UNVERIFIED',
         riskControls: checks.riskControls?.status === 'PASS' ? 'ACTIVE' : 'INCOMPLETE',
         killSwitch: checks.killSwitchState?.status === 'PASS' ? 'ARMED' : 'BLOCKED',
         algo: 'BLOCKED',

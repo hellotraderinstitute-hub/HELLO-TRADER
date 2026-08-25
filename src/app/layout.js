@@ -49,6 +49,7 @@ export const metadata = {
   authors: [{ name: "Hello Trader Institute", url: BASE_URL }],
   creator: "Hello Trader",
   publisher: "Hello Trader Institute",
+  category: "Education",
   robots: {
     index: true,
     follow: true,
@@ -99,7 +100,7 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
+    <html lang="en-IN">
       <head>
         {/* Google tag (gtag.js) - Google Ads: AW-18112591783 */}
         <Script

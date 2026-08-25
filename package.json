@@ -42,8 +42,10 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "concurrently": "^10.0.5",
     "eslint": "^9",
     "eslint-config-next": "16.3.0",
+    "playwright": "^1.62.1",
     "prisma": "^5.22.0",
     "tailwindcss": "^4"
   }

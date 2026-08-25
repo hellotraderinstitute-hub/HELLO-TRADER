@@ -23,20 +23,7 @@ import React, {
 import { BinanceAdapter, BINANCE_SYMBOLS } from '../providers/BinanceAdapter';
 import { io } from 'socket.io-client';
 
-const getSocketUrl = () => {
-  if (typeof window !== 'undefined') {
-    return window.location.origin;
-  }
-  return process.env.NEXT_PUBLIC_API_URL ? process.env.NEXT_PUBLIC_API_URL.replace('/api', '') : 'http://localhost:4000';
-};
-const socket = io(getSocketUrl(), { 
-  autoConnect: true,
-  reconnection: true,
-  reconnectionAttempts: Infinity,
-  reconnectionDelay: 300,
-  reconnectionDelayMax: 1000,
-  transports: ['websocket', 'polling']
-});
+import { socket } from '../utils/socketClient';
 
 // ─── Provider IDs ─────────────────────────────────────────────────
 export const PROVIDERS = {
@@ -110,10 +97,111 @@ export function MarketProviderLayer({ children }) {
   const [selectedSymbol, setSelectedSymbol] = useState('NIFTY');
   const [scannerSignals, setScannerSignals] = useState([]);
   const [optionChainData, setOptionChainData] = useState(null);
+  const [optionQuotes, setOptionQuotes] = useState({});
 
   const binanceRef = useRef(null);
   const indianRef  = useRef(null);
   const nseTimerRef = useRef(null);
+
+  // ── Register / Update Option Contract Quotes ───────────────────────
+  const updateOptionQuotes = useCallback((contracts = [], underlying = 'NIFTY', expiry = null) => {
+    if (!Array.isArray(contracts) || contracts.length === 0) return;
+    const und = (underlying || 'NIFTY').toUpperCase();
+    const now = Date.now();
+
+    setOptionQuotes(prev => {
+      const next = { ...prev };
+      contracts.forEach(c => {
+        const strike = c.strike;
+        if (!strike) return;
+
+        // Support flat fields from dhanOptionChainService (ceLtp, peLtp)
+        // as well as nested fields (call.ltp, call.last_price, put.ltp, put.last_price)
+        const cePrice = typeof c.ceLtp === 'number' && c.ceLtp > 0
+          ? c.ceLtp
+          : (typeof c.call?.ltp === 'number' ? c.call.ltp : c.call?.last_price);
+
+        const pePrice = typeof c.peLtp === 'number' && c.peLtp > 0
+          ? c.peLtp
+          : (typeof c.put?.ltp === 'number' ? c.put.ltp : c.put?.last_price);
+
+        if (typeof cePrice === 'number' && cePrice > 0) {
+          const symSpaced  = `${und} ${strike} CE`;
+          const symCompact = `${und}${strike}CE`;
+          const val = { price: cePrice, strike, type: 'CE', underlying: und, expiry, timestamp: now };
+          next[symSpaced]  = val;
+          next[symCompact] = val;
+          if (expiry) {
+            next[`${symSpaced} ${expiry}`] = val;
+            next[`${symCompact}_${expiry}`] = val;
+          }
+        }
+
+        if (typeof pePrice === 'number' && pePrice > 0) {
+          const symSpaced  = `${und} ${strike} PE`;
+          const symCompact = `${und}${strike}PE`;
+          const val = { price: pePrice, strike, type: 'PE', underlying: und, expiry, timestamp: now };
+          next[symSpaced]  = val;
+          next[symCompact] = val;
+          if (expiry) {
+            next[`${symSpaced} ${expiry}`] = val;
+            next[`${symCompact}_${expiry}`] = val;
+          }
+        }
+      });
+      return next;
+    });
+  }, []);
+
+  // ── Unified Quote Metadata & Option Mark Price Resolver ────────────
+  const getQuoteInfo = useCallback((symbol, fallbackPrice = 0) => {
+    if (!symbol) return { price: fallbackPrice || 0, isStale: false, timestamp: null, source: 'DEFAULT' };
+    const cleanSym = String(symbol).trim().toUpperCase();
+    const compactSym = cleanSym.replace(/\s+/g, '');
+    const now = Date.now();
+    const STALE_THRESHOLD_MS = 25000; // 25s threshold for STALE marking
+
+    // 1. Exact match in Spot Tickers
+    const spotTicker = (tickers || []).find(t => 
+      t.symbol?.toUpperCase() === cleanSym || 
+      t.display?.toUpperCase() === cleanSym ||
+      t.symbol?.replace(/\s+/g, '').toUpperCase() === compactSym
+    );
+    if (spotTicker && typeof spotTicker.price === 'number' && spotTicker.price > 0) {
+      return { price: spotTicker.price, isStale: false, timestamp: now, source: 'SPOT_TICKER' };
+    }
+
+    // 2. Direct match in Option Quotes Registry (spaced or compact)
+    const directEntry = optionQuotes[cleanSym] || optionQuotes[compactSym];
+    if (directEntry && typeof directEntry.price === 'number' && directEntry.price > 0) {
+      const isStale = (now - (directEntry.timestamp || 0)) > STALE_THRESHOLD_MS;
+      return { price: directEntry.price, isStale, timestamp: directEntry.timestamp, source: 'OPTION_REGISTRY' };
+    }
+
+    // 3. Option Contract Parser & Match
+    const optMatch = compactSym.match(/^([A-Z]+)(\d+)(CE|PE)/);
+    if (optMatch) {
+      const [, underlying, strikeStr, optType] = optMatch;
+      const strike = parseFloat(strikeStr);
+      const spacedKey = `${underlying} ${strike} ${optType}`;
+      const compKey = `${underlying}${strike}${optType}`;
+
+      const matchedEntry = optionQuotes[spacedKey] || optionQuotes[compKey];
+      if (matchedEntry && typeof matchedEntry.price === 'number' && matchedEntry.price > 0) {
+        const isStale = (now - (matchedEntry.timestamp || 0)) > STALE_THRESHOLD_MS;
+        return { price: matchedEntry.price, isStale, timestamp: matchedEntry.timestamp, source: 'OPTION_REGISTRY_MATCH' };
+      }
+    }
+
+    // 4. Safe Non-Zero Fallback: NEVER return 0 if fallbackPrice (e.g. entryPrice) exists
+    const safePrice = fallbackPrice > 0 ? fallbackPrice : 0;
+    return { price: safePrice, isStale: true, timestamp: null, source: 'FALLBACK' };
+  }, [tickers, optionQuotes]);
+
+  const resolvePrice = useCallback((symbol, fallbackPrice = 0) => {
+    const info = getQuoteInfo(symbol, fallbackPrice);
+    return info.price;
+  }, [getQuoteInfo]);
 
   // ── 1. Load persisted settings on mount ────────────────────────────
   useEffect(() => {
@@ -313,33 +401,28 @@ export function MarketProviderLayer({ children }) {
       // Skip fallback if Dhan is active and streaming live ticks
       if (activeProvider === 'DHAN' && providerStatus.DHAN === 'LIVE') return;
 
-      for (const [sym, yahooSym] of Object.entries(YAHOO_MAP)) {
+      for (const [sym] of Object.entries(YAHOO_MAP)) {
         try {
           const meta = INDIAN_TICKERS[sym];
-          const encoded = encodeURIComponent(yahooSym);
-          const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(
-            `https://query1.finance.yahoo.com/v8/finance/chart/${encoded}?interval=1d&range=1d`
-          )}`;
-          const res  = await fetch(proxy);
-          const outer = await res.json();
-          const data = JSON.parse(outer.contents);
-          const m = data?.chart?.result?.[0]?.meta;
-          if (!m) continue;
-          const price = m.regularMarketPrice || 0;
-          const prev  = m.chartPreviousClose || m.previousClose || price;
-          handleTick({
-            ...meta,
-            symbol: sym,
-            price,
-            change:    parseFloat(((price - prev) / prev * 100).toFixed(2)),
-            changeAmt: parseFloat((price - prev).toFixed(2)),
-            high:      m.regularMarketDayHigh || price,
-            low:       m.regularMarketDayLow  || price,
-            volume:    m.regularMarketVolume
-              ? `${(m.regularMarketVolume / 1e7).toFixed(2)}Cr`
-              : '—',
-            provider: 'YAHOO_FALLBACK'
-          });
+          const res = await fetch(`/api/smde/klines?symbol=${encodeURIComponent(sym)}&timeframe=1d&limit=2`);
+          const data = await res.json();
+          if (data && data.success && Array.isArray(data.klines) && data.klines.length > 0) {
+            const lastCandle = data.klines[data.klines.length - 1];
+            const prevCandle = data.klines.length > 1 ? data.klines[data.klines.length - 2] : lastCandle;
+            const price = lastCandle.close || 0;
+            const prev = prevCandle.close || price;
+            handleTick({
+              ...meta,
+              symbol: sym,
+              price,
+              change: parseFloat(((price - prev) / prev * 100).toFixed(2)),
+              changeAmt: parseFloat((price - prev).toFixed(2)),
+              high: lastCandle.high || price,
+              low: lastCandle.low || price,
+              volume: lastCandle.volume ? `${(lastCandle.volume / 1e7).toFixed(2)}Cr` : '—',
+              provider: 'SMDE_SNAPSHOT'
+            });
+          }
         } catch (_) {}
       }
     };
@@ -412,19 +495,28 @@ export function MarketProviderLayer({ children }) {
     [tickers, selectedSymbol]
   );
 
+  // ── Stable Refs for ticker and provider state across live ticks ─────
+  const tickersRef = useRef(tickers);
+  tickersRef.current = tickers;
+  const activeProviderRef = useRef(activeProvider);
+  activeProviderRef.current = activeProvider;
+  const providerStatusRef = useRef(providerStatus);
+  providerStatusRef.current = providerStatus;
+
   // ── Kline fetchers (route to correct adapter) ─────────────────────
   const fetchKlines = useCallback(async (symbol, interval = '5m', limit = 200, to = null) => {
-    const ticker = tickers.find(t => t.symbol === symbol);
-    if (!ticker) return [];
+    const currentTickers = tickersRef.current || [];
+    const ticker = currentTickers.find(t => t.symbol === symbol);
+    if (!ticker && !symbol) return [];
 
     // Crypto/Forex
-    if (ticker.type === 'crypto' || ticker.provider === 'BINANCE') {
+    if (ticker?.type === 'crypto' || ticker?.provider === 'BINANCE') {
       if (!binanceRef.current) return [];
       return binanceRef.current.fetchKlines(symbol, interval, limit, to);
     }
 
     // Indian Market Live Provider (Dhan/Breeze)
-    if (activeProvider === 'DHAN' && providerStatus.DHAN === 'LIVE' && indianRef.current?.fetchKlines && !to) {
+    if (activeProviderRef.current === 'DHAN' && providerStatusRef.current.DHAN === 'LIVE' && indianRef.current?.fetchKlines && !to) {
       try {
         const candles = await indianRef.current.fetchKlines(symbol, interval);
         if (candles && candles.length > 0) return candles;
@@ -457,17 +549,25 @@ export function MarketProviderLayer({ children }) {
 
     const yahooSym = YAHOO_MAP[symbol] || `${symbol}.NS`;
     let yahooInterval = '5m';
-    let yahooRange = '5d';
+    let yahooRange = '1mo';
 
-    if (interval === '1m') { yahooInterval = '1m'; yahooRange = '1d'; }
-    else if (interval === '5m') { yahooInterval = '5m'; yahooRange = '5d'; }
-    else if (interval === '15m') { yahooInterval = '15m'; yahooRange = '5d'; }
-    else if (interval === '1h') { yahooInterval = '60m'; yahooRange = '1mo'; }
-    else if (interval === '1D' || interval === '1d') { yahooInterval = '1d'; yahooRange = '3mo'; }
+    if (interval === '1m') { yahooInterval = '1m'; yahooRange = '7d'; }
+    else if (interval === '3m') { yahooInterval = '1m'; yahooRange = '7d'; }
+    else if (interval === '5m') { yahooInterval = '5m'; yahooRange = '1mo'; }
+    else if (interval === '15m') { yahooInterval = '15m'; yahooRange = '1mo'; }
+    else if (interval === '30m') { yahooInterval = '30m'; yahooRange = '1mo'; }
+    else if (interval === '1h') { yahooInterval = '60m'; yahooRange = '3mo'; }
+    else if (interval === '1D' || interval === '1d') { yahooInterval = '1d'; yahooRange = '1y'; }
 
     try {
       const encoded = encodeURIComponent(yahooSym);
-      const res = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encoded}?interval=${yahooInterval}&range=${yahooRange}`);
+      let url = `https://query1.finance.yahoo.com/v8/finance/chart/${encoded}?interval=${yahooInterval}&range=${yahooRange}`;
+      if (to) {
+        const p2 = Math.min(parseInt(to, 10), Math.floor(Date.now() / 1000));
+        const p1 = Math.max(0, p2 - 30 * 86400);
+        url = `https://query1.finance.yahoo.com/v8/finance/chart/${encoded}?interval=${yahooInterval}&period1=${p1}&period2=${p2}`;
+      }
+      const res = await fetch(url);
       const data = await res.json();
       const result = data?.chart?.result?.[0];
       if (!result) return [];
@@ -493,15 +593,16 @@ export function MarketProviderLayer({ children }) {
       console.error("OHLC klines fetch error:", err);
       return [];
     }
-  }, [tickers, activeProvider]);
+  }, []);
 
   const subscribeKline = useCallback((symbol, interval, onCandle) => {
-    const ticker = tickers.find(t => t.symbol === symbol);
+    const currentTickers = tickersRef.current || [];
+    const ticker = currentTickers.find(t => t.symbol === symbol);
     if (ticker?.type === 'crypto' && binanceRef.current) {
       return binanceRef.current.subscribeKline(symbol, interval, onCandle);
     }
     return () => {};
-  }, [tickers]);
+  }, []);
 
   const fetchOptionChain = useCallback(async (symbol, expiry) => {
     if (indianRef.current?.fetchOptionChain) {
@@ -546,6 +647,10 @@ export function MarketProviderLayer({ children }) {
     // Derived feeds for modules
     scannerSignals: scannerSignals || [],
     optionChainData: optionChainData || {},
+    optionQuotes: optionQuotes || {},
+    updateOptionQuotes,
+    resolvePrice,
+    getQuoteInfo,
 
     // Computed
     activeBinanceStatus: providerStatus?.BINANCE || 'IDLE',
@@ -554,7 +659,7 @@ export function MarketProviderLayer({ children }) {
     activeProvider, providerKeys, updateProviderKeys, providerStatus, providerMetrics,
     tickers, selectedSymbol, currentTicker,
     fetchKlines, subscribeKline, fetchOptionChain,
-    scannerSignals, optionChainData,
+    scannerSignals, optionChainData, optionQuotes, updateOptionQuotes, resolvePrice, getQuoteInfo
   ]);
 
   return (

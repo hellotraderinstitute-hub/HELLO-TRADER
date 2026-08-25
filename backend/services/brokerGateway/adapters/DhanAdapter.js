@@ -52,7 +52,7 @@ class DhanAdapter extends IBrokerAdapter {
   async placeOrder(order) {
     try {
       // Map to Dhan API format
-      const dhanExchange = { NSE: 'NSE', BSE: 'BSE', NFO: 'NSE_FNO', MCX: 'MCX' }[order.exchange] || 'NSE';
+      const dhanExchange = { NSE: 'NSE_EQ', BSE: 'BSE_EQ', NFO: 'NSE_FNO', MCX: 'MCX_COMM' }[order.exchange] || 'NSE_EQ';
       const dhanProduct = { MIS: 'INTRADAY', NRML: 'MARGIN', CNC: 'CNC' }[order.productType] || 'INTRADAY';
       const dhanOrderType = {
         MARKET: 'MARKET', LIMIT: 'LIMIT',
@@ -182,7 +182,7 @@ class DhanAdapter extends IBrokerAdapter {
 
   async getLTP(symbol, exchange) {
     try {
-      const dhanExchange = { NSE: 'NSE', BSE: 'BSE', NFO: 'NSE_FNO' }[exchange] || 'NSE';
+      const dhanExchange = { NSE: 'NSE_EQ', BSE: 'BSE_EQ', NFO: 'NSE_FNO' }[exchange] || 'NSE_EQ';
       const body = { NSE: symbol ? [{ symbol, exchange: dhanExchange }] : [] };
       // Use market feed LTP endpoint
       const res = await axios.post('https://api.dhan.co/v2/marketfeed/ltp', {

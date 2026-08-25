@@ -321,21 +321,51 @@ class SingleMarketDataEngine extends EventEmitter {
     console.log('========================================================================\n');
   }
 
+  // ── IST-Anchored Timeframe Bucketing & Continuous Candle Engine ────
+  _getISTCandleBucket(timestampSec, intervalSec) {
+    const IST_OFFSET_SEC = 19800; // 5 hours 30 mins (UTC + 05:30)
+    const MARKET_OPEN_OFFSET_SEC = 33300; // 09:15:00 IST from midnight (9*3600 + 15*60)
+    const istSec = timestampSec + IST_OFFSET_SEC;
+    const midnightIstSec = Math.floor(istSec / 86400) * 86400;
+    const secIntoDay = istSec - midnightIstSec;
+
+    if (intervalSec >= 86400) {
+      return midnightIstSec - IST_OFFSET_SEC;
+    }
+
+    if (secIntoDay >= MARKET_OPEN_OFFSET_SEC) {
+      const elapsedSinceOpen = secIntoDay - MARKET_OPEN_OFFSET_SEC;
+      const bucketElapsed = Math.floor(elapsedSinceOpen / intervalSec) * intervalSec;
+      const bucketIstSec = midnightIstSec + MARKET_OPEN_OFFSET_SEC + bucketElapsed;
+      return bucketIstSec - IST_OFFSET_SEC;
+    } else {
+      const bucketIstSec = Math.floor(istSec / intervalSec) * intervalSec;
+      return bucketIstSec - IST_OFFSET_SEC;
+    }
+  }
+
   // ── Helper: Update OHLC Candlestick Bucket on Tick Ingestion ──────
-  _updateKlineOnTick(symbol, price, timestampMs) {
+  _updateKlineOnTick(symbol, price, timestampMs, tickVolume = 0) {
+    if (!symbol || typeof price !== 'number' || isNaN(price) || price <= 0) return;
+
     const timeframes = [
       { tf: '1m', sec: 60 },
+      { tf: '3m', sec: 180 },
       { tf: '5m', sec: 300 },
       { tf: '15m', sec: 900 },
+      { tf: '30m', sec: 1800 },
       { tf: '1h', sec: 3600 },
+      { tf: '2h', sec: 7200 },
+      { tf: '4h', sec: 14400 },
       { tf: '1d', sec: 86400 }
     ];
 
     const nowSec = Math.floor(timestampMs / 1000);
+    const symKey = symbol.toUpperCase();
 
     timeframes.forEach(({ tf, sec }) => {
-      const key = `${symbol.toUpperCase()}_${tf}`;
-      const bucketTime = Math.floor(nowSec / sec) * sec;
+      const key = `${symKey}_${tf}`;
+      const bucketTime = this._getISTCandleBucket(nowSec, sec);
 
       let candles = this.klineStore.get(key);
       if (!candles) {
@@ -347,22 +377,41 @@ class SingleMarketDataEngine extends EventEmitter {
 
       if (lastCandle && lastCandle.time === bucketTime) {
         // Update existing candle in current timeframe bucket
-        lastCandle.high = Math.max(lastCandle.high, price);
-        lastCandle.low = Math.min(lastCandle.low, price);
-        lastCandle.close = price;
+        lastCandle.high = Number(Math.max(lastCandle.high, price).toFixed(2));
+        lastCandle.low = Number(Math.min(lastCandle.low, price).toFixed(2));
+        lastCandle.close = Number(price.toFixed(2));
+        if (tickVolume > 0) {
+          lastCandle.volume = (lastCandle.volume || 0) + tickVolume;
+        }
+
+        this.emit('candle_update', {
+          symbol: symKey,
+          timeframe: tf,
+          candle: { ...lastCandle },
+          isNew: false,
+          timestamp: timestampMs
+        });
       } else {
         // Create new candle for current timeframe bucket
         const prevClose = lastCandle ? lastCandle.close : price;
         const newCandle = {
           time: bucketTime,
-          open: prevClose,
-          high: Math.max(prevClose, price),
-          low: Math.min(prevClose, price),
-          close: price,
-          volume: 100
+          open: Number(prevClose.toFixed(2)),
+          high: Number(Math.max(prevClose, price).toFixed(2)),
+          low: Number(Math.min(prevClose, price).toFixed(2)),
+          close: Number(price.toFixed(2)),
+          volume: tickVolume > 0 ? tickVolume : 1
         };
         candles.push(newCandle);
-        if (candles.length > 5000) candles.shift(); // Extended memory buffer for smooth historical panning
+        if (candles.length > 5000) candles.shift();
+
+        this.emit('candle_update', {
+          symbol: symKey,
+          timeframe: tf,
+          candle: { ...newCandle },
+          isNew: true,
+          timestamp: timestampMs
+        });
       }
     });
   }
@@ -412,13 +461,13 @@ class SingleMarketDataEngine extends EventEmitter {
   /**
    * Async Get OHLC Candlestick History with Pagination & 'to' Timestamp support
    */
-  async getKlinesAsync(symbol, timeframe = '5m', limit = 200, to = null) {
+  async getKlinesAsync(symbol, timeframe = '5m', limit = 500, to = null) {
     if (!symbol) return { success: false, klines: [], hasMore: false };
     const symKey = symbol.toUpperCase();
     const key = `${symKey}_${timeframe}`;
     let storedCandles = this.klineStore.get(key) || [];
 
-    const parsedLimit = Math.min(Math.max(parseInt(limit, 10) || 200, 10), 1000);
+    const parsedLimit = Math.min(Math.max(parseInt(limit, 10) || 500, 10), 2000);
     const toTs = to ? parseInt(to, 10) : null;
 
     // Filter by 'to' timestamp if provided
@@ -462,7 +511,7 @@ class SingleMarketDataEngine extends EventEmitter {
 
         const nowSec = Math.floor(Date.now() / 1000);
         const p2 = toTs ? Math.min(toTs, nowSec) : nowSec;
-        const lookbackSeconds = Math.max(parsedLimit * secondsPerBar * 3, 5 * 86400);
+        const lookbackSeconds = Math.max(parsedLimit * secondsPerBar * 4, 30 * 86400);
         const p1 = Math.max(0, p2 - lookbackSeconds);
 
         const fetched = await new Promise((resolve) => {
@@ -700,6 +749,9 @@ class SingleMarketDataEngine extends EventEmitter {
     // Save to Cache Layer
     this.cache.set(sym, cacheEntry);
     this.telemetry.lastHeartbeatAt = new Date();
+
+    // Continuously update IST-anchored candlestick stores across all timeframes
+    this._updateKlineOnTick(sym, tick.price, cacheEntry.timestamp, typeof tick.volume === 'number' ? tick.volume : 0);
 
     // Broadcast tick event
     this.emit('tick', cacheEntry);

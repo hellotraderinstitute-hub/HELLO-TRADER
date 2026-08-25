@@ -1,0 +1,344 @@
+[
+  {
+    "file": "backend\\audit_mock_data.js",
+    "line": 5,
+    "keyword": "mock",
+    "text": "'mock', 'dummy', 'sample', 'fake', 'fallback',"
+  },
+  {
+    "file": "backend\\audit_mock_data.js",
+    "line": 5,
+    "keyword": "dummy",
+    "text": "'mock', 'dummy', 'sample', 'fake', 'fallback',"
+  },
+  {
+    "file": "backend\\audit_mock_data.js",
+    "line": 5,
+    "keyword": "sample",
+    "text": "'mock', 'dummy', 'sample', 'fake', 'fallback',"
+  },
+  {
+    "file": "backend\\audit_mock_data.js",
+    "line": 5,
+    "keyword": "fake",
+    "text": "'mock', 'dummy', 'sample', 'fake', 'fallback',"
+  },
+  {
+    "file": "backend\\audit_mock_data.js",
+    "line": 5,
+    "keyword": "fallback",
+    "text": "'mock', 'dummy', 'sample', 'fake', 'fallback',"
+  },
+  {
+    "file": "backend\\audit_mock_data.js",
+    "line": 6,
+    "keyword": "mock",
+    "text": "'demo', 'testData', 'mockData', 'sampleData',"
+  },
+  {
+    "file": "backend\\audit_mock_data.js",
+    "line": 6,
+    "keyword": "sample",
+    "text": "'demo', 'testData', 'mockData', 'sampleData',"
+  },
+  {
+    "file": "backend\\audit_mock_data.js",
+    "line": 6,
+    "keyword": "demo",
+    "text": "'demo', 'testData', 'mockData', 'sampleData',"
+  },
+  {
+    "file": "backend\\audit_mock_data.js",
+    "line": 6,
+    "keyword": "testData",
+    "text": "'demo', 'testData', 'mockData', 'sampleData',"
+  },
+  {
+    "file": "backend\\audit_mock_data.js",
+    "line": 6,
+    "keyword": "mockData",
+    "text": "'demo', 'testData', 'mockData', 'sampleData',"
+  },
+  {
+    "file": "backend\\audit_mock_data.js",
+    "line": 6,
+    "keyword": "sampleData",
+    "text": "'demo', 'testData', 'mockData', 'sampleData',"
+  },
+  {
+    "file": "backend\\audit_mock_data.js",
+    "line": 7,
+    "keyword": "fixtures",
+    "text": "'fixtures', 'hardcoded', 'Math.random'"
+  },
+  {
+    "file": "backend\\audit_mock_data.js",
+    "line": 7,
+    "keyword": "hardcoded",
+    "text": "'fixtures', 'hardcoded', 'Math.random'"
+  },
+  {
+    "file": "backend\\audit_mock_data.js",
+    "line": 7,
+    "keyword": "Math.random",
+    "text": "'fixtures', 'hardcoded', 'Math.random'"
+  },
+  {
+    "file": "backend\\generate_audit_report.js",
+    "line": 15,
+    "keyword": "mock",
+    "text": "console.log('        MOCK / DUMMY DATA AUDIT SUMMARY             ');"
+  },
+  {
+    "file": "backend\\generate_audit_report.js",
+    "line": 15,
+    "keyword": "dummy",
+    "text": "console.log('        MOCK / DUMMY DATA AUDIT SUMMARY             ');"
+  },
+  {
+    "file": "backend\\routes\\guardian.js",
+    "line": 4,
+    "keyword": "fake",
+    "text": "* Real Health Checks (NO hardcoded fake values):"
+  },
+  {
+    "file": "backend\\routes\\guardian.js",
+    "line": 4,
+    "keyword": "hardcoded",
+    "text": "* Real Health Checks (NO hardcoded fake values):"
+  },
+  {
+    "file": "backend\\routes\\guardian.js",
+    "line": 163,
+    "keyword": "hardcoded",
+    "text": "integrity: 'PASS — Zero hardcoded balances',"
+  },
+  {
+    "file": "backend\\scheduler.js",
+    "line": 83,
+    "keyword": "Math.random",
+    "text": "const closePrice = trade.entryPrice * (1 + (Math.random() * 0.002 - 0.001));"
+  },
+  {
+    "file": "backend\\services\\brokerGateway\\adapters\\AngelOneAdapter.js",
+    "line": 37,
+    "keyword": "fallback",
+    "text": "// Fallback: if user provides pre-generated TOTP"
+  },
+  {
+    "file": "backend\\test_algo_qa.js",
+    "line": 44,
+    "keyword": "sample",
+    "text": "console.log('Sample Broker:', brokersRes.data.brokers?.[0]);"
+  },
+  {
+    "file": "backend\\test_algo_qa.js",
+    "line": 52,
+    "keyword": "sample",
+    "text": "accessToken: 'sample_dhan_jwt_access_token_12345',"
+  },
+  {
+    "file": "backend\\test_copy_qa.js",
+    "line": 30,
+    "keyword": "sample",
+    "text": "accessToken: 'sample_master_jwt_token_999',"
+  },
+  {
+    "file": "backend\\test_copy_qa.js",
+    "line": 53,
+    "keyword": "sample",
+    "text": "console.log('Sample Master Record:', mastersListRes.data.masters?.[0]);"
+  },
+  {
+    "file": "backend\\test_guardian_qa.js",
+    "line": 19,
+    "keyword": "hardcoded",
+    "text": "console.log('\\n--- Real Non-Hardcoded Subsystem Checks ---');"
+  },
+  {
+    "file": "backend\\test_trial_qa.js",
+    "line": 30,
+    "keyword": "demo",
+    "text": "note: 'Trial extended by Admin for demonstration'"
+  },
+  {
+    "file": "refactor.js",
+    "line": 27,
+    "keyword": "fallback",
+    "text": "// 3. Remove localStorage fallback from submitSignupRequest"
+  },
+  {
+    "file": "refactor.js",
+    "line": 28,
+    "keyword": "fallback",
+    "text": "code = code.replace(/catch \\(error\\) \\{[\\s\\S]*?\\/\\/ Fallback to legacy local state[\\s\\S]*?addAuditLog\\(`New SignUp submi"
+  },
+  {
+    "file": "refactor_context.js",
+    "line": 74,
+    "keyword": "dummy",
+    "text": "// Dummy methods to prevent crashes in unmigrated components"
+  },
+  {
+    "file": "src\\app\\register\\page.js",
+    "line": 31,
+    "keyword": "fallback",
+    "text": "<Suspense fallback={"
+  },
+  {
+    "file": "src\\components\\AdminPortal.js",
+    "line": 134,
+    "keyword": "demo",
+    "text": "placeholder=\"e.g. Extended for demo, special case\""
+  },
+  {
+    "file": "src\\components\\AdminPortal.js",
+    "line": 987,
+    "keyword": "Math.random",
+    "text": "const tempPass = tempPasswordInputs[r.id] || `HT@${Math.floor(1000 + Math.random() * 9000)}`;"
+  },
+  {
+    "file": "src\\components\\AILab.js",
+    "line": 44,
+    "keyword": "mock",
+    "text": "reply = \"AI Portfolio Audit: You currently have no open paper trading positions. Open the Trading Desk or Option Chain t"
+  },
+  {
+    "file": "src\\components\\GuardianDashboard.js",
+    "line": 108,
+    "keyword": "hardcoded",
+    "text": "<p className=\"text-xs text-gray-400\">Real-time non-hardcoded health pings for 10 platform subsystems & incident logging<"
+  },
+  {
+    "file": "src\\components\\Navbar.js",
+    "line": 20,
+    "keyword": "demo",
+    "text": "const resetAccount = () => alert('Demo wallet reset is disabled in production mode.');"
+  },
+  {
+    "file": "src\\components\\Navbar.js",
+    "line": 90,
+    "keyword": "demo",
+    "text": "<span className=\"text-gray-400 text-[9px] block uppercase tracking-wider\">DEMO CAPITAL</span>"
+  },
+  {
+    "file": "src\\components\\Navbar.js",
+    "line": 113,
+    "keyword": "demo",
+    "text": "title=\"Reset Demo Wallet to $100,000\""
+  },
+  {
+    "file": "src\\components\\TradingDesk.js",
+    "line": 216,
+    "keyword": "mock",
+    "text": "const mockAsks = useMemo(() => {"
+  },
+  {
+    "file": "src\\components\\TradingDesk.js",
+    "line": 221,
+    "keyword": "Math.random",
+    "text": "size: typeof window !== 'undefined' ? (Math.random() * 3 + 0.5).toFixed(3) : \"1.000\","
+  },
+  {
+    "file": "src\\components\\TradingDesk.js",
+    "line": 222,
+    "keyword": "Math.random",
+    "text": "percent: typeof window !== 'undefined' ? Math.floor(Math.random() * 80) + 10 : 50"
+  },
+  {
+    "file": "src\\components\\TradingDesk.js",
+    "line": 227,
+    "keyword": "mock",
+    "text": "const mockBids = useMemo(() => {"
+  },
+  {
+    "file": "src\\components\\TradingDesk.js",
+    "line": 232,
+    "keyword": "Math.random",
+    "text": "size: typeof window !== 'undefined' ? (Math.random() * 3 + 0.5).toFixed(3) : \"1.000\","
+  },
+  {
+    "file": "src\\components\\TradingDesk.js",
+    "line": 233,
+    "keyword": "Math.random",
+    "text": "percent: typeof window !== 'undefined' ? Math.floor(Math.random() * 80) + 10 : 50"
+  },
+  {
+    "file": "src\\components\\TradingDesk.js",
+    "line": 314,
+    "keyword": "mock",
+    "text": "{mockAsks.map((ask, i) => ("
+  },
+  {
+    "file": "src\\components\\TradingDesk.js",
+    "line": 331,
+    "keyword": "mock",
+    "text": "{mockBids.map((bid, i) => ("
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 231,
+    "keyword": "mock",
+    "text": "// ── Listen to local backend mock ticks ───────────────────────────"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 283,
+    "keyword": "Math.random",
+    "text": "const randIdx = Math.floor(Math.random() * prev.length);"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 287,
+    "keyword": "Math.random",
+    "text": "const delta = (Math.random() * 0.0006) - 0.0003;"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 305,
+    "keyword": "fallback",
+    "text": "// ── NSE Yahoo Finance fallback for Indian tickers (30s polling) ──"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 320,
+    "keyword": "fallback",
+    "text": "// Skip fallback if Dhan is active and streaming live ticks"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 348,
+    "keyword": "fallback",
+    "text": "provider: 'YAHOO_FALLBACK'"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 439,
+    "keyword": "fallback",
+    "text": "console.warn(\"Failed to fetch klines from Dhan, using Yahoo fallback:\", err);"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 443,
+    "keyword": "fallback",
+    "text": "// Indian Fallback - Yahoo Finance chart proxy"
+  },
+  {
+    "file": "src\\context\\MarketProviderContext.js",
+    "line": 573,
+    "keyword": "fallback",
+    "text": "return { ...ctx, tickers: [] }; // fallback without mutating the react context"
+  },
+  {
+    "file": "src\\context\\TradingContext.js",
+    "line": 237,
+    "keyword": "fallback",
+    "text": "// Membership plans (static fallback, admin portal fetches live)"
+  },
+  {
+    "file": "src\\providers\\DhanAdapter.js",
+    "line": 283,
+    "keyword": "fallback",
+    "text": "change:    0.02, // Fallback placeholder since standard quote diffs are dynamic"
+  }
+]

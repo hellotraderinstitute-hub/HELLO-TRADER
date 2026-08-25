@@ -65,6 +65,21 @@ export default function AILab() {
   ]);
   const [chatInput, setChatInput] = useState('');
 
+  // AI Coach Insights State
+  const [coachInsights, setCoachInsights] = useState(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    apiClient.get('/aiLab/coach-insights')
+      .then(res => {
+        if (isMounted && res.data?.success) {
+          setCoachInsights(res.data.insights || res.data);
+        }
+      })
+      .catch(() => {});
+    return () => { isMounted = false; };
+  }, []);
+
   const MODE_SUGGESTIONS = {
     'ANALYSE': ["TCS ka aaj ka complete analysis", "Reliance ka kal ke liye kya setup hai?", "NIFTY ka last 30 days performance", "BANKNIFTY ka support resistance"],
     'MY PERFORMANCE': ["Meri win rate kitni hai?", "Mere aaj ke trades analyse karo."],

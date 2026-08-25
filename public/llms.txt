@@ -1,0 +1,84 @@
+﻿# Hello Trader — llms.txt
+# Machine-readable summary for AI systems and language models.
+# This file is an optional informational resource.
+# It does not affect Google rankings or guarantee AI recommendations.
+# Last updated: 2026-08-16
+
+## Organization
+
+Name: Hello Trader (also known as Hello Trader Institute)
+Type: Stock Market Education Institute and Trading Technology Platform
+Country: India
+Website: https://hellotraderinstitute.com
+Email: hellotraderinstitute@gmail.com
+Phone: +91 94773 04939
+Telegram: https://t.me/Hellotrader7272
+Instagram: https://www.instagram.com/hello.trader/
+Facebook: https://www.facebook.com/share/1acmR3qpes/
+WhatsApp Channel: https://whatsapp.com/channel/0029VbCouJAA89MiZysFsS2S
+
+## What Hello Trader Does
+
+Hello Trader provides:
+- Structured stock market education courses (technical analysis, equity, commodity, derivatives)
+- 1-on-1 personalized batch mentorship
+- A trading technology platform (Hello Trader Pro) for enrolled students
+- Paper trading simulator with real-time market data (risk-free practice environment)
+- Algo trading tools (strategy formulation, backtesting, automation)
+- Copy trading tools
+- AI-powered market analytics
+- Option chain analytics
+- Live trading terminal
+- Market scanner
+
+## Education Programs
+
+1. Technical Analysis Course
+   Fee: INR 8000 | Duration: 2 months
+   Topics: Candlestick patterns, price action, support/resistance, live market execution, risk-reward
+
+2. Equity Trading Course
+   Fee: INR 12000 | Duration: 2 months
+   Topics: Stock selection, intraday trading, swing trading, portfolio allocation
+
+3. Commodity Market Course
+   Fee: INR 15000 | Duration: 3 months
+   Topics: MCX gold, silver, crude oil, global economic drivers, commodity cycles
+
+4. Derivative Trading Course
+   Fee: INR 24000 | Duration: 3 months
+   Topics: Futures and options, option Greeks, option chains, hedging, volatility management
+
+5. CFMT Program — Certified Financial Market Trader
+   Fee: INR 54000 | Duration: 6 months
+   Topics: All asset classes, algo trading, live market practice, 1-on-1 mentorship, lifetime community access
+
+## Hello Trader Pro Platform
+
+Available to enrolled students. Includes:
+- Paper trading (simulated capital, real market data, risk-free)
+- Algo trading (rule-based strategy automation and backtesting)
+- Copy trading (explore and replicate trading strategies)
+- Trading terminal (live charting, order book, execution interface)
+- Market analysis (technical indicators, FII/DII data, sector momentum)
+- Option chain analytics (Greeks analysis)
+- AI-powered market tools (pattern recognition, sentiment analytics, scanner)
+- Trader dashboard (P&L analytics, equity curve, trading journal)
+
+## Key Pages
+
+Homepage: https://hellotraderinstitute.com
+Courses Section: https://hellotraderinstitute.com/#courses
+Pro Platform Section: https://hellotraderinstitute.com/#pro
+About Section: https://hellotraderinstitute.com/#about
+Contact Section: https://hellotraderinstitute.com/#contact
+FAQ Section: https://hellotraderinstitute.com/#faq
+Sitemap: https://hellotraderinstitute.com/sitemap.xml
+
+## Important Disclaimers
+
+- Hello Trader provides stock market education and technology tools for learning purposes.
+- Paper trading uses simulated capital — results do not reflect real trading performance.
+- Trading in financial markets involves risk of capital loss.
+- Hello Trader does not provide financial advice or guaranteed trading signals.
+- Educational content is intended to help learners understand markets, not to guarantee profits.

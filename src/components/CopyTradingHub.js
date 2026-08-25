@@ -20,6 +20,35 @@ const BROKERS_CONFIG = [
   { id: 'GOPOCKET', name: 'GoPocket',  icon: '💼', fields: ['clientId', 'apiKey', 'apiSecret', 'accessToken'] },
 ];
 
+function getBrokerFieldLabel(broker, field) {
+  if (broker === 'ANGELONE' && (field === 'password' || field === 'pin')) return 'PIN / MPIN';
+  return field.replace(/([A-Z])/g, ' $1');
+}
+
+function getBrokerFieldPlaceholder(broker, field) {
+  if (broker === 'DHAN') {
+    if (field === 'clientId') return 'e.g. 1100346083 (Dhan Numeric Client ID)';
+    if (field === 'accessToken') return 'Enter Dhan 24-Hour Access Token';
+  }
+  if (broker === 'ANGELONE') {
+    if (field === 'clientId') return 'e.g. A123456 (Angel One Client ID)';
+    if (field === 'apiKey') return 'Enter Angel One SmartAPI Key';
+    if (field === 'password' || field === 'pin') return 'Enter Angel One PIN / MPIN';
+    if (field === 'totpSecret') return 'Enter 32-digit Authenticator TOTP Secret';
+  }
+  if (broker === 'UPSTOX') {
+    if (field === 'apiKey') return 'Enter Upstox API Key';
+    if (field === 'apiSecret') return 'Enter Upstox API Secret';
+    if (field === 'accessToken') return 'Enter Upstox Access Token';
+  }
+  if (broker === 'FYERS') {
+    if (field === 'clientId') return 'e.g. FY12345 (Fyers Client ID)';
+    if (field === 'apiKey') return 'Enter Fyers App ID';
+    if (field === 'accessToken') return 'Enter Fyers Access Token';
+  }
+  return `Enter ${getBrokerFieldLabel(broker, field)}`;
+}
+
 // ─── Status Badge ──────────────────────────────────────────────────────────
 function StatusBadge({ status }) {
   const map = {
@@ -297,6 +326,12 @@ export default function CopyTradingHub({ user, onBack, socket }) {
   // ─── Connect Broker ───────────────────────────────────────────────────────
   const handleConnectBroker = async (e) => {
     e.preventDefault();
+
+    // Client ID Validation: Prevent website/admin login email from being submitted
+    if (brokerFormData.clientId && brokerFormData.clientId.trim().includes('@')) {
+      return alert('❌ Invalid Client ID: Please enter your broker numeric Client ID (e.g. 1100346083), NOT your website login email.');
+    }
+
     setConnectingBroker(true);
     try {
       const res = await apiClient.post('/algo/connect', {
@@ -794,7 +829,9 @@ export default function CopyTradingHub({ user, onBack, socket }) {
                       <span>{BROKERS_CONFIG.find(b => b.id === c.broker)?.name || c.broker}</span>
                       <span className="text-[9px] bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded">{c.displayName}</span>
                     </div>
-                    <span className="text-[10px] text-gray-400 font-mono">Client: {c.clientId || c.id.slice(0, 8)}</span>
+                    <span className="text-[10px] text-gray-400 font-mono">
+                      Client: {c.clientId ? (c.clientId.length > 4 ? `${c.clientId.slice(0, 4)}******${c.clientId.slice(-2)}` : c.clientId) : c.id.slice(0, 8)}
+                    </span>
                   </div>
                   <button
                     onClick={async () => {
@@ -812,7 +849,14 @@ export default function CopyTradingHub({ user, onBack, socket }) {
           )}
 
           {(showConnectForm || connections.length === 0) && (
-            <form onSubmit={handleConnectBroker} className="space-y-3">
+            <form
+              onSubmit={handleConnectBroker}
+              className="space-y-3"
+              autoComplete="off"
+              data-lpignore="true"
+              data-1p-ignore="true"
+              data-form-type="other"
+            >
               <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
                 {BROKERS_CONFIG.map(b => (
                   <button key={b.id} type="button" onClick={() => { setSelectedBroker(b.id); setBrokerFormData({}); }}
@@ -825,23 +869,41 @@ export default function CopyTradingHub({ user, onBack, socket }) {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-[9px] text-gray-400 font-bold block mb-1">ACCOUNT LABEL</label>
-                  <input value={brokerLabel} onChange={e => setBrokerLabel(e.target.value)}
+                  <input
+                    name="copy_broker_label_no_autofill"
+                    autoComplete="off"
+                    data-lpignore="true"
+                    data-1p-ignore="true"
+                    data-form-type="other"
+                    value={brokerLabel}
+                    onChange={e => setBrokerLabel(e.target.value)}
                     placeholder="e.g. My Live Account"
-                    className="w-full bg-[#0B0E14] border border-white/10 p-2 rounded text-xs text-white outline-none focus:border-purple-500" />
+                    className="w-full bg-[#0B0E14] border border-white/10 p-2 rounded text-xs text-white outline-none focus:border-purple-500"
+                  />
                 </div>
-                {BROKERS_CONFIG.find(b => b.id === selectedBroker)?.fields.map(f => (
-                  <div key={f}>
-                    <label className="text-[9px] text-gray-400 font-bold block mb-1 uppercase">{f}</label>
-                    <input
-                      type={f.toLowerCase().includes('secret') || f.toLowerCase().includes('token') || f.toLowerCase().includes('password') ? 'password' : 'text'}
-                      placeholder={`Enter ${f}`}
-                      value={brokerFormData[f] || ''}
-                      onChange={e => setBrokerFormData({ ...brokerFormData, [f]: e.target.value })}
-                      className="w-full bg-[#0B0E14] border border-white/10 p-2 rounded text-xs text-white outline-none focus:border-purple-500 font-mono"
-                      required
-                    />
-                  </div>
-                ))}
+                {BROKERS_CONFIG.find(b => b.id === selectedBroker)?.fields.map(f => {
+                  const isSecret = f.toLowerCase().includes('secret') ||
+                                  f.toLowerCase().includes('token') ||
+                                  f.toLowerCase().includes('password');
+                  return (
+                    <div key={f}>
+                      <label className="text-[9px] text-gray-400 font-bold block mb-1 uppercase">{getBrokerFieldLabel(selectedBroker, f)}</label>
+                      <input
+                        type={isSecret ? 'password' : 'text'}
+                        name={`copy_broker_${selectedBroker.toLowerCase()}_${f}_no_autofill`}
+                        autoComplete={isSecret ? "new-password" : "off"}
+                        data-lpignore="true"
+                        data-1p-ignore="true"
+                        data-form-type="other"
+                        placeholder={getBrokerFieldPlaceholder(selectedBroker, f)}
+                        value={brokerFormData[f] || ''}
+                        onChange={e => setBrokerFormData({ ...brokerFormData, [f]: e.target.value })}
+                        className="w-full bg-[#0B0E14] border border-white/10 p-2 rounded text-xs text-white outline-none focus:border-purple-500 font-mono"
+                        required
+                      />
+                    </div>
+                  );
+                })}
               </div>
               <button type="submit" disabled={connectingBroker}
                 className="w-full py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-black text-xs rounded-xl cursor-pointer disabled:opacity-50">

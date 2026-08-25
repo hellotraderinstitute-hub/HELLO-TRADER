@@ -101,168 +101,24 @@ class CopyEngine {
     }
   }
 
-  /**
-   * Process individual follower copy execution.
-   */
-  static async _processFollowerTrade({ master, follower, masterOrder, masterCopyOrder, io, masterCopyOrderId = null }) {
-    const followerUserId = follower.userId;
-
-    // 1. Find follower's broker connection
-    const connection = await prisma.algoBrokerConnection.findFirst({
-      where: { id: follower.connectionId, userId: followerUserId, isActive: true, killSwitchActive: false }
-    });
-
-    if (!connection) {
-      const tradeLog = await prisma.copyTradeLog.create({
-        data: {
-          masterId:         master.id,
-          followerId:       follower.id,
-          masterCopyOrderId: masterCopyOrderId,
-          symbol:           masterOrder.symbol,
-          side:             masterOrder.side,
-          quantity:         0,
-          price:            masterOrder.price || 0,
-          eventType:        masterOrder.eventType || 'ENTRY',
-          status:           'FAILED',
-          errorMessage:     'No active broker connection found for follower',
-        }
-      });
-      return tradeLog;
-    }
-
-    // 2. Calculate follower quantity based on allocation mode
-    let followerQty = 1;
-    if (follower.allocationType === 'FIXED_QTY') {
-      followerQty = Math.max(1, Math.round(follower.allocationValue));
-    } else if (follower.allocationType === 'MULTIPLIER') {
-      followerQty = Math.max(1, Math.round(masterOrder.quantity * follower.allocationValue));
-    } else if (follower.allocationType === 'PERCENTAGE') {
-      followerQty = Math.max(1, Math.round((masterOrder.quantity * follower.allocationValue) / 100));
-    }
-
-    // Follower position size risk cap
-    if (follower.maxPositionSize && followerQty > follower.maxPositionSize) {
-      followerQty = Math.floor(follower.maxPositionSize);
-    }
-
-    // 3. Construct follower order
-    const followerOrder = {
-      symbol: masterOrder.symbol,
-      exchange: masterOrder.exchange || 'NSE',
-      side: masterOrder.side,
-      quantity: followerQty,
-      orderType: masterOrder.orderType || 'MARKET',
-      productType: masterOrder.productType || 'MIS',
-      price: masterOrder.price || 0,
-      triggerPrice: masterOrder.sl || 0,
-      sl: masterOrder.sl,
-      target: masterOrder.target,
+  static async _processFollowerTrade({ master, follower, masterOrder, masterCopyOrder, io, masterCopyOrderId = null, prismaClient = null }) {
+    const db = prismaClient || prisma;
+    // COPY TRADING LOCKED MANDATE: Block all copy trade execution until explicit specification approved
+    const logData = {
+      masterId:          master.id,
+      followerId:        follower.id,
+      symbol:            masterOrder.symbol,
+      side:              masterOrder.side,
+      quantity:          0,
+      price:             masterOrder.price || 0,
+      status:            'SKIPPED',
+      errorMessage:      'Copy trading is currently locked.',
+      riskReason:        'COPY_TRADING_LOCKED'
     };
+    if (masterCopyOrderId) logData.masterCopyOrderId = masterCopyOrderId;
 
-    // Determine Parent Source: MASTER_ALGO vs MASTER_MANUAL
-    const parentSource = masterCopyOrder.tradeSource === 'ALGO' ? 'MASTER_ALGO' : 'MASTER_MANUAL';
-    const webhookLogId = masterCopyOrder.webhookLogId || null;
-
-    // 4. Validate through RiskEngine
-    const riskResult = await RiskEngine.validate(followerOrder, connection);
-    if (!riskResult.allowed) {
-      const tradeLog = await prisma.copyTradeLog.create({
-        data: {
-          masterId:          master.id,
-          followerId:        follower.id,
-          masterCopyOrderId: masterCopyOrderId,
-          symbol:            masterOrder.symbol,
-          side:              masterOrder.side,
-          quantity:          followerQty,
-          price:             masterOrder.price || 0,
-          eventType:         masterOrder.eventType || 'ENTRY',
-          tradeSource:       'COPY',
-          parentSource,
-          webhookLogId,
-          status:            'RISK_REJECTED',
-          riskReason:        riskResult.reason,
-        }
-      });
-
-      await AuditLogger.log({
-        userId: followerUserId,
-        category: CATEGORIES.COPY,
-        action: 'COPY_RISK_REJECTED',
-        detail: `Copy trade (${parentSource}) rejected for follower: ${riskResult.reason}`,
-        meta: { masterId: master.id, followerId: follower.id, parentSource, riskResult },
-      });
-
-      if (io) {
-        io.to(followerUserId).emit('copy_trade_update', {
-          status: 'RISK_REJECTED',
-          symbol: masterOrder.symbol,
-          parentSource,
-          reason: riskResult.reason,
-        });
-      }
-
-      return tradeLog;
-    }
-
-    // 5. Create initial CopyTradeLog
-    const tradeLog = await prisma.copyTradeLog.create({
-      data: {
-        masterId:          master.id,
-        followerId:        follower.id,
-        masterCopyOrderId: masterCopyOrderId,
-        symbol:            masterOrder.symbol,
-        side:              masterOrder.side,
-        quantity:          followerQty,
-        price:             masterOrder.price || 0,
-        eventType:         masterOrder.eventType || 'ENTRY',
-        tradeSource:       'COPY',
-        parentSource,
-        webhookLogId,
-        status:            'QUEUED',
-      }
-    });
-
-    // 6. Execute Order via BrokerGateway with retry backoff
-    const execResult = await BrokerGateway.executeOrder(followerOrder, connection);
-
-    // 7. Update CopyTradeLog
-    const updatedLog = await prisma.copyTradeLog.update({
-      where: { id: tradeLog.id },
-      data: {
-        status: execResult.success ? 'EXECUTED' : 'FAILED',
-        followerOrderId: execResult.orderId || null,
-        errorMessage: execResult.success ? null : execResult.message,
-        retryCount: execResult.attempts || 1,
-        executedAt: execResult.success ? new Date() : null,
-      }
-    });
-
-    // 8. Audit Log
-    await AuditLogger.log({
-      userId: followerUserId,
-      category: CATEGORIES.COPY,
-      action: execResult.success ? 'COPY_TRADE_EXECUTED' : 'COPY_TRADE_FAILED',
-      detail: execResult.success
-        ? `Copied ${masterOrder.side} ${followerQty} ${masterOrder.symbol} from Master ${master.displayName}`
-        : `Failed to copy trade from Master ${master.displayName}: ${execResult.message}`,
-      meta: { masterId: master.id, followerId: follower.id, execResult },
-    });
-
-    // 9. Real-time Socket.io Notification
-    if (io) {
-      io.to(followerUserId).emit('copy_trade_update', {
-        id: updatedLog.id,
-        masterName: master.displayName,
-        symbol: masterOrder.symbol,
-        side: masterOrder.side,
-        qty: followerQty,
-        status: execResult.success ? 'EXECUTED' : 'FAILED',
-        orderId: execResult.orderId,
-        message: execResult.message,
-      });
-    }
-
-    return updatedLog;
+    const tradeLog = await db.copyTradeLog.create({ data: logData });
+    return tradeLog;
   }
 
   // ─────────────────────────────────────────────────────────────────────────

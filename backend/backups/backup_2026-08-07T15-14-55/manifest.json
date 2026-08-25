@@ -1,0 +1,12 @@
+{
+  "backupTimestamp": "2026-08-07T15:14:55.614Z",
+  "filesCount": 4,
+  "version": "1.0.0-PROD",
+  "modules": [
+    "CORE",
+    "ALGO_TRADING",
+    "COPY_TRADING",
+    "RISK_ENGINE",
+    "AUDIT_LOGS"
+  ]
+}

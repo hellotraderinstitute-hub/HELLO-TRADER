@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hello Trader Reel #1 - Downloadable Hindi Voiceover & Terminal Screen Sync</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background-color: #0b0f17; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+    .header { text-align: center; margin-bottom: 20px; max-width: 600px; }
+    .header h1 { font-size: 22px; color: #ffd700; text-transform: uppercase; letter-spacing: 1px; }
+    .header p { font-size: 13px; color: #94a3b8; margin-top: 6px; line-height: 1.5; }
+    
+    /* Download Card */
+    .download-card {
+      background: rgba(255, 215, 0, 0.1);
+      border: 1.5px solid #ffd700;
+      border-radius: 16px;
+      padding: 16px 24px;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      width: 100%;
+      max-width: 480px;
+    }
+    .download-info h3 { font-size: 15px; color: #fff; }
+    .download-info p { font-size: 12px; color: #ffd700; margin-top: 2px; }
+    .download-btn {
+      padding: 10px 20px;
+      background: linear-gradient(135deg, #ffd700, #ffaa00);
+      color: #000;
+      text-decoration: none;
+      font-weight: 800;
+      font-size: 13px;
+      border-radius: 10px;
+      box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    
+    /* 9:16 Vertical Reel Canvas Container */
+    .reel-container {
+      width: 360px;
+      height: 640px;
+      background-color: #10141d;
+      border: 3px solid #ffd700;
+      border-radius: 24px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 20px 50px rgba(255, 215, 0, 0.15), 0 0 30px rgba(0, 212, 255, 0.2);
+    }
+    
+    /* Scene Backgrounds */
+    .scene {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      transition: opacity 0.8s ease-in-out;
+      background-size: cover;
+      background-position: center;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 24px;
+    }
+    .scene.active { opacity: 1; }
+    
+    .scene-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to bottom, rgba(16, 20, 29, 0.4) 0%, rgba(16, 20, 29, 0.85) 100%);
+      z-index: 1;
+    }
+    
+    .scene-content {
+      position: relative;
+      z-index: 2;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    /* Top Progress Bar */
+    .progress-container {
+      display: flex;
+      gap: 6px;
+      margin-top: 12px;
+    }
+    .progress-bar {
+      flex: 1;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: #ffd700;
+      transition: width 0.1s linear;
+    }
+
+    /* Badges & Captions */
+    .badge {
+      display: inline-block;
+      padding: 6px 14px;
+      background: rgba(255, 215, 0, 0.2);
+      border: 1px solid #ffd700;
+      color: #ffd700;
+      font-size: 11px;
+      font-weight: 800;
+      border-radius: 20px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-top: 16px;
+      align-self: flex-start;
+      backdrop-filter: blur(10px);
+    }
+    
+    .caption-box {
+      background: rgba(16, 20, 29, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 24px;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+    
+    .caption-text {
+      font-size: 14px;
+      font-weight: 700;
+      color: #ffffff;
+      line-height: 1.4;
+      text-align: center;
+    }
+    .caption-sub {
+      font-size: 12px;
+      color: #00d4ff;
+      text-align: center;
+      margin-top: 6px;
+      font-weight: 600;
+    }
+
+    /* Controls */
+    .controls {
+      margin-top: 20px;
+      display: flex;
+      gap: 12px;
+    }
+    button {
+      padding: 12px 24px;
+      background: linear-gradient(135deg, #ffd700, #ffaa00);
+      color: #000;
+      border: none;
+      border-radius: 12px;
+      font-weight: 800;
+      font-size: 14px;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3);
+    }
+    button.secondary {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>🎬 Hello Trader Reel #1 Audio & Video Preview</h1>
+    <p>Conversational Indian Male Voiceover (~28-35 age, 1.05x speed, natural pauses after Option Chain, Volume & Greeks).</p>
+  </div>
+
+  <!-- Download Audio Card -->
+  <div class="download-card">
+    <div class="download-info">
+      <h3>🎙️ Natural Hindi Voiceover MP3</h3>
+      <p>Download audio file for video editing</p>
+    </div>
+    <a href="/reel1_hindi_voiceover.mp3" download="reel1_hindi_voiceover.mp3" class="download-btn">
+      📥 DOWNLOAD MP3
+    </a>
+  </div>
+
+  <div class="reel-container">
+    <!-- Progress Bars -->
+    <div style="position: absolute; top: 0; left: 16px; right: 16px; z-index: 10;">
+      <div class="progress-container">
+        <div class="progress-bar"><div class="progress-fill" id="p0"></div></div>
+        <div class="progress-bar"><div class="progress-fill" id="p1"></div></div>
+        <div class="progress-bar"><div class="progress-fill" id="p2"></div></div>
+      </div>
+    </div>
+
+    <!-- Scene 1: Hook -->
+    <div class="scene active" id="s0" style="background-image: url('/reel_assets/reel1_scene1_hook_1786363228942.jpg');">
+      <div class="scene-overlay"></div>
+      <div class="scene-content">
+        <div>
+          <span class="badge" style="border-color: #ff3131; color: #ff3131;">⚠️ WARNING TRADERS</span>
+        </div>
+        <div class="caption-box">
+          <div class="caption-text">"Options trade karte ho? Lekin kya aap bhi... sirf chart dekh ke hi entry lete ho?"</div>
+          <div class="caption-sub">Slightly Curious Opening Hook</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scene 2: Option Chain & Greeks -->
+    <div class="scene" id="s1" style="background-image: url('/reel_assets/reel1_scene2_chain_1786363250398.jpg');">
+      <div class="scene-overlay"></div>
+      <div class="scene-content">
+        <div>
+          <span class="badge">📊 LIVE GREEKS & SENTIMENT</span>
+        </div>
+        <div class="caption-box">
+          <div class="caption-text">"Dekho Hello Trader Terminal ki live Option Chain! Delta, Theta, IV aur PCR Sentiment Meter!"</div>
+          <div class="caption-sub">Natural Pauses on Volume & Greeks</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scene 3: CTA -->
+    <div class="scene" id="s2" style="background-image: url('/reel_assets/reel1_scene3_cta_1786363269971.jpg');">
+      <div class="scene-overlay"></div>
+      <div class="scene-content">
+        <div>
+          <span class="badge" style="border-color: #00ff41; color: #00ff41;">🚀 LAUNCH OFFER</span>
+        </div>
+        <div class="caption-box">
+          <div class="caption-text">"Aaj hi try karein Hello Trader Terminal! Access starting at just ₹900 per month."</div>
+          <div class="caption-sub">Emphasis on Hello Trader Terminal</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <audio id="audioPlayer" src="/reel1_hindi_voiceover.mp3"></audio>
+
+  <div class="controls">
+    <button onclick="playWithMP3()">▶ PLAY WITH REAL VOICE MP3</button>
+    <button class="secondary" onclick="stopAudio()">⏹ RESET</button>
+  </div>
+
+  <script>
+    const audio = document.getElementById('audioPlayer');
+
+    function playWithMP3() {
+      stopAudio();
+      audio.currentTime = 0;
+      audio.play();
+
+      // Scene timeline sync based on audio duration (~30 secs)
+      setTimeout(() => setScene(0), 100);
+      setTimeout(() => setScene(1), 6000);
+      setTimeout(() => setScene(2), 20000);
+    }
+
+    function setScene(index) {
+      for (let i = 0; i < 3; i++) {
+        document.getElementById('s' + i).classList.remove('active');
+        document.getElementById('p' + i).style.width = i <= index ? '100%' : '0%';
+      }
+      document.getElementById('s' + index).classList.add('active');
+    }
+
+    function stopAudio() {
+      audio.pause();
+      audio.currentTime = 0;
+      setScene(0);
+      document.getElementById('p0').style.width = '0%';
+    }
+  </script>
+</body>
+</html>

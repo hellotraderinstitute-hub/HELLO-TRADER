@@ -27,18 +27,22 @@ export default function Dashboard({ setActiveTab }) {
   const winRate = closedTrades.length > 0 ? ((wins / closedTrades.length) * 100).toFixed(1) : '0.0';
 
   // Live ticking 4-Day Trial Countdown state
+  const trialDays = (currentStudent?.trialDaysOverride !== null && currentStudent?.trialDaysOverride !== undefined)
+    ? currentStudent.trialDaysOverride
+    : 4;
+
   const [trialTimeLeft, setTrialTimeLeft] = useState({ 
-    days: 4, hours: 0, minutes: 0, seconds: 0, expired: false, formatted: '04d : 00h : 00m : 00s' 
+    days: trialDays, hours: 0, minutes: 0, seconds: 0, expired: false, formatted: `${String(trialDays).padStart(2, '0')}d : 00h : 00m : 00s` 
   });
 
   useEffect(() => {
     const updateCountdown = () => {
       if (!currentStudent?.trialStartedAt) {
-        setTrialTimeLeft({ days: 4, hours: 0, minutes: 0, seconds: 0, expired: false, formatted: '04d : 00h : 00m : 00s' });
+        setTrialTimeLeft({ days: trialDays, hours: 0, minutes: 0, seconds: 0, expired: false, formatted: `${String(trialDays).padStart(2, '0')}d : 00h : 00m : 00s` });
         return;
       }
 
-      const trialDuration = 4 * 24 * 60 * 60 * 1000; // 4 days in ms
+      const trialDuration = trialDays * 24 * 60 * 60 * 1000;
       const startedAt = new Date(currentStudent.trialStartedAt).getTime();
       const expiresAt = startedAt + trialDuration;
       const now = Date.now();
@@ -63,7 +67,7 @@ export default function Dashboard({ setActiveTab }) {
     updateCountdown();
     const interval = setInterval(updateCountdown, 1000);
     return () => clearInterval(interval);
-  }, [currentStudent?.trialStartedAt]);
+  }, [currentStudent?.trialStartedAt, currentStudent?.trialDaysOverride, trialDays]);
 
   return (
     <div className="p-4 bg-[#0b0e14] text-white min-h-[calc(100vh-80px)] font-mono space-y-4">
@@ -91,7 +95,7 @@ export default function Dashboard({ setActiveTab }) {
       <InstallPwaModal variant="banner" />
 
       {/* Trial Countdown Banner */}
-      {currentStudent && (
+      {currentStudent && currentStudent.role !== 'ADMIN' && (
         <div className={`p-4 rounded-xl border flex flex-wrap items-center justify-between gap-4 shadow-lg ${
           trialTimeLeft.expired 
             ? 'bg-red-500/10 border-red-500/30 text-red-400' 
@@ -103,14 +107,14 @@ export default function Dashboard({ setActiveTab }) {
             {trialTimeLeft.expired ? <AlertTriangle className="w-6 h-6 shrink-0 animate-bounce" /> : <Clock className="w-6 h-6 shrink-0 animate-spin" style={{ animationDuration: '4s' }} />}
             <div>
               <h3 className="font-extrabold text-sm flex items-center gap-2">
-                {trialTimeLeft.expired ? 'FREE TRIAL EXPIRED' : '4-DAY FREE TRIAL ACTIVE'}
+                {trialTimeLeft.expired ? 'FREE TRIAL EXPIRED' : `${trialDays}-DAY FREE TRIAL ACTIVE`}
                 {!trialTimeLeft.expired && trialTimeLeft.days < 1 && (
                   <span className="bg-amber-500 text-black text-[9px] font-black px-2 py-0.5 rounded">EXPIRING SOON</span>
                 )}
               </h3>
               <p className="text-xs opacity-90 mt-0.5">
                 {trialTimeLeft.expired 
-                  ? 'Your 4-day trial period has ended. Recharge tokens to reactivate trading access.' 
+                  ? `Your ${trialDays}-day trial period has ended. Recharge tokens to reactivate trading access.` 
                   : `Real-time countdown remaining. Recharge tokens before expiry to prevent interruption.`}
               </p>
             </div>

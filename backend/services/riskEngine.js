@@ -56,7 +56,7 @@ class RiskEngine {
     // 4. Max Open Trades
     if (connection.maxOpenTrades) {
       const openCount = await prisma.algoPosition.count({
-        where: { userId: connection.userId, brokerId: connection.id, status: 'OPEN' }
+        where: { userId: connection.userId, connectionId: connection.id, status: 'OPEN' }
       });
       if (openCount >= connection.maxOpenTrades) {
         return { allowed: false, reason: `MAX_OPEN_TRADES: Already at limit of ${connection.maxOpenTrades} open positions` };
@@ -70,7 +70,7 @@ class RiskEngine {
       const todayLoss = await prisma.algoPosition.aggregate({
         where: {
           userId: connection.userId,
-          brokerId: connection.id,
+          connectionId: connection.id,
           status: { in: ['CLOSED', 'SL_HIT'] },
           closedAt: { gte: todayStart },
           pnl: { lt: 0 },

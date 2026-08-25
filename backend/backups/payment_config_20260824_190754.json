@@ -1,0 +1,20 @@
+{
+  "backupType": "PAYMENT_CONFIGURATION",
+  "version": "v1.0",
+  "createdAt": "2026-08-24T13:37:54.626Z",
+  "createdBy": "Automated Scheduler Cron",
+  "settings": {
+    "upiEnabled": true,
+    "upiId": "7665977937@ybl",
+    "upiHolderName": "Hello Trader Institute",
+    "qrEnabled": true,
+    "qrImageUrl": "/images/payment_qr.png",
+    "bankEnabled": true,
+    "bankName": "Bank of Baroda",
+    "bankAccountName": "Hello Trader Institute",
+    "bankAccountNumber": "28668100005444",
+    "bankIfsc": "BARB0SHIVBS",
+    "bankBranch": "Main Branch"
+  },
+  "auditLogs": []
+}

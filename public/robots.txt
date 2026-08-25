@@ -1,6 +1,22 @@
 User-agent: *
 Allow: /
+
+# Block private API routes — these are backend endpoints, not public pages
 Disallow: /api/
-Disallow: /_next/
+
+# Block internal/private application routes
+# The trading terminal, dashboard, and admin areas are authenticated-only
+# and should not appear in search results
+Disallow: /api/auth/
+Disallow: /api/admin/
+Disallow: /api/leads/
+Disallow: /api/wallet/
+Disallow: /api/users/
+Disallow: /api/trades/
+Disallow: /api/socket/
+
+# Allow search engines to access Next.js static assets
+# (JS, CSS, fonts) required for rendering
+Allow: /_next/static/
 
 Sitemap: https://hellotraderinstitute.com/sitemap.xml

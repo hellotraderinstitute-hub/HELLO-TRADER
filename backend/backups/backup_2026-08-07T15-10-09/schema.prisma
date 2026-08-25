@@ -1,0 +1,393 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────────────────────
+// CORE PLATFORM MODELS
+// ─────────────────────────────────────────────────────────────
+
+model SystemSettings {
+  id                 String    @id @default("CONFIG")
+  trialDays          Int       @default(4)
+  monthlyCost        Float     @default(900)
+  tokenPrice         Float     @default(1)
+  welcomeBonus       Float     @default(0)
+  referralReward     Float     @default(0)
+  autoRenewal        Boolean   @default(true)
+  minWithdrawal      Float     @default(500)
+  maxWithdrawal      Float     @default(100000)
+  membershipDuration Int       @default(30)
+  paperBalance       Float     @default(5000000)
+  dhanClientId       String?
+  dhanAccessToken    String?
+  globalKillSwitch   Boolean   @default(false)
+  globalKillReason   String?
+  globalKillAt       DateTime?
+}
+
+model User {
+  id               String    @id @default(uuid())
+  studentId        String    @unique
+  name             String
+  email            String    @unique
+  phone            String    @unique
+  password         String
+  role             String    @default("USER")
+  referralCode     String    @unique
+  referredBy       String?
+  status           String    @default("ACTIVE")
+  trialStartedAt   DateTime  @default(now())
+  // Per-user trial override — if null, global SystemSettings.trialDays applies (default 4)
+  trialDaysOverride Int?
+  // Admin note for override reason
+  trialOverrideNote String?
+  trialOverrideAt   DateTime?
+  createdAt        DateTime  @default(now())
+
+  wallets           Wallet[]
+  trades            Trade[]
+  memberships       Membership[]
+  paymentRequests   PaymentRequest[]
+  ledger            Ledger[]
+  referralsMade     Referral[]           @relation("Referrer")
+  referredByLink    Referral?            @relation("Referred")
+  bonusClaims       ReferralBonusClaim[]
+  brokerConnections AlgoBrokerConnection[]
+  auditLogs         AuditLog[]
+  algoPositions     AlgoPosition[]
+  copyMaster        CopyMaster?
+  copyFollowing     CopyFollower[]
+}
+
+model Wallet {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+  type   String
+}
+
+model Ledger {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  walletType String
+  amount     Float
+  type       String
+  reason     String
+  timestamp  DateTime @default(now())
+}
+
+model Membership {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  status    String   @default("ACTIVE")
+  autoRenew Boolean  @default(false)
+  startedAt DateTime @default(now())
+  expiresAt DateTime
+}
+
+model PaymentRequest {
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+  amount        Float
+  method        String
+  utr           String?  @unique
+  screenshotUrl String?
+  actualAmount  Float?
+  bonusApplied  Float?
+  reason        String?
+  adminId       String?
+  status        String   @default("PENDING")
+  timestamp     DateTime @default(now())
+}
+
+model BonusRule {
+  id           String @id @default(uuid())
+  minAmount    Float  @unique
+  bonusPercent Float
+}
+
+model Trade {
+  id          String    @id @default(uuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  symbol      String
+  productType String
+  orderType   String
+  quantity    Int
+  entryPrice  Float
+  exitPrice   Float?
+  status      String
+  pnl         Float?
+  openedAt    DateTime  @default(now())
+  closedAt    DateTime?
+}
+
+model SignupRequest {
+  id           String   @id @default(uuid())
+  name         String
+  email        String
+  phone        String
+  referralCode String?
+  ipAddress    String?
+  status       String   @default("PENDING")
+  createdAt    DateTime @default(now())
+}
+
+model Referral {
+  id           String    @id @default(uuid())
+  referrerId   String
+  referrer     User      @relation("Referrer", fields: [referrerId], references: [id])
+  referredId   String?   @unique
+  referred     User?     @relation("Referred", fields: [referredId], references: [id])
+  signupEmail  String?
+  status       String    @default("PENDING")
+  ipAddress    String?
+  bonusClaimed Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  successAt    DateTime?
+}
+
+model ReferralBonusClaim {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  rewardType  String
+  referralIds String
+  claimedAt   DateTime @default(now())
+}
+
+// ─────────────────────────────────────────────────────────────
+// ALGO TRADING ENGINE
+// ─────────────────────────────────────────────────────────────
+
+model AlgoBrokerConnection {
+  id          String  @id @default(uuid())
+  userId      String
+  user        User    @relation(fields: [userId], references: [id])
+  broker      String  // DHAN | ANGELONE | UPSTOX | SHOONYA | FYERS | GOPOCKET
+  displayName String?
+
+  // Credentials — AES-256 encrypted at rest. Passwords NEVER stored.
+  apiKey       String?
+  apiSecret    String?
+  clientId     String?
+  accessToken  String? // Encrypted
+  totpSecret   String? // Encrypted — only for TOTP-based brokers
+  vendorCode   String?
+  refreshToken String?
+  redirectUri  String?
+  imei         String?
+
+  // Webhook
+  webhookToken String @unique // Cryptographically random secret
+
+  // Connection status
+  isActive     Boolean   @default(false)
+  lastTestedAt DateTime?
+  testStatus   String?   // SUCCESS | FAILED
+  testMessage  String?
+
+  // COMPLIANCE: Explicit consent — MANDATORY before any order
+  consentAccepted Boolean   @default(false)
+  consentAt       DateTime?
+  consentIp       String?
+  consentVersion  String    @default("v1.0")
+  consentText     String?   // Exact consent text shown to user (snapshot)
+
+  // Risk Controls — user configurable
+  maxOpenTrades     Int?
+  maxDailyLoss      Float?
+  maxPositionSize   Float?
+  allowedProducts   String? // CSV: "MIS,NRML"
+  tradingHoursStart String? // "09:15"
+  tradingHoursEnd   String? // "15:30"
+
+  // Kill Switch
+  killSwitchActive Boolean   @default(false)
+  killSwitchAt     DateTime?
+  killSwitchReason String?
+
+  connectedAt DateTime @default(now())
+
+  webhookLogs AlgoWebhookLog[]
+  positions   AlgoPosition[]
+}
+
+model AlgoWebhookLog {
+  id           String               @id @default(uuid())
+  userId       String
+  connectionId String
+  connection   AlgoBrokerConnection @relation(fields: [connectionId], references: [id])
+
+  rawPayload      String  // Immutable — full JSON from TradingView
+  idempotencyKey  String? // Dedup: symbol+action+token+5s window
+
+  parsedSymbol    String?
+  parsedAction    String? // BUY | SELL | EXIT
+  parsedQty       Int?
+  parsedSL        Float?
+  parsedTarget    Float?
+  parsedProduct   String?
+  parsedOrderType String?
+
+  executionStatus String  @default("PENDING") // PENDING|EXECUTED|FAILED|SKIPPED|RISK_REJECTED
+  brokerOrderId   String?
+  errorMessage    String?
+  riskReason      String?
+
+  receivedAt  DateTime  @default(now())
+  executedAt  DateTime?
+}
+
+model AlgoPosition {
+  id           String               @id @default(uuid())
+  userId       String
+  user         User                 @relation(fields: [userId], references: [id])
+  connectionId String
+  connection   AlgoBrokerConnection @relation(fields: [connectionId], references: [id])
+
+  symbol      String
+  exchange    String @default("NSE")
+  side        String // BUY | SELL
+  quantity    Int
+  entryPrice  Float
+  productType String @default("MIS")
+
+  slPrice     Float?
+  targetPrice Float?
+  trailSL     Boolean @default(false)
+  trailOffset Float?
+  currentSL   Float?
+
+  status        String    @default("OPEN") // OPEN|CLOSED|SL_HIT|TARGET_HIT|MANUALLY_CLOSED
+  brokerOrderId String?
+  exitOrderId   String?
+  exitPrice     Float?
+  pnl           Float?
+
+  openedAt DateTime  @default(now())
+  closedAt DateTime?
+}
+
+// ─────────────────────────────────────────────────────────────
+// IMMUTABLE AUDIT LOG
+// ─────────────────────────────────────────────────────────────
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  category  String   // BROKER|ALGO|WEBHOOK|RISK|ORDER|POSITION|COPY|KILL_SWITCH|AUTH|CONSENT|SYSTEM
+  action    String
+  detail    String?
+  meta      String?  // JSON — broker response, risk reason, order details, etc.
+  ipAddress String?
+  timestamp DateTime @default(now())
+
+  @@index([userId, timestamp])
+  @@index([category, timestamp])
+}
+
+// ─────────────────────────────────────────────────────────────
+// COPY TRADING ENGINE
+// ─────────────────────────────────────────────────────────────
+
+model CopyMaster {
+  id             String   @id @default(uuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id])
+  connectionId   String
+  displayName    String
+  description    String?
+  riskLevel      String   @default("MEDIUM") // LOW|MEDIUM|HIGH
+  isPublic       Boolean  @default(false)
+  isActive       Boolean  @default(false)
+  killSwitch     Boolean  @default(false)
+  performanceRoi Float    @default(0)
+  totalTrades    Int      @default(0)
+  winRate        Float    @default(0)
+  maxFollowers   Int      @default(10)
+  createdAt      DateTime @default(now())
+
+  followers CopyFollower[]
+  tradeLogs CopyTradeLog[]
+}
+
+model CopyFollower {
+  id           String     @id @default(uuid())
+  masterId     String
+  master       CopyMaster @relation(fields: [masterId], references: [id])
+  userId       String
+  user         User       @relation(fields: [userId], references: [id])
+  connectionId String
+
+  allocationType  String // FIXED_QTY|MULTIPLIER|PERCENTAGE
+  allocationValue Float
+
+  maxDailyLoss    Float   @default(5000)
+  maxOpenTrades   Int     @default(5)
+  maxPositionSize Float?
+  allowedProducts String?
+  emergencyStop   Boolean @default(false)
+
+  killSwitchActive Boolean   @default(false)
+  killSwitchAt     DateTime?
+
+  // COMPLIANCE: Explicit consent before activation
+  consentAccepted Boolean   @default(false)
+  consentAt       DateTime?
+  consentIp       String?
+
+  isActive Boolean  @default(true)
+  joinedAt DateTime @default(now())
+
+  tradeLogs CopyTradeLog[]
+}
+
+model CopyTradeLog {
+  id         String       @id @default(uuid())
+  masterId   String
+  master     CopyMaster   @relation(fields: [masterId], references: [id])
+  followerId String
+  follower   CopyFollower @relation(fields: [followerId], references: [id])
+
+  masterOrderId   String?
+  followerOrderId String?
+  symbol          String
+  side            String
+  quantity        Int
+  price           Float
+
+  status       String @default("QUEUED") // QUEUED|EXECUTED|FAILED|SKIPPED|RISK_REJECTED
+  retryCount   Int    @default(0)
+  errorMessage String?
+  riskReason   String?
+
+  executedAt DateTime?
+  createdAt  DateTime  @default(now())
+}
+
+// ─────────────────────────────────────────────────────────────
+// GUARDIAN INCIDENT MONITOR MODEL
+// ─────────────────────────────────────────────────────────────
+
+model GuardianIncident {
+  id              String   @id @default(uuid())
+  component       String   // FRONTEND, BACKEND, DATABASE, REDIS, BROKER, WEBHOOK, QUEUE, LOGIN, WALLET, MEMBERSHIP
+  severity        String   // INFO, WARNING, CRITICAL
+  message         String
+  error           String?
+  autoActionTaken String?  // e.g. "RESTARTED_STREAM", "ALERTED_ADMIN", "NO_ACTION"
+  timestamp       DateTime @default(now())
+
+  @@index([component, timestamp])
+}
+

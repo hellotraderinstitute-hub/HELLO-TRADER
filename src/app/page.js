@@ -20,6 +20,7 @@ import ApiStatusMonitor from '../components/ApiStatusMonitor';
 import NotificationsModal from '../components/NotificationsModal';
 import LandingPage from '../components/LandingPage';
 import InstallPwaModal from '../components/InstallPwaModal';
+import UserSettings from '../components/UserSettings';
 import apiClient from '../lib/axios';
 import { Bell, User, TrendingUp, TrendingDown, Lock, CheckCircle2, AlertTriangle, Key, ShieldCheck, Eye, EyeOff } from 'lucide-react';
 
@@ -50,6 +51,7 @@ export default function Home() {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [viewLanding, setViewLanding] = useState(false);
   const [studentIdInput, setStudentIdInput] = useState('');
+  const [loginMobileInput, setLoginMobileInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
   const [loginError, setLoginError] = useState('');
 
@@ -185,10 +187,17 @@ export default function Home() {
     try {
       const res = await apiClient.post('/auth/login', {
         emailOrPhone: studentIdInput.trim(),
+        phone: loginMobileInput.trim(),
         password: passwordInput
       });
 
       if (res.data && res.data.user) {
+        // Partner Gateway Check & Redirection
+        if (res.data?.role === 'PARTNER' || res.data?.redirectTo === '/partner' || String(res.data.user?.role || '').toUpperCase() === 'PARTNER') {
+          window.location.href = '/partner';
+          return;
+        }
+
         const student = res.data.user;
         if (student.status !== 'ACTIVE') {
           setLoginError('Account suspended or awaiting admin activation.');
@@ -541,57 +550,85 @@ export default function Home() {
                   <p className="text-[10px] text-gray-500 mt-1">Demat Trading Education Environment</p>
                 </div>
 
-                <form onSubmit={handleLogin} className="space-y-4">
-                  <div>
-                    <label className="block text-gray-400 font-bold mb-1">STUDENT ID / CODE</label>
-                    <input 
-                      type="text"
-                      disabled={!isServerOnline}
-                      value={studentIdInput}
-                      onChange={e => setStudentIdInput(e.target.value)}
-                      placeholder="e.g. HT1001"
-                      className="w-full bg-[#0b0e14] border border-white/10 px-3 py-2.5 rounded-lg text-white font-extrabold focus:outline-none focus:border-[#D4AF37]"
-                      required
-                    />
-                  </div>
+                {(() => {
+                  const isPartnerLogin = studentIdInput.trim().toUpperCase().startsWith('PHT');
+                  return (
+                    <form onSubmit={handleLogin} className="space-y-4">
+                      {isPartnerLogin && (
+                        <div className="bg-cyan-500/10 border border-cyan-500/30 p-2 rounded-lg text-cyan-400 text-center font-bold text-[10px] uppercase tracking-wider flex items-center justify-center gap-1.5">
+                          <Users className="w-3.5 h-3.5" /> Partner Business Authentication
+                        </div>
+                      )}
 
-                  <div>
-                    <label className="block text-gray-400 font-bold mb-1">PASSWORD</label>
-                    <div className="relative">
-                      <input 
-                        type={showStudentPassword ? "text" : "password"}
+                      <div>
+                        <label className="block text-gray-400 font-bold mb-1">
+                          {isPartnerLogin ? 'PARTNER ID (PHT...)' : 'STUDENT ID / CODE'}
+                        </label>
+                        <input 
+                          type="text"
+                          disabled={!isServerOnline}
+                          value={studentIdInput}
+                          onChange={e => setStudentIdInput(e.target.value)}
+                          placeholder={isPartnerLogin ? "e.g. PHT0036" : "e.g. HT1001"}
+                          className={`w-full bg-[#0b0e14] border px-3 py-2.5 rounded-lg text-white font-extrabold focus:outline-none ${isPartnerLogin ? 'border-cyan-500/50 focus:border-cyan-400' : 'border-white/10 focus:border-[#D4AF37]'}`}
+                          required
+                        />
+                      </div>
+
+                      {isPartnerLogin && (
+                        <div>
+                          <label className="block text-cyan-400 font-bold mb-1">REGISTERED MOBILE NUMBER *</label>
+                          <input 
+                            type="tel"
+                            disabled={!isServerOnline}
+                            value={loginMobileInput}
+                            onChange={e => setLoginMobileInput(e.target.value)}
+                            placeholder="e.g. 9876543210"
+                            className="w-full bg-[#0b0e14] border border-cyan-500/40 px-3 py-2.5 rounded-lg text-white font-extrabold focus:outline-none focus:border-cyan-400"
+                            required
+                          />
+                        </div>
+                      )}
+
+                      <div>
+                        <label className="block text-gray-400 font-bold mb-1">PASSWORD</label>
+                        <div className="relative">
+                          <input 
+                            type={showStudentPassword ? "text" : "password"}
+                            disabled={!isServerOnline}
+                            value={passwordInput}
+                            onChange={e => setPasswordInput(e.target.value)}
+                            placeholder="••••••••"
+                            className={`w-full bg-[#0b0e14] border pl-3 pr-10 py-2.5 rounded-lg text-white focus:outline-none ${isPartnerLogin ? 'border-cyan-500/50 focus:border-cyan-400' : 'border-white/10 focus:border-[#D4AF37]'}`}
+                            required
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowStudentPassword(!showStudentPassword)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white"
+                          >
+                            {showStudentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        </div>
+                      </div>
+
+                      {loginError && (
+                        <div className="text-red-400 font-bold bg-red-500/10 p-2 rounded border border-red-500/30 text-[10px]">
+                          {loginError}
+                        </div>
+                      )}
+                      {!isServerOnline && <div className="text-red-500 font-bold text-center">API SERVER OFFLINE - PLEASE WAIT</div>}
+
+                      <button 
+                        type="submit"
                         disabled={!isServerOnline}
-                        value={passwordInput}
-                        onChange={e => setPasswordInput(e.target.value)}
-                        placeholder="••••••••"
-                        className="w-full bg-[#0b0e14] border border-white/10 pl-3 pr-10 py-2.5 rounded-lg text-white focus:outline-none focus:border-[#D4AF37]"
-                        required
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowStudentPassword(!showStudentPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white"
+                        className={`w-full py-2.5 font-extrabold rounded-lg text-xs transition-all ${isPartnerLogin ? 'bg-cyan-500 hover:bg-cyan-400 text-black shadow-[0_0_15px_rgba(0,212,255,0.3)]' : 'bg-gradient-to-r from-[#D4AF37] to-[#FFD700] hover:brightness-110 text-black shadow-[0_0_15px_rgba(212,175,55,0.3)]'}`}
                       >
-                        {showStudentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        {isPartnerLogin ? 'AUTHENTICATE PARTNER' : 'AUTHENTICATE ACCOUNT'}
                       </button>
-                    </div>
-                  </div>
-
-                  {loginError && (
-                    <div className="text-red-400 font-bold bg-red-500/10 p-2 rounded border border-red-500/30 text-[10px]">
-                      {loginError}
-                    </div>
-                  )}
-                  {!isServerOnline && <div className="text-red-500 font-bold text-center">API SERVER OFFLINE - PLEASE WAIT</div>}
-
-                  <button 
-                    type="submit"
-                    disabled={!isServerOnline}
-                    className="w-full py-2.5 bg-gradient-to-r from-[#D4AF37] to-[#FFD700] hover:brightness-110 text-black font-extrabold rounded-lg text-xs transition-all shadow-[0_0_15px_rgba(212,175,55,0.3)]"
-                  >
-                    AUTHENTICATE ACCOUNT
-                  </button>
-                </form>
+                    </form>
+                  );
+                })()}
 
                 <div className="text-center pt-2.5 border-t border-white/5 space-y-2">
                   <InstallPwaModal variant="sidebar" />
@@ -728,6 +765,24 @@ export default function Home() {
               <span className={`w-2 h-2 rounded-full ${isNseMarketOpen ? 'bg-[#00FF41] animate-ping' : 'bg-amber-400'}`} />
               <span>{isNseMarketOpen ? '🟢 NSE MARKET OPEN (09:15 - 15:30 IST)' : '🔴 NSE CLOSED (09:15 - 15:30 IST)'}</span>
             </div>
+            {user?.adminSupportMode && (
+              <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border border-amber-500/30 bg-amber-500/10 text-amber-400 text-[10px] font-bold">
+                <span>⚠️ ADMIN / SUPPORT MODE</span>
+                <button 
+                  onClick={async () => {
+                    try {
+                      await apiClient.post('/auth/logout');
+                      window.location.href = '/';
+                    } catch (_) {
+                      window.location.href = '/';
+                    }
+                  }}
+                  className="ml-2 underline text-white hover:text-amber-400 cursor-pointer font-extrabold uppercase"
+                >
+                  [EXIT]
+                </button>
+              </div>
+            )}
             <div className="hidden md:flex items-center gap-4 text-[#bbc9cf]">
               {tickers.slice(0,3).map(t => (
                 <span key={t.symbol} className="cursor-pointer hover:text-white transition-colors">
@@ -883,8 +938,10 @@ export default function Home() {
             {activeTab === 'ai-lab' && <AILab />}
             {activeTab === 'wallet' && <WalletHub />}
             {activeTab === 'admin' && <AdminPortal />}
+            {activeTab === 'static-ip' && <AdminPortal initialTab="STATIC_IP" />}
             {activeTab === 'guardian' && <GuardianDashboard />}
             {activeTab === 'referral' && <ReferralDashboard />}
+            {activeTab === 'settings' && <UserSettings />}
           </div>
         </div>
       </div>

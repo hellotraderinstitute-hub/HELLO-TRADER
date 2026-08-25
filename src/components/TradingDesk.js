@@ -102,10 +102,10 @@ export default function TradingDesk() {
           <span>Vol: <b className="text-white">{currentTicker?.volume}</b></span>
         </div>
         {/* Timeframes */}
-        <div className="ml-auto flex items-center bg-[#1d2026] p-0.5 rounded border border-[#3c494e]/30">
-          {['1m','5m','15m','1h','1D'].map(tf => (
+        <div className="ml-auto flex items-center bg-[#1d2026] p-0.5 rounded border border-[#3c494e]/30 overflow-x-auto">
+          {['1m','3m','5m','15m','30m','1h','2h','4h','1D'].map(tf => (
             <button key={tf} onClick={() => setTimeframe(tf)}
-              className={`px-2.5 py-0.5 rounded text-[11px] font-bold transition-all ${timeframe === tf ? 'bg-[#00d4ff] text-black' : 'text-[#bbc9cf] hover:text-white'}`}>
+              className={`px-2 py-0.5 rounded text-[11px] font-bold transition-all ${timeframe === tf ? 'bg-[#00d4ff] text-black' : 'text-[#bbc9cf] hover:text-white'}`}>
               {tf}
             </button>
           ))}
@@ -306,7 +306,16 @@ export default function TradingDesk() {
                         <td className="px-2 py-1.5 font-bold text-[#859398]">{pos.productType || 'INTRADAY'}</td>
                         <td className="px-2 py-1.5">{pos.quantity}</td>
                         <td className="px-2 py-1.5">{pos.entryPrice.toLocaleString(undefined, {maximumFractionDigits: 4})}</td>
-                        <td className="px-2 py-1.5 font-bold">{pos.currentPrice.toLocaleString(undefined, {maximumFractionDigits: 4})}</td>
+                        <td className="px-2 py-1.5 font-bold">
+                          <div className="flex items-center gap-1.5">
+                            <span>₹{pos.currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</span>
+                            {pos.isStale && (
+                              <span className="px-1 py-0.2 bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded text-[9px] font-bold">
+                                STALE
+                              </span>
+                            )}
+                          </div>
+                        </td>
                         <td className="px-2 py-1.5 text-[#00d4ff] font-bold">{pos.leverage}x</td>
                         <td className={`px-2 py-1.5 font-extrabold ${pos.pnl >= 0 ? 'text-[#00e639]' : 'text-[#ffb4ab]'}`}>
                           {pos.pnl >= 0 ? '+' : ''}₹{pos.pnl.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}

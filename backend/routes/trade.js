@@ -37,6 +37,8 @@ router.get('/option-chain/expiries', async (req, res) => {
   }
 });
 
+const { checkUserEntitlement, requireEntitlement, getDailyFreeTradeUsage, sanitizeOptionChainForFreeUser } = require('../services/entitlementService');
+
 // GET /option-chain?symbol=NIFTY&expiry=2026-08-13
 router.get('/option-chain', async (req, res) => {
   try {
@@ -64,12 +66,22 @@ router.get('/option-chain', async (req, res) => {
       });
     }
 
+    // Evaluate entitlement for option chain data tier
+    const userId = req.user?.id;
+    const entitlement = userId ? await checkUserEntitlement(userId, 'OPTION_CHAIN') : { authorized: false };
+    const isPremium = entitlement.authorized;
+
+    const contractsPayload = isPremium
+      ? result.contracts
+      : sanitizeOptionChainForFreeUser(result.contracts);
+
     res.json({
       success: true,
+      tier: isPremium ? 'PREMIUM' : 'FREE',
       symbol,
       expiry,
       spotPrice: result.spotPrice,
-      contracts: result.contracts,
+      contracts: contractsPayload,
       totalStrikes: result.totalStrikes || result.contracts.length,
       dataTime: result.dataTime,
       lastUpdated: result.lastUpdated,
@@ -93,19 +105,101 @@ router.get('/option-chain/status', async (req, res) => {
   }
 });
 
+// GET /daily-trade-status — Check daily free paper trade limit status
+router.get('/daily-trade-status', async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ error: 'Authentication required' });
+
+    const entitlement = await checkUserEntitlement(userId, 'PAPER_TRADING');
+    const isPremium = entitlement.authorized;
+    const usage = await getDailyFreeTradeUsage(userId);
+
+    res.json({
+      success: true,
+      isPremium,
+      usedToday: usage.usedToday,
+      maxFree: 1,
+      remainingFree: isPremium ? 'UNLIMITED' : usage.remaining,
+      startOfDayIST: usage.startOfDayIST
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Helper to get Paper Balance
 async function getPaperBalance(userId) {
   const ledgers = await prisma.ledger.findMany({
     where: { userId, walletType: 'PAPER' }
   });
+
+  if (ledgers.length === 0) {
+    // New user: auto-seed standard initial virtual paper capital
+    const settings = await prisma.systemSettings.findUnique({ where: { id: 'CONFIG' } });
+    const initialCapital = settings?.paperBalance || 5000000;
+    try {
+      await prisma.ledger.create({
+        data: {
+          userId,
+          walletType: 'PAPER',
+          amount: initialCapital,
+          type: 'CREDIT',
+          reason: 'WELCOME_PAPER_MARGIN'
+        }
+      });
+      return initialCapital;
+    } catch (_) {
+      return initialCapital;
+    }
+  }
+
   return ledgers.reduce((acc, curr) => curr.type === 'CREDIT' ? acc + curr.amount : acc - curr.amount, 0);
 }
 
-// POST /place
+function isOptionContract(symbol) {
+  if (!symbol) return false;
+  const s = String(symbol).trim().toUpperCase();
+  return /\s+(CE|PE)$/i.test(s) || /\d+(CE|PE)$/i.test(s) || /[-_](CE|PE)$/i.test(s);
+}
+
+function calculateMargin(symbol, productType, orderType, entryPrice, quantity) {
+  const tradeValue = entryPrice * quantity;
+  const isOption = isOptionContract(symbol);
+  // Option BUY (Long Options) requires 100% upfront premium (1x leverage / 0 leverage)
+  if (isOption && orderType === 'BUY') {
+    return tradeValue;
+  }
+  // Generic Equity Intraday allows 5x leverage
+  if (productType === 'INTRADAY') {
+    return tradeValue / 5;
+  }
+  return tradeValue;
+}
+
+// POST /place — Order Execution (Free 1-Trade/Day IST Limit Enforced)
 router.post('/place', async (req, res) => {
   try {
-    const { symbol, productType, orderType, quantity, entryPrice } = req.body;
-    
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ error: 'Authentication required' });
+
+    // 1. Check Entitlement Tier & Daily Limit
+    const entitlement = await checkUserEntitlement(userId, 'PAPER_TRADING');
+    const isPremium = entitlement.authorized;
+
+    if (!isPremium) {
+      const usage = await getDailyFreeTradeUsage(userId);
+      if (usage.usedToday >= 1) {
+        return res.status(403).json({
+          success: false,
+          error: 'FREE_DAILY_TRADE_LIMIT_REACHED',
+          message: 'Free daily paper trade limit reached (1/1 used today). Upgrade to Premium Membership for unlimited paper trading.',
+          dailyUsage: usage
+        });
+      }
+    }
+    const { symbol, productType, orderType, quantity, entryPrice, orderExecutionType, limitPrice, currentMarketPrice } = req.body;
+
     if (!symbol || !productType || !orderType || !quantity || !entryPrice) {
       return res.status(400).json({ error: 'Missing required trade parameters' });
     }
@@ -114,13 +208,26 @@ router.post('/place', async (req, res) => {
 
     // Delivery short selling is not allowed in Indian markets.
     if (productType === 'DELIVERY' && orderType === 'SELL') {
-      // In a real system, we'd check their holdings. For now, block naked delivery shorts.
       return res.status(400).json({ error: 'Delivery short selling is not permitted.' });
     }
 
-    // Calculate required margin
-    const tradeValue = entryPrice * quantity;
-    const requiredMargin = productType === 'INTRADAY' ? tradeValue / 5 : tradeValue;
+    // Determine if order should be OPEN (filled immediately) or PENDING (waiting for limit trigger)
+    const isLimitOrder = orderExecutionType === 'LIMIT' && limitPrice != null;
+    let initialStatus = 'OPEN';
+    const effectiveEntryPrice = isLimitOrder ? Number(limitPrice) : Number(entryPrice);
+
+    if (isLimitOrder && currentMarketPrice != null) {
+      const cmp = Number(currentMarketPrice);
+      const lp = Number(limitPrice);
+      if (orderType === 'BUY' && cmp > lp) {
+        initialStatus = 'PENDING';
+      } else if (orderType === 'SELL' && cmp < lp) {
+        initialStatus = 'PENDING';
+      }
+    }
+
+    // Calculate required margin (Option BUY requires 100% premium, Intraday equity gets 5x)
+    const requiredMargin = calculateMargin(symbol, productType, orderType, effectiveEntryPrice, quantity);
 
     // Check balance
     const currentBalance = await getPaperBalance(req.user.id);
@@ -133,7 +240,7 @@ router.post('/place', async (req, res) => {
     // Process Transaction (Deduct Margin and Create Trade)
     let trade;
     await prisma.$transaction(async (tx) => {
-      // Block margin
+      // Block margin for the order
       await tx.ledger.create({
         data: {
           userId: req.user.id,
@@ -152,15 +259,96 @@ router.post('/place', async (req, res) => {
           productType,
           orderType,
           quantity,
-          entryPrice,
-          status: 'OPEN'
+          entryPrice: effectiveEntryPrice,
+          status: initialStatus
         }
       });
     });
 
-    if (req.io) req.io.to(req.user.studentId).emit('trade_opened', trade);
+    if (req.io) req.io.to(req.user.studentId).emit(initialStatus === 'PENDING' ? 'order_placed' : 'trade_opened', trade);
     
-    res.json({ success: true, trade, requiredMargin });
+    res.json({ success: true, trade, requiredMargin, isPending: initialStatus === 'PENDING' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /cancel-order — Cancel PENDING limit order and refund blocked margin
+router.post('/cancel-order', async (req, res) => {
+  try {
+    const { tradeId } = req.body;
+    if (!tradeId) return res.status(400).json({ error: 'Missing tradeId' });
+
+    const trade = await prisma.trade.findUnique({ where: { id: tradeId } });
+    if (!trade || trade.userId !== req.user.id) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    if (trade.status !== 'PENDING') {
+      return res.status(400).json({ error: 'Only pending orders can be cancelled' });
+    }
+
+    const marginToRefund = calculateMargin(trade.symbol, trade.productType, trade.orderType, trade.entryPrice, trade.quantity);
+
+    let cancelledTrade;
+    await prisma.$transaction(async (tx) => {
+      cancelledTrade = await tx.trade.update({
+        where: { id: tradeId },
+        data: { status: 'CANCELLED', closedAt: new Date() }
+      });
+
+      await tx.ledger.create({
+        data: {
+          userId: req.user.id,
+          walletType: 'PAPER',
+          amount: marginToRefund,
+          type: 'CREDIT',
+          reason: `TRADE_CANCELLED_MARGIN_REFUND_${trade.symbol}`
+        }
+      });
+    });
+
+    res.json({ success: true, trade: cancelledTrade, refundedMargin: marginToRefund });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Helper / Route to trigger pending limit orders when market price reaches limit
+async function processPendingOrders(symbol, currentMarketPrice) {
+  const pendingTrades = await prisma.trade.findMany({
+    where: {
+      symbol,
+      status: 'PENDING'
+    }
+  });
+
+  const filledTrades = [];
+  for (const t of pendingTrades) {
+    let shouldFill = false;
+    if (t.orderType === 'BUY' && currentMarketPrice <= t.entryPrice) {
+      shouldFill = true;
+    } else if (t.orderType === 'SELL' && currentMarketPrice >= t.entryPrice) {
+      shouldFill = true;
+    }
+
+    if (shouldFill) {
+      const updated = await prisma.trade.update({
+        where: { id: t.id },
+        data: { status: 'OPEN', openedAt: new Date() }
+      });
+      filledTrades.push(updated);
+    }
+  }
+  return filledTrades;
+}
+
+router.post('/trigger-pending', async (req, res) => {
+  try {
+    const { symbol, currentPrice } = req.body;
+    if (!symbol || currentPrice == null) return res.status(400).json({ error: 'Missing parameters' });
+    const filled = await processPendingOrders(symbol, Number(currentPrice));
+    res.json({ success: true, filledCount: filled.length, filledTrades: filled });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -187,9 +375,8 @@ router.post('/close', async (req, res) => {
       ? (exitPrice - trade.entryPrice) * trade.quantity
       : (trade.entryPrice - exitPrice) * trade.quantity;
 
-    // Calculate original margin used
-    const tradeValue = trade.entryPrice * trade.quantity;
-    const originalMargin = trade.productType === 'INTRADAY' ? tradeValue / 5 : tradeValue;
+    // Calculate original margin used (Option BUY was 100% premium, Intraday equity was 5x)
+    const originalMargin = calculateMargin(trade.symbol, trade.productType, trade.orderType, trade.entryPrice, trade.quantity);
 
     const totalRefund = originalMargin + pnl;
 

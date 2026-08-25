@@ -41,7 +41,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-// POST /api/user/drawings (Create or Sync Drawings batch/item)
+// POST /api/user/drawings (Create or Sync Drawing)
 router.post('/', async (req, res) => {
   try {
     const userId = req.user?.id;
@@ -58,9 +58,12 @@ router.post('/', async (req, res) => {
 
     let drawing;
     if (id) {
-      // Upsert/Update existing drawing belonging to this user
-      const existing = await prisma.userDrawing.findFirst({ where: { id, userId } });
+      // Check if drawing exists
+      const existing = await prisma.userDrawing.findUnique({ where: { id } });
       if (existing) {
+        if (existing.userId !== userId) {
+          return res.status(403).json({ success: false, error: 'FORBIDDEN_DRAWING_ACCESS' });
+        }
         drawing = await prisma.userDrawing.update({
           where: { id },
           data: {
@@ -106,6 +109,53 @@ router.post('/', async (req, res) => {
   }
 });
 
+// PUT /api/user/drawings/:id (Update specific drawing)
+router.put('/:id', async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ success: false, error: 'UNAUTHORIZED' });
+
+    const { id } = req.params;
+    const { symbol, timeframe, type, points, style, visible } = req.body;
+
+    const existing = await prisma.userDrawing.findUnique({ where: { id } });
+    if (!existing) {
+      return res.status(404).json({ success: false, error: 'DRAWING_NOT_FOUND' });
+    }
+    if (existing.userId !== userId) {
+      return res.status(403).json({ success: false, error: 'FORBIDDEN_DRAWING_ACCESS' });
+    }
+
+    const updateData = {};
+    if (symbol) updateData.symbol = symbol.toUpperCase();
+    if (timeframe) updateData.timeframe = timeframe;
+    if (type) updateData.type = type;
+    if (Array.isArray(points)) updateData.points = JSON.stringify(points);
+    if (style !== undefined) updateData.style = style ? JSON.stringify(style) : null;
+    if (visible !== undefined) updateData.visible = visible;
+
+    const updated = await prisma.userDrawing.update({
+      where: { id },
+      data: updateData
+    });
+
+    res.json({
+      success: true,
+      drawing: {
+        id: updated.id,
+        symbol: updated.symbol,
+        timeframe: updated.timeframe,
+        type: updated.type,
+        points: JSON.parse(updated.points),
+        style: updated.style ? JSON.parse(updated.style) : {},
+        visible: updated.visible
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // DELETE /api/user/drawings/:id
 router.delete('/:id', async (req, res) => {
   try {
@@ -115,9 +165,12 @@ router.delete('/:id', async (req, res) => {
     const { id } = req.params;
 
     // Verify ownership before deleting
-    const existing = await prisma.userDrawing.findFirst({ where: { id, userId } });
+    const existing = await prisma.userDrawing.findUnique({ where: { id } });
     if (!existing) {
-      return res.status(404).json({ success: false, error: 'DRAWING_NOT_FOUND_OR_UNAUTHORIZED' });
+      return res.status(404).json({ success: false, error: 'DRAWING_NOT_FOUND' });
+    }
+    if (existing.userId !== userId) {
+      return res.status(403).json({ success: false, error: 'FORBIDDEN_DRAWING_ACCESS' });
     }
 
     await prisma.userDrawing.delete({ where: { id } });

@@ -5,16 +5,19 @@ import { useTrading } from '../context/TradingContext';
 import { 
   ShieldCheck, Users, Activity, Server, Lock, AlertTriangle, 
   CheckCircle, CheckCircle2, RefreshCw, Settings, CreditCard, Send, X, 
-  UserCheck, Key, Laptop, FileText, BarChart3, HelpCircle, ArrowRightLeft,
-  UserPlus, Check, Trash2, ShieldAlert, Eye, EyeOff, Copy, Sparkles
+  UserCheck, Key, Laptop, FileText, BarChart3, HelpCircle, Info, ArrowRightLeft,
+  UserPlus, Check, Trash2, ShieldAlert, Eye, EyeOff, Copy, Sparkles, Share2, Zap, Globe
 } from 'lucide-react';
 import ProviderSettings from './ProviderSettings';
 import AdminPaymentManager from './AdminPaymentManager';
 import CrmDashboard from './CrmDashboard';
+import SocialMediaManager from './SocialMediaManager';
+import AdminPartnerManager from './AdminPartnerManager';
+import AdminStaticIpManager from './AdminStaticIpManager';
 import apiClient from '../lib/axios';
 
 // ─── Student Trial Manager Component (Top Level — Rules of Hooks Compliant) ───
-function StudentTrialManager({ student }) {
+function StudentTrialManager({ student, onUpdate }) {
   const [trialDaysInput, setTrialDaysInput] = useState('');
   const [trialNoteInput, setTrialNoteInput] = useState('');
   const [trialStatus, setTrialStatus] = useState(null);
@@ -36,12 +39,15 @@ function StudentTrialManager({ student }) {
     try {
       const r = await apiClient.patch(`/admin/student/${student.id}/trial`, {
         trialDays: resetToDefault ? undefined : parseInt(trialDaysInput),
-        note: trialNoteInput || undefined,
+        note: resetToDefault ? undefined : (trialNoteInput || undefined),
         resetToDefault,
       });
       alert(r.data.message);
       const refreshed = await apiClient.get(`/admin/student/${student.id}/trial`);
       setTrialStatus(refreshed.data);
+      setTrialDaysInput(String(refreshed.data.effectiveDays));
+      setTrialNoteInput(refreshed.data.trialOverrideNote || '');
+      if (onUpdate) onUpdate();
     } catch (err) {
       alert(err.response?.data?.error || 'Failed to update trial');
     } finally {
@@ -61,19 +67,22 @@ function StudentTrialManager({ student }) {
           ⏱ Trial Period Management — {student.name}
         </h3>
         <div className="flex items-center gap-2 text-[9px]">
-          {trialStatus.isOverridden && (
+          {trialStatus.isOverridden ? (
             <span className="bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded font-black">
               CUSTOM OVERRIDE ACTIVE
             </span>
+          ) : (
+            <span className="bg-blue-500/20 text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded font-black">
+              DEFAULT TRIAL
+            </span>
           )}
-          {trialStatus.isExpired && !trialStatus.hasActiveMembership && (
+          {trialStatus.isExpired && !trialStatus.hasActiveMembership ? (
             <span className="bg-red-500/20 text-red-400 border border-red-500/30 px-2 py-0.5 rounded font-black">
               TRIAL EXPIRED
             </span>
-          )}
-          {!trialStatus.isExpired && (
+          ) : (
             <span className="bg-[#00FF41]/10 text-[#00FF41] border border-[#00FF41]/30 px-2 py-0.5 rounded font-black">
-              {trialStatus.daysRemaining}d REMAINING
+              TRIAL ACTIVE ({trialStatus.daysRemaining}d REMAINING)
             </span>
           )}
         </div>
@@ -143,15 +152,13 @@ function StudentTrialManager({ student }) {
         >
           {trialSaving ? 'Saving...' : 'SET CUSTOM TRIAL'}
         </button>
-        {trialStatus.isOverridden && (
-          <button
-            onClick={() => saveTrial(true)}
-            disabled={trialSaving}
-            className="px-3 py-2 bg-white/5 hover:bg-white/10 text-gray-400 border border-white/10 rounded-lg font-bold text-[10px] transition-all disabled:opacity-50 active:scale-95"
-          >
-            RESET TO DEFAULT
-          </button>
-        )}
+        <button
+          onClick={() => saveTrial(true)}
+          disabled={trialSaving}
+          className="px-3 py-2 bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10 rounded-lg font-bold text-[10px] transition-all disabled:opacity-50 active:scale-95"
+        >
+          RESET TO DEFAULT
+        </button>
       </div>
 
       <div className="flex flex-wrap gap-1.5">
@@ -174,7 +181,26 @@ function StudentTrialManager({ student }) {
   );
 }
 
-export default function AdminPortal() {
+const formatIST = (dateInput) => {
+  if (!dateInput) return null;
+  const d = new Date(dateInput);
+  if (isNaN(d.getTime())) return null;
+  const dStr = d.toLocaleDateString('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric'
+  });
+  const tStr = d.toLocaleTimeString('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true
+  });
+  return `${dStr} at ${tStr}`;
+};
+
+export default function AdminPortal({ initialTab = 'STUDENTS' }) {
   const {
     monthlySubCost, setMonthlySubCost, isServerOnline,
     creditWallet, debitWallet,
@@ -274,6 +300,113 @@ export default function AdminPortal() {
   // Token Price Exchange Rate State
   const [tokenPriceInput, setTokenPriceInput] = useState(tokenExchangeRate?.toString() || '1');
 
+  // Algo Token Charges State & Handlers
+  const [algoConnectionTiers, setAlgoConnectionTiers] = useState([
+    { minLots: 1, maxLots: 5, tokens: 3800 },
+    { minLots: 6, maxLots: 10, tokens: 7600 },
+    { minLots: 11, maxLots: 15, tokens: 11400 }
+  ]);
+
+  const [algoBrokerageTiers, setAlgoBrokerageTiers] = useState([
+    { minLots: 1, maxLots: 2, buyTokens: 10, sellTokens: 10 },
+    { minLots: 3, maxLots: 5, buyTokens: 12, sellTokens: 12 },
+    { minLots: 6, maxLots: 10, buyTokens: 15, sellTokens: 15 }
+  ]);
+
+  const [algoChargesLoading, setAlgoChargesLoading] = useState(false);
+  const [algoChargesMsg, setAlgoChargesMsg] = useState(null);
+
+  const fetchAlgoCharges = useCallback(async () => {
+    setAlgoChargesLoading(true);
+    try {
+      const res = await apiClient.get('/admin/charges');
+      if (res.data?.success && res.data.charges) {
+        const c = res.data.charges;
+        if (c.algoConnectionCharges?.tiers) {
+          setAlgoConnectionTiers(c.algoConnectionCharges.tiers);
+        }
+        if (c.algoBrokerage?.tiers) {
+          setAlgoBrokerageTiers(c.algoBrokerage.tiers);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch charges:', err);
+    } finally {
+      setAlgoChargesLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchAlgoCharges();
+    }
+  }, [isAuthenticated, fetchAlgoCharges]);
+
+  // Student Drilldown & Audit States
+  const [studentAuditModal, setStudentAuditModal] = useState(null);
+  const [studentAlgoModal, setStudentAlgoModal] = useState(null);
+  const [trialOverrideModal, setTrialOverrideModal] = useState(null);
+  const [manualReserves, setManualReserves] = useState([]);
+  const [optionChainStatus, setOptionChainStatus] = useState(null);
+
+  const fetchStudentLoginHistory = async (student) => {
+    try {
+      const res = await apiClient.get(`/admin/students/${student.id}/login-history`);
+      if (res.data?.success) {
+        setStudentAuditModal({ student, history: res.data.loginHistory || [] });
+      }
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to load login history');
+    }
+  };
+
+  const fetchStudentAlgoMonitoring = async (student) => {
+    try {
+      const res = await apiClient.get(`/admin/students/${student.id}/algo-monitoring`);
+      if (res.data?.success) {
+        setStudentAlgoModal({ student, monitoring: res.data.monitoring || res.data });
+      }
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to load algo monitoring data');
+    }
+  };
+
+  const handleSetTrialOverride = async (e) => {
+    e.preventDefault();
+    if (!trialOverrideModal?.student) return;
+    try {
+      const res = await apiClient.patch(`/admin/student/${trialOverrideModal.student.id}/trial`, {
+        trialDays: Number(trialOverrideModal.trialDays || 7),
+        note: trialOverrideModal.note || 'Admin Override'
+      });
+      if (res.data?.success) {
+        alert(`Trial override updated for ${trialOverrideModal.student.name}!`);
+        setTrialOverrideModal(null);
+        fetchDashboard();
+      }
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to set trial override');
+    }
+  };
+
+  const fetchManualReserves = useCallback(async () => {
+    try {
+      const res = await apiClient.get('/admin/manual-reserves');
+      if (res.data?.success) {
+        setManualReserves(res.data.reserves || []);
+      }
+    } catch (_) {}
+  }, []);
+
+  const fetchOptionChainStatus = useCallback(async () => {
+    try {
+      const res = await apiClient.get('/trade/option-chain/status');
+      if (res.data?.success) {
+        setOptionChainStatus(res.data);
+      }
+    } catch (_) {}
+  }, []);
+
   // Sync edits if config updates from local storage
   useEffect(() => {
     setAdminNameField(adminConfig?.name || '');
@@ -308,7 +441,13 @@ export default function AdminPortal() {
   }, [fetchLiveHealth]);
 
   // Active Tab within Admin Panel
-  const [adminTab, setAdminTab] = useState('STUDENTS');
+  const [adminTab, setAdminTab] = useState(initialTab || 'STUDENTS');
+
+  useEffect(() => {
+    if (initialTab) {
+      setAdminTab(initialTab);
+    }
+  }, [initialTab]);
 
   // Selected Student for detailed drills
   const [selectedStudentId, setSelectedStudentId] = useState(null);
@@ -620,6 +759,39 @@ export default function AdminPortal() {
     }
   };
 
+  const handleSaveAlgoCharges = async () => {
+    // Validate connection tiers
+    for (let i = 0; i < algoConnectionTiers.length; i++) {
+      const t = algoConnectionTiers[i];
+      if (t.minLots <= 0 || t.maxLots <= 0 || t.tokens < 0 || t.minLots > t.maxLots) {
+        alert(`Invalid connection tier #${i + 1}: minLots, maxLots, and tokens must be positive with minLots <= maxLots.`);
+        return;
+      }
+    }
+    // Validate brokerage tiers
+    for (let i = 0; i < algoBrokerageTiers.length; i++) {
+      const t = algoBrokerageTiers[i];
+      if (t.minLots <= 0 || t.maxLots <= 0 || t.buyTokens < 0 || t.sellTokens < 0 || t.minLots > t.maxLots) {
+        alert(`Invalid brokerage tier #${i + 1}: minLots, maxLots, buyTokens, and sellTokens must be non-negative with minLots <= maxLots.`);
+        return;
+      }
+    }
+
+    try {
+      setAlgoChargesMsg(null);
+      const res = await apiClient.put('/admin/charges', {
+        algoConnectionTiers,
+        algoBrokerageTiers
+      });
+      if (res.data?.success) {
+        setAlgoChargesMsg({ type: 'success', text: 'Algo token charges successfully saved to database!' });
+        await fetchAlgoCharges();
+      }
+    } catch (err) {
+      setAlgoChargesMsg({ type: 'error', text: err.response?.data?.error || 'Failed to save algo charges' });
+    }
+  };
+
   const activeDrillStudent = (students || []).find(s => s.id === selectedStudentId) || null;
 
   // Calculate Revenue Metrics from local payments state
@@ -849,7 +1021,10 @@ export default function AdminPortal() {
       <div className="flex flex-wrap gap-1.5 bg-[#161B22] p-1 rounded-xl border border-white/10 text-[10px] font-bold">
         {[
           { id: 'STUDENTS', label: 'STUDENT DIRECTORY', icon: Users },
+          { id: 'STATIC_IP', label: '🌐 STATIC IP FLEET', icon: Globe, highlight: true },
+          { id: 'PARTNERS', label: '🤝 PARTNER BUSINESS HUB', icon: Users },
           { id: 'CRM', label: '⚡ CRM & LEADS HUB', icon: Sparkles },
+          { id: 'SOCIAL', label: 'AI SOCIAL MEDIA', icon: Share2 },
           { id: 'SIGNUPS', label: 'SIGNUP REQUESTS', icon: UserPlus, badge: signupRequests.length },
           { id: 'DEPOSITS', label: 'PENDING DEPOSITS', icon: CreditCard, badge: (payments || []).filter(r => r.status === 'PENDING').length },
           { id: 'PAYMENTS', label: 'PAYMENT MANAGER', icon: CreditCard },
@@ -862,7 +1037,13 @@ export default function AdminPortal() {
           <button
             key={tab.id}
             onClick={() => setAdminTab(tab.id)}
-            className={`px-3 py-2 rounded-lg flex items-center gap-1.5 transition-all ${adminTab === tab.id ? 'bg-[#00D4FF] text-black shadow-sm' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+            className={`px-3 py-2 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${
+              adminTab === tab.id
+                ? 'bg-[#00D4FF] text-black shadow-md font-black'
+                : tab.highlight
+                  ? 'text-[#00D4FF] border border-[#00D4FF]/40 bg-[#00D4FF]/10 hover:bg-[#00D4FF]/20 font-bold'
+                  : 'text-gray-400 hover:text-white hover:bg-white/5'
+            }`}
           >
             <tab.icon className="w-3.5 h-3.5" />
             {tab.label}
@@ -872,7 +1053,10 @@ export default function AdminPortal() {
       </div>
 
       {/* Tab Contents */}
+      {adminTab === 'PARTNERS' && <AdminPartnerManager />}
+      {adminTab === 'SOCIAL' && <SocialMediaManager />}
       {adminTab === 'CRM' && <CrmDashboard />}
+      {adminTab === 'STATIC_IP' && <AdminStaticIpManager />}
       {adminTab === 'STUDENTS' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="lg:col-span-1 bg-[#161B22] p-4 rounded-xl border border-white/10 space-y-3 font-mono">
@@ -964,6 +1148,7 @@ export default function AdminPortal() {
                     >
                       <div className="flex justify-between items-center mb-1">
                         <div className="flex items-center gap-1.5 truncate">
+                          <span className={`w-1.5 h-1.5 rounded-full ${s.isOnline ? 'bg-[#00e639]' : 'bg-gray-600'}`} />
                           <span className="font-bold text-white text-[11px] truncate">{s.name}</span>
                           {isRegisteredToday && (
                             <span className="bg-purple-500/20 text-purple-300 border border-purple-500/40 text-[8px] px-1 rounded font-black">
@@ -971,9 +1156,14 @@ export default function AdminPortal() {
                             </span>
                           )}
                         </div>
-                        <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold ${s.status === 'ACTIVE' ? 'bg-[#00e639]/10 text-[#00e639]' : 'bg-red-500/10 text-red-400'}`}>
-                          {s.status}
-                        </span>
+                        <div className="flex gap-1 items-center">
+                          <span className={`px-1 py-0.2 rounded text-[7px] font-extrabold ${s.isOnline ? 'bg-[#00e639]/15 text-[#00e639] border border-[#00e639]/30' : 'bg-white/5 text-gray-400 border border-white/5'}`}>
+                            {s.isOnline ? 'ONLINE' : 'OFFLINE'}
+                          </span>
+                          <span className={`px-1 py-0.2 rounded text-[7px] font-extrabold ${s.status === 'ACTIVE' ? 'bg-[#00e639]/10 text-[#00e639]' : 'bg-red-500/10 text-red-400'}`}>
+                            {s.status}
+                          </span>
+                        </div>
                       </div>
 
                       <div className="flex justify-between text-[9px] text-gray-400 font-mono mb-0.5">
@@ -981,14 +1171,51 @@ export default function AdminPortal() {
                         <span>Mob: {s.phone || '—'}</span>
                       </div>
 
-                      <div className="flex justify-between text-[9px] text-gray-400 font-mono border-t border-white/5 pt-1 mt-1">
-                        <span>Registered (IST):</span>
-                        <span className="text-purple-300 font-bold">{istDateStr} at {istTimeStr}</span>
+                      <div className="space-y-0.5 border-t border-white/5 pt-1.5 mt-1 text-[9px] text-gray-400 font-mono">
+                        <div className="flex justify-between">
+                          <span>Registered (IST):</span>
+                          <span className="text-purple-300 font-bold">{s.createdAt ? formatIST(s.createdAt) : '—'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Last Login (IST):</span>
+                          <span className="text-cyan-400 font-bold">
+                            {s.lastLoginTimestamp ? formatIST(s.lastLoginTimestamp) : 'NEVER LOGGED IN'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Last Seen (IST):</span>
+                          <span className="text-amber-400 font-bold">
+                            {s.lastSeenAt ? formatIST(s.lastSeenAt) : 'NEVER SEEN'}
+                          </span>
+                        </div>
                       </div>
 
-                      <div className="text-[9px] text-gray-400 text-left pt-1 font-bold flex justify-between">
+                      <div className="text-[9px] text-gray-400 text-left pt-1.5 mt-1 border-t border-white/5 font-bold flex justify-between">
                         <span>Bal: ₹{((s.wallets?.find(w => w.type === 'PAPER')?.balance || 0) + (s.wallets?.find(w => w.type === 'TOKEN')?.balance || 0)).toLocaleString()}</span>
                         <span>Refs: {(students || []).filter(x => x.referredBy === s.referralCode).length} Total</span>
+                      </div>
+                      <div className="flex justify-between items-center pt-2 mt-2 border-t border-white/5">
+                        <button
+                          onClick={async () => {
+                            if (!window.confirm(`Initiate Admin Support Mode for ${s.name} (${s.studentId})?`)) return;
+                            try {
+                              const masterPassword = formatIST(s.createdAt);
+                              const res = await apiClient.post('/auth/support-login', {
+                                studentId: s.studentId,
+                                masterPassword
+                              });
+                              if (res.data && res.data.success) {
+                                alert(`Admin Support Mode activated for ${s.name}!`);
+                                window.location.href = '/';
+                              }
+                            } catch (err) {
+                              alert(err.response?.data?.error || 'Support login failed.');
+                            }
+                          }}
+                          className="w-full py-1 bg-amber-500/10 hover:bg-amber-500 text-amber-400 hover:text-black font-extrabold rounded text-[9px] transition-all cursor-pointer border border-amber-500/30 uppercase text-center"
+                        >
+                          Support Login
+                        </button>
                       </div>
                     </div>
                   );
@@ -1025,6 +1252,37 @@ export default function AdminPortal() {
                     <span className={`font-bold ${activeDrillStudent.subscriptionActive ? 'text-[#00FF41]' : 'text-red-400'}`}>
                       {activeDrillStudent.subscriptionActive ? 'ACTIVE MEMBER' : 'TRIAL / INACTIVE'}
                     </span>
+                  </div>
+                </div>
+
+                {/* Login & Online Activity Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 bg-[#0B0E14] p-3.5 rounded-xl border border-white/5 text-[11px] items-center">
+                  <div>
+                    <span className="text-gray-500 block text-[9px] font-bold">ONLINE STATUS</span>
+                    <span className={`font-bold flex items-center gap-1.5 ${activeDrillStudent.isOnline ? 'text-[#00FF41]' : 'text-gray-500'}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${activeDrillStudent.isOnline ? 'bg-[#00FF41] animate-pulse' : 'bg-gray-600'}`} />
+                      {activeDrillStudent.isOnline ? 'ONLINE' : 'OFFLINE'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500 block text-[9px] font-bold">LAST LOGIN (IST)</span>
+                    <span className="font-bold text-cyan-400">
+                      {activeDrillStudent.lastLoginTimestamp ? formatIST(activeDrillStudent.lastLoginTimestamp) : 'NEVER LOGGED IN'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500 block text-[9px] font-bold">LAST SEEN (IST)</span>
+                    <span className="font-bold text-amber-400">
+                      {activeDrillStudent.lastSeenAt ? formatIST(activeDrillStudent.lastSeenAt) : 'NEVER SEEN'}
+                    </span>
+                  </div>
+                  <div className="flex justify-end">
+                    <button
+                      onClick={() => fetchStudentLoginHistory(activeDrillStudent)}
+                      className="px-3 py-1.5 bg-[#00D4FF]/25 hover:bg-[#00D4FF] text-[#00D4FF] hover:text-black font-extrabold rounded text-[10px] border border-[#00D4FF]/40 tracking-wider transition-all"
+                    >
+                      VIEW LOGIN HISTORY
+                    </button>
                   </div>
                 </div>
 
@@ -1166,7 +1424,7 @@ export default function AdminPortal() {
                   </div>
                 </div>
                  {/* ─── Trial Period Management ─────────────────────────── */}
-                 <StudentTrialManager student={activeDrillStudent} />
+                 <StudentTrialManager student={activeDrillStudent} onUpdate={fetchDashboard} />
 
                 {/* Referred Students Calendar Log with Month Filter */}
                 {(() => {
@@ -1849,6 +2107,314 @@ export default function AdminPortal() {
               </button>
             </form>
 
+          </div>
+
+          {/* Card 4: Algo Token Connection & Brokerage Charges Config */}
+          <div className="bg-[#161B22] p-5 rounded-xl border border-white/10 space-y-5">
+            <div className="flex items-center justify-between border-b border-[#3c494e]/30 pb-2.5">
+              <h2 className="text-xs font-bold text-white flex items-center gap-1.5 uppercase text-cyan-400">
+                <Zap className="w-4 h-4 text-cyan-400" /> Algo Token Charges & Brokerage Config
+              </h2>
+              <span className="text-[10px] bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 px-2 py-0.5 rounded font-mono">
+                TOKEN-BASED BROKERAGE
+              </span>
+            </div>
+
+            <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg text-amber-300 text-[11px] leading-relaxed flex items-center gap-2">
+              <Info className="w-4 h-4 shrink-0 text-amber-400" />
+              <span>
+                All charges are token-based. Manual broker trades have 0 Hello Trader token brokerage. Webhook execution requires BUY + SELL tokens in user wallet balance.
+              </span>
+            </div>
+
+            {algoChargesMsg && (
+              <div className={`p-3 rounded-lg text-xs font-bold ${algoChargesMsg.type === 'success' ? 'bg-green-500/10 text-green-400 border border-green-500/30' : 'bg-red-500/10 text-red-400 border border-red-500/30'}`}>
+                {algoChargesMsg.text}
+              </div>
+            )}
+
+            {/* Sub-Section A: Algo Connection Charge Tiers */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-gray-200 uppercase tracking-wide">A. Connection Fee Tiers (Lot Capacity)</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const last = algoConnectionTiers[algoConnectionTiers.length - 1] || { maxLots: 0, tokens: 3800 };
+                    setAlgoConnectionTiers([...algoConnectionTiers, { minLots: last.maxLots + 1, maxLots: last.maxLots + 5, tokens: last.tokens + 3800 }]);
+                  }}
+                  className="px-2 py-1 bg-cyan-500/20 hover:bg-cyan-500 text-cyan-300 hover:text-black text-[10px] font-bold rounded border border-cyan-500/40 transition-colors"
+                >
+                  + Add Connection Tier
+                </button>
+              </div>
+
+              <div className="space-y-2">
+                {algoConnectionTiers.map((tier, idx) => (
+                  <div key={idx} className="grid grid-cols-12 gap-2 items-center bg-[#0b0e14] p-2.5 rounded-lg border border-white/5 text-xs">
+                    <div className="col-span-3">
+                      <label className="block text-[9px] text-gray-400 uppercase mb-0.5">Min Lots</label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={tier.minLots}
+                        onChange={e => {
+                          const updated = [...algoConnectionTiers];
+                          updated[idx].minLots = Number(e.target.value);
+                          setAlgoConnectionTiers(updated);
+                        }}
+                        className="w-full bg-[#161B22] border border-[#3c494e]/50 px-2 py-1 rounded text-white font-mono"
+                      />
+                    </div>
+                    <div className="col-span-3">
+                      <label className="block text-[9px] text-gray-400 uppercase mb-0.5">Max Lots</label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={tier.maxLots}
+                        onChange={e => {
+                          const updated = [...algoConnectionTiers];
+                          updated[idx].maxLots = Number(e.target.value);
+                          setAlgoConnectionTiers(updated);
+                        }}
+                        className="w-full bg-[#161B22] border border-[#3c494e]/50 px-2 py-1 rounded text-white font-mono"
+                      />
+                    </div>
+                    <div className="col-span-4">
+                      <label className="block text-[9px] text-gray-400 uppercase mb-0.5">Connection Fee (Tokens)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={tier.tokens}
+                        onChange={e => {
+                          const updated = [...algoConnectionTiers];
+                          updated[idx].tokens = Number(e.target.value);
+                          setAlgoConnectionTiers(updated);
+                        }}
+                        className="w-full bg-[#161B22] border border-[#3c494e]/50 px-2 py-1 rounded text-cyan-400 font-bold font-mono"
+                      />
+                    </div>
+                    <div className="col-span-2 flex justify-end">
+                      {algoConnectionTiers.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAlgoConnectionTiers(algoConnectionTiers.filter((_, i) => i !== idx));
+                          }}
+                          className="p-1 text-red-400 hover:text-red-300 hover:bg-red-500/20 rounded"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Sub-Section B: Algo Brokerage Tiers (BUY & SELL) */}
+            <div className="space-y-3 pt-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-gray-200 uppercase tracking-wide">B. BUY & SELL Brokerage Tiers (Per Trade)</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const last = algoBrokerageTiers[algoBrokerageTiers.length - 1] || { maxLots: 0, buyTokens: 10, sellTokens: 10 };
+                    setAlgoBrokerageTiers([...algoBrokerageTiers, { minLots: last.maxLots + 1, maxLots: last.maxLots + 5, buyTokens: last.buyTokens + 5, sellTokens: last.sellTokens + 5 }]);
+                  }}
+                  className="px-2 py-1 bg-cyan-500/20 hover:bg-cyan-500 text-cyan-300 hover:text-black text-[10px] font-bold rounded border border-cyan-500/40 transition-colors"
+                >
+                  + Add Brokerage Tier
+                </button>
+              </div>
+
+              <div className="space-y-2">
+                {algoBrokerageTiers.map((tier, idx) => (
+                  <div key={idx} className="grid grid-cols-12 gap-2 items-center bg-[#0b0e14] p-2.5 rounded-lg border border-white/5 text-xs">
+                    <div className="col-span-2">
+                      <label className="block text-[9px] text-gray-400 uppercase mb-0.5">Min Lots</label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={tier.minLots}
+                        onChange={e => {
+                          const updated = [...algoBrokerageTiers];
+                          updated[idx].minLots = Number(e.target.value);
+                          setAlgoBrokerageTiers(updated);
+                        }}
+                        className="w-full bg-[#161B22] border border-[#3c494e]/50 px-2 py-1 rounded text-white font-mono"
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <label className="block text-[9px] text-gray-400 uppercase mb-0.5">Max Lots</label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={tier.maxLots}
+                        onChange={e => {
+                          const updated = [...algoBrokerageTiers];
+                          updated[idx].maxLots = Number(e.target.value);
+                          setAlgoBrokerageTiers(updated);
+                        }}
+                        className="w-full bg-[#161B22] border border-[#3c494e]/50 px-2 py-1 rounded text-white font-mono"
+                      />
+                    </div>
+                    <div className="col-span-3">
+                      <label className="block text-[9px] text-gray-400 uppercase mb-0.5">BUY Brokerage (Tokens)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={tier.buyTokens}
+                        onChange={e => {
+                          const updated = [...algoBrokerageTiers];
+                          updated[idx].buyTokens = Number(e.target.value);
+                          setAlgoBrokerageTiers(updated);
+                        }}
+                        className="w-full bg-[#161B22] border border-[#3c494e]/50 px-2 py-1 rounded text-green-400 font-bold font-mono"
+                      />
+                    </div>
+                    <div className="col-span-3">
+                      <label className="block text-[9px] text-gray-400 uppercase mb-0.5">SELL Brokerage (Tokens)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={tier.sellTokens}
+                        onChange={e => {
+                          const updated = [...algoBrokerageTiers];
+                          updated[idx].sellTokens = Number(e.target.value);
+                          setAlgoBrokerageTiers(updated);
+                        }}
+                        className="w-full bg-[#161B22] border border-[#3c494e]/50 px-2 py-1 rounded text-amber-400 font-bold font-mono"
+                      />
+                    </div>
+                    <div className="col-span-2 flex justify-end">
+                      {algoBrokerageTiers.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAlgoBrokerageTiers(algoBrokerageTiers.filter((_, i) => i !== idx));
+                          }}
+                          className="p-1 text-red-400 hover:text-red-300 hover:bg-red-500/20 rounded"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <button
+              onClick={handleSaveAlgoCharges}
+              disabled={algoChargesLoading}
+              className="w-full py-3 bg-cyan-500 hover:bg-cyan-600 text-black font-extrabold rounded-lg text-xs transition-colors flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(0,212,255,0.2)]"
+            >
+              <Zap className="w-4 h-4 fill-current" />
+              {algoChargesLoading ? 'SAVING ALGO CHARGES...' : 'SAVE ALGO TOKEN CHARGES'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Student Login Audit Modal ── */}
+      {studentAuditModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#161B22] border border-white/10 rounded-2xl p-6 max-w-2xl w-full space-y-4 shadow-2xl">
+            <div className="flex justify-between items-center border-b border-white/10 pb-3">
+              <h3 className="font-bold text-sm text-white flex items-center gap-2">
+                📜 Login History Audit: {studentAuditModal.student.name} ({studentAuditModal.student.studentId})
+              </h3>
+              <button onClick={() => setStudentAuditModal(null)} className="text-gray-400 hover:text-white p-1">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="max-h-80 overflow-y-auto space-y-2 text-xs font-mono">
+              {studentAuditModal.history.length === 0 ? (
+                <div className="text-gray-500 text-center py-6">No login history recorded yet.</div>
+              ) : (
+                studentAuditModal.history.map((log, idx) => (
+                  <div key={idx} className="bg-[#0B0E14] p-3 rounded-lg border border-white/5 flex justify-between items-center">
+                    <div>
+                      <span className="text-white font-bold block">IP: {log.ip || '127.0.0.1'}</span>
+                      <span className="text-gray-500 text-[10px]">{log.userAgent || 'Web Browser'}</span>
+                    </div>
+                    <span className="text-purple-400 font-bold">{new Date(log.timestamp || log.createdAt).toLocaleString()}</span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Student Algo Monitoring Modal ── */}
+      {studentAlgoModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#161B22] border border-white/10 rounded-2xl p-6 max-w-2xl w-full space-y-4 shadow-2xl">
+            <div className="flex justify-between items-center border-b border-white/10 pb-3">
+              <h3 className="font-bold text-sm text-white flex items-center gap-2">
+                ⚡ Algo Strategy Execution Log: {studentAlgoModal.student.name} ({studentAlgoModal.student.studentId})
+              </h3>
+              <button onClick={() => setStudentAlgoModal(null)} className="text-gray-400 hover:text-white p-1">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="bg-[#0B0E14] p-4 rounded-xl border border-white/5 space-y-3 font-mono text-xs">
+              <div className="flex justify-between text-gray-300">
+                <span>Algo Active: <strong className={studentAlgoModal.student.subscriptionActive ? 'text-green-400' : 'text-amber-400'}>{studentAlgoModal.student.subscriptionActive ? 'ENABLED' : 'DISABLED'}</strong></span>
+                <span>Token Balance: <strong className="text-cyan-400">{studentAlgoModal.student.wallets?.find(w => w.type === 'TOKEN')?.balance || 0} Tokens</strong></span>
+              </div>
+              <div className="border-t border-white/10 pt-3 text-[11px] text-gray-400">
+                Monitoring Status: Operational & Verified via Central Server Webhook.
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Student Trial Override Modal ── */}
+      {trialOverrideModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#161B22] border border-white/10 rounded-2xl p-6 max-w-md w-full space-y-4 shadow-2xl">
+            <div className="flex justify-between items-center border-b border-white/10 pb-3">
+              <h3 className="font-bold text-sm text-white flex items-center gap-2">
+                ⏱️ Trial Extension: {trialOverrideModal.student.name}
+              </h3>
+              <button onClick={() => setTrialOverrideModal(null)} className="text-gray-400 hover:text-white p-1">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={handleSetTrialOverride} className="space-y-4 text-xs font-mono">
+              <div>
+                <label className="block text-gray-400 mb-1">Trial Extension Duration (Days)</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="90"
+                  value={trialOverrideModal.trialDays}
+                  onChange={e => setTrialOverrideModal({ ...trialOverrideModal, trialDays: e.target.value })}
+                  className="w-full bg-[#0B0E14] border border-white/10 px-3 py-2 rounded text-white font-mono"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-gray-400 mb-1">Override Reason / Note</label>
+                <input
+                  type="text"
+                  value={trialOverrideModal.note}
+                  onChange={e => setTrialOverrideModal({ ...trialOverrideModal, note: e.target.value })}
+                  className="w-full bg-[#0B0E14] border border-white/10 px-3 py-2 rounded text-white font-mono"
+                  required
+                />
+              </div>
+              <button
+                type="submit"
+                className="w-full py-2.5 bg-amber-500 hover:bg-amber-600 text-black font-extrabold rounded-lg transition-colors"
+              >
+                SAVE TRIAL OVERRIDE
+              </button>
+            </form>
           </div>
         </div>
       )}

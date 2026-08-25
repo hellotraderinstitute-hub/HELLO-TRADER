@@ -1,0 +1,1790 @@
+[
+  {
+    "event": "ALGO_EXIT_SQUAREOFF",
+    "category": "ALGO",
+    "dedupKey": "exit_HT9999_TEST_MOCK_TEST_EXIT_123",
+    "status": "SUPPRESSED",
+    "httpStatus": null,
+    "errorReason": "TEST_DATA_ISOLATION",
+    "latencyMs": 0,
+    "ist": "25 Aug 2026, 11:10:45 am",
+    "timestamp": "2026-08-25T05:40:45.865Z"
+  },
+  {
+    "event": "ALGO_EXIT_SQUAREOFF",
+    "category": "ALGO",
+    "dedupKey": "exit_HT9999_TEST_MOCK_TEST_EXIT_123",
+    "status": "SUPPRESSED",
+    "httpStatus": null,
+    "errorReason": "TEST_DATA_ISOLATION",
+    "latencyMs": 0,
+    "ist": "25 Aug 2026, 10:58:48 am",
+    "timestamp": "2026-08-25T05:28:48.196Z"
+  },
+  {
+    "event": "MEMBERSHIP_ACTIVATED",
+    "category": "MEMBERSHIP",
+    "dedupKey": "P4B_MEM_1786898069582_activated_30",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "16 Aug 2026, 10:04 pm",
+    "timestamp": "2026-08-16T16:34:43.095Z"
+  },
+  {
+    "event": "MEMBERSHIP_ACTIVATED",
+    "category": "MEMBERSHIP",
+    "dedupKey": "P4B_MEM_1786896193385_activated_30",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "16 Aug 2026, 09:33 pm",
+    "timestamp": "2026-08-16T16:03:25.600Z"
+  },
+  {
+    "event": "MEMBERSHIP_ACTIVATED",
+    "category": "MEMBERSHIP",
+    "dedupKey": "P4B_MEM_1786895678342_activated_30",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "16 Aug 2026, 09:24 pm",
+    "timestamp": "2026-08-16T15:54:50.465Z"
+  },
+  {
+    "event": "MEMBERSHIP_ACTIVATED",
+    "category": "MEMBERSHIP",
+    "dedupKey": "P4B_MEM_1786894072735_activated_30",
+    "result": {
+      "success": false,
+      "reason": "NOT_CONFIGURED"
+    },
+    "ist": "16 Aug 2026, 08:58 pm",
+    "timestamp": "2026-08-16T15:28:02.963Z"
+  },
+  {
+    "event": "SECURITY_EVENT",
+    "category": "ADMIN",
+    "dedupKey": "sec_ADMIN001_1786878398506",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "16 Aug 2026, 04:36 pm",
+    "timestamp": "2026-08-16T11:06:50.647Z"
+  },
+  {
+    "event": "ALGO_BROKER_CONNECTED",
+    "category": "ALGO",
+    "dedupKey": "HT-ADMIN-001_DHAN",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "15 Aug 2026, 12:02 pm",
+    "timestamp": "2026-08-15T06:32:55.783Z"
+  },
+  {
+    "event": "CUSTOM_TELEGRAM_MESSAGE",
+    "category": "ADMIN",
+    "dedupKey": "custom_msg_0.9546590416077188",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "14 Aug 2026, 02:19 pm",
+    "timestamp": "2026-08-14T08:49:11.853Z"
+  },
+  {
+    "event": "CUSTOM_TELEGRAM_MESSAGE",
+    "category": "ADMIN",
+    "dedupKey": "custom_msg_0.6576071155642348",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "14 Aug 2026, 02:19 pm",
+    "timestamp": "2026-08-14T08:49:10.478Z"
+  },
+  {
+    "event": "CUSTOM_TELEGRAM_MESSAGE",
+    "category": "ADMIN",
+    "dedupKey": "custom_msg_0.2552611709938153",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "13 Aug 2026, 08:10 pm",
+    "timestamp": "2026-08-13T14:40:02.654Z"
+  },
+  {
+    "event": "CUSTOM_TELEGRAM_MESSAGE",
+    "category": "ADMIN",
+    "dedupKey": "custom_msg_0.07411732819903238",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "13 Aug 2026, 06:48 pm",
+    "timestamp": "2026-08-13T13:18:05.952Z"
+  },
+  {
+    "event": "CUSTOM_TELEGRAM_MESSAGE",
+    "category": "ADMIN",
+    "dedupKey": "custom_msg_0.3208918013364501",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "13 Aug 2026, 06:48 pm",
+    "timestamp": "2026-08-13T13:18:05.912Z"
+  },
+  {
+    "event": "CUSTOM_TELEGRAM_MESSAGE",
+    "category": "ADMIN",
+    "dedupKey": "custom_msg_0.4522450208221005",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "13 Aug 2026, 06:48 pm",
+    "timestamp": "2026-08-13T13:18:05.860Z"
+  },
+  {
+    "event": "CUSTOM_TELEGRAM_MESSAGE",
+    "category": "ADMIN",
+    "dedupKey": "custom_msg_0.46307351580438305",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "13 Aug 2026, 06:48 pm",
+    "timestamp": "2026-08-13T13:18:05.670Z"
+  },
+  {
+    "event": "CUSTOM_TELEGRAM_MESSAGE",
+    "category": "ADMIN",
+    "dedupKey": "custom_msg_0.9102025134127344",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "13 Aug 2026, 06:48 pm",
+    "timestamp": "2026-08-13T13:18:05.667Z"
+  },
+  {
+    "event": "CUSTOM_TELEGRAM_MESSAGE",
+    "category": "ADMIN",
+    "dedupKey": "custom_msg_0.6740085204018249",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "13 Aug 2026, 06:48 pm",
+    "timestamp": "2026-08-13T13:18:05.662Z"
+  },
+  {
+    "event": "CUSTOM_TELEGRAM_MESSAGE",
+    "category": "ADMIN",
+    "dedupKey": "custom_msg_0.1610658910487086",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "13 Aug 2026, 05:28 pm",
+    "timestamp": "2026-08-13T11:58:12.429Z"
+  },
+  {
+    "event": "CUSTOM_TELEGRAM_MESSAGE",
+    "category": "ADMIN",
+    "dedupKey": "custom_msg_0.23202502252870183",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "13 Aug 2026, 05:28 pm",
+    "timestamp": "2026-08-13T11:58:12.283Z"
+  },
+  {
+    "event": "CUSTOM_TELEGRAM_MESSAGE",
+    "category": "ADMIN",
+    "dedupKey": "custom_msg_0.44113574434074965",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "13 Aug 2026, 05:28 pm",
+    "timestamp": "2026-08-13T11:58:11.858Z"
+  },
+  {
+    "event": "CUSTOM_TELEGRAM_MESSAGE",
+    "category": "ADMIN",
+    "dedupKey": "custom_msg_0.6174131518066488",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "13 Aug 2026, 05:28 pm",
+    "timestamp": "2026-08-13T11:58:11.355Z"
+  },
+  {
+    "event": "CUSTOM_TELEGRAM_MESSAGE",
+    "category": "ADMIN",
+    "dedupKey": "custom_msg_0.3150324043215378",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "13 Aug 2026, 05:28 pm",
+    "timestamp": "2026-08-13T11:58:11.093Z"
+  },
+  {
+    "event": "CUSTOM_TELEGRAM_MESSAGE",
+    "category": "ADMIN",
+    "dedupKey": "custom_msg_0.1298913252525209",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "13 Aug 2026, 05:28 pm",
+    "timestamp": "2026-08-13T11:58:11.087Z"
+  },
+  {
+    "event": "CUSTOM_TELEGRAM_MESSAGE",
+    "category": "ADMIN",
+    "dedupKey": "custom_msg_0.2969577424887111",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "13 Aug 2026, 04:53 pm",
+    "timestamp": "2026-08-13T11:23:08.934Z"
+  },
+  {
+    "event": "CUSTOM_TELEGRAM_MESSAGE",
+    "category": "ADMIN",
+    "dedupKey": "custom_msg_0.6016969734298769",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "13 Aug 2026, 04:53 pm",
+    "timestamp": "2026-08-13T11:23:08.397Z"
+  },
+  {
+    "event": "CUSTOM_TELEGRAM_MESSAGE",
+    "category": "ADMIN",
+    "dedupKey": "custom_msg_0.934695032086859",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "13 Aug 2026, 04:53 pm",
+    "timestamp": "2026-08-13T11:23:08.185Z"
+  },
+  {
+    "event": "CUSTOM_TELEGRAM_MESSAGE",
+    "category": "ADMIN",
+    "dedupKey": "custom_msg_0.37251023178870457",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "13 Aug 2026, 04:53 pm",
+    "timestamp": "2026-08-13T11:23:08.158Z"
+  },
+  {
+    "event": "CUSTOM_TELEGRAM_MESSAGE",
+    "category": "ADMIN",
+    "dedupKey": "custom_msg_0.142785359531438",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "13 Aug 2026, 04:53 pm",
+    "timestamp": "2026-08-13T11:23:07.845Z"
+  },
+  {
+    "event": "CUSTOM_TELEGRAM_MESSAGE",
+    "category": "ADMIN",
+    "dedupKey": "custom_msg_0.8053235662970539",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "13 Aug 2026, 04:53 pm",
+    "timestamp": "2026-08-13T11:23:07.841Z"
+  },
+  {
+    "event": "CUSTOM_TELEGRAM_MESSAGE",
+    "category": "ADMIN",
+    "dedupKey": "custom_msg_0.024428276117113068",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "13 Aug 2026, 04:19 pm",
+    "timestamp": "2026-08-13T10:49:00.232Z"
+  },
+  {
+    "event": "CUSTOM_TELEGRAM_MESSAGE",
+    "category": "ADMIN",
+    "dedupKey": "custom_msg_0.8901371894971658",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "13 Aug 2026, 04:14 pm",
+    "timestamp": "2026-08-13T10:44:08.285Z"
+  },
+  {
+    "event": "CUSTOM_TELEGRAM_MESSAGE",
+    "category": "ADMIN",
+    "dedupKey": "custom_msg_0.024501612739947",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "13 Aug 2026, 04:14 pm",
+    "timestamp": "2026-08-13T10:44:08.268Z"
+  },
+  {
+    "event": "CUSTOM_TELEGRAM_MESSAGE",
+    "category": "ADMIN",
+    "dedupKey": "custom_msg_0.26213570253203944",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "13 Aug 2026, 04:14 pm",
+    "timestamp": "2026-08-13T10:44:08.254Z"
+  },
+  {
+    "event": "CUSTOM_TELEGRAM_MESSAGE",
+    "category": "ADMIN",
+    "dedupKey": "custom_msg_0.5941634154783814",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "13 Aug 2026, 04:14 pm",
+    "timestamp": "2026-08-13T10:44:07.808Z"
+  },
+  {
+    "event": "CUSTOM_TELEGRAM_MESSAGE",
+    "category": "ADMIN",
+    "dedupKey": "custom_msg_0.5354140664083157",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "13 Aug 2026, 04:14 pm",
+    "timestamp": "2026-08-13T10:44:07.805Z"
+  },
+  {
+    "event": "CUSTOM_TELEGRAM_MESSAGE",
+    "category": "ADMIN",
+    "dedupKey": "custom_msg_0.6623311816949677",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "13 Aug 2026, 04:14 pm",
+    "timestamp": "2026-08-13T10:44:07.801Z"
+  },
+  {
+    "event": "CUSTOM_TELEGRAM_MESSAGE",
+    "category": "ADMIN",
+    "dedupKey": "custom_msg_0.33588373403540395",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "13 Aug 2026, 03:57 pm",
+    "timestamp": "2026-08-13T10:27:34.656Z"
+  },
+  {
+    "event": "CUSTOM_TELEGRAM_MESSAGE",
+    "category": "ADMIN",
+    "dedupKey": "custom_msg_0.08216203990967941",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "13 Aug 2026, 03:44 pm",
+    "timestamp": "2026-08-13T10:14:22.955Z"
+  },
+  {
+    "event": "CUSTOM_TELEGRAM_MESSAGE",
+    "category": "ADMIN",
+    "dedupKey": "custom_msg_0.947909133629174",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "13 Aug 2026, 03:39 pm",
+    "timestamp": "2026-08-13T10:09:28.908Z"
+  },
+  {
+    "event": "CUSTOM_TELEGRAM_MESSAGE",
+    "category": "ADMIN",
+    "dedupKey": "custom_msg_0.7548154546252458",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "13 Aug 2026, 03:39 pm",
+    "timestamp": "2026-08-13T10:09:28.641Z"
+  },
+  {
+    "event": "CUSTOM_TELEGRAM_MESSAGE",
+    "category": "ADMIN",
+    "dedupKey": "custom_msg_0.5920003774344075",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "13 Aug 2026, 03:39 pm",
+    "timestamp": "2026-08-13T10:09:28.453Z"
+  },
+  {
+    "event": "CUSTOM_TELEGRAM_MESSAGE",
+    "category": "ADMIN",
+    "dedupKey": "custom_msg_0.2990866627102986",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "13 Aug 2026, 03:39 pm",
+    "timestamp": "2026-08-13T10:09:28.138Z"
+  },
+  {
+    "event": "CUSTOM_TELEGRAM_MESSAGE",
+    "category": "ADMIN",
+    "dedupKey": "custom_msg_0.41689941450952883",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "13 Aug 2026, 03:39 pm",
+    "timestamp": "2026-08-13T10:09:28.127Z"
+  },
+  {
+    "event": "CUSTOM_TELEGRAM_MESSAGE",
+    "category": "ADMIN",
+    "dedupKey": "custom_msg_0.4833336936577143",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "13 Aug 2026, 03:39 pm",
+    "timestamp": "2026-08-13T10:09:28.120Z"
+  },
+  {
+    "event": "SECURITY_EVENT",
+    "category": "ADMIN",
+    "dedupKey": "sec_ADMIN001_1786491394639",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 05:06 am",
+    "timestamp": "2026-08-11T23:36:46.617Z"
+  },
+  {
+    "event": "MEMBERSHIP_ACTIVATED",
+    "category": "MEMBERSHIP",
+    "dedupKey": "HT_SMOKE_99_activated_30",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 04:16 am",
+    "timestamp": "2026-08-11T22:46:40.359Z"
+  },
+  {
+    "event": "PAYMENT_APPROVED",
+    "category": "PAYMENTS",
+    "dedupKey": "HT_SMOKE_99_approved_2000",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 04:16 am",
+    "timestamp": "2026-08-11T22:46:38.360Z"
+  },
+  {
+    "event": "MEMBERSHIP_ACTIVATED",
+    "category": "MEMBERSHIP",
+    "dedupKey": "HT99999_activated_30",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 04:12 am",
+    "timestamp": "2026-08-11T22:42:10.050Z"
+  },
+  {
+    "event": "PAYMENT_APPROVED",
+    "category": "PAYMENTS",
+    "dedupKey": "HT_SMOKE_99_approved_2000",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 04:12 am",
+    "timestamp": "2026-08-11T22:42:03.832Z"
+  },
+  {
+    "event": "MEMBERSHIP_ACTIVATED",
+    "category": "MEMBERSHIP",
+    "dedupKey": "HT_SMOKE_99_activated_30",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 04:12 am",
+    "timestamp": "2026-08-11T22:42:03.362Z"
+  },
+  {
+    "event": "MEMBERSHIP_ACTIVATED",
+    "category": "MEMBERSHIP",
+    "dedupKey": "HT_GAP_01_activated_30",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 04:11 am",
+    "timestamp": "2026-08-11T22:41:02.372Z"
+  },
+  {
+    "event": "MEMBERSHIP_ACTIVATED",
+    "category": "MEMBERSHIP",
+    "dedupKey": "HT99999_activated_30",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 04:10 am",
+    "timestamp": "2026-08-11T22:40:02.272Z"
+  },
+  {
+    "event": "PAYMENT_APPROVED",
+    "category": "PAYMENTS",
+    "dedupKey": "HT_SMOKE_99_approved_2000",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 03:58 am",
+    "timestamp": "2026-08-11T22:28:49.828Z"
+  },
+  {
+    "event": "MEMBERSHIP_ACTIVATED",
+    "category": "MEMBERSHIP",
+    "dedupKey": "HT_SMOKE_99_activated_30",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 03:58 am",
+    "timestamp": "2026-08-11T22:28:49.351Z"
+  },
+  {
+    "event": "MEMBERSHIP_ACTIVATED",
+    "category": "MEMBERSHIP",
+    "dedupKey": "HT_GAP_01_activated_30",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 03:39 am",
+    "timestamp": "2026-08-11T22:09:54.901Z"
+  },
+  {
+    "event": "MEMBERSHIP_ACTIVATED",
+    "category": "MEMBERSHIP",
+    "dedupKey": "HT99999_activated_30",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 03:38 am",
+    "timestamp": "2026-08-11T22:08:46.086Z"
+  },
+  {
+    "event": "MEMBERSHIP_ACTIVATED",
+    "category": "MEMBERSHIP",
+    "dedupKey": "HT0786_activated_30",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 03:31 am",
+    "timestamp": "2026-08-11T22:01:35.351Z"
+  },
+  {
+    "event": "PAYMENT_APPROVED",
+    "category": "PAYMENTS",
+    "dedupKey": "HT9995_approved_900",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 03:31 am",
+    "timestamp": "2026-08-11T22:01:34.944Z"
+  },
+  {
+    "event": "MEMBERSHIP_ACTIVATED",
+    "category": "MEMBERSHIP",
+    "dedupKey": "HT_GAP_01_activated_30",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 03:30 am",
+    "timestamp": "2026-08-11T22:00:34.537Z"
+  },
+  {
+    "event": "MEMBERSHIP_ACTIVATED",
+    "category": "MEMBERSHIP",
+    "dedupKey": "HT99999_activated_30",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 03:29 am",
+    "timestamp": "2026-08-11T21:59:34.508Z"
+  },
+  {
+    "event": "MEMBERSHIP_ACTIVATED",
+    "category": "MEMBERSHIP",
+    "dedupKey": "HT0786_activated_30",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 03:08 am",
+    "timestamp": "2026-08-11T21:38:37.237Z"
+  },
+  {
+    "event": "PAYMENT_APPROVED",
+    "category": "PAYMENTS",
+    "dedupKey": "HT9995_approved_900",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 03:08 am",
+    "timestamp": "2026-08-11T21:38:36.757Z"
+  },
+  {
+    "event": "MEMBERSHIP_ACTIVATED",
+    "category": "MEMBERSHIP",
+    "dedupKey": "HT99999_activated_30",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 03:07 am",
+    "timestamp": "2026-08-11T21:37:36.393Z"
+  },
+  {
+    "event": "MEMBERSHIP_ACTIVATED",
+    "category": "MEMBERSHIP",
+    "dedupKey": "HT_GAP_01_activated_30",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 03:07 am",
+    "timestamp": "2026-08-11T21:37:04.434Z"
+  },
+  {
+    "event": "PAYMENT_REJECTED",
+    "category": "PAYMENTS",
+    "dedupKey": "HT9995_rejected_900",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 03:03 am",
+    "timestamp": "2026-08-11T21:33:07.739Z"
+  },
+  {
+    "event": "PAYMENT_APPROVED",
+    "category": "PAYMENTS",
+    "dedupKey": "HT9995_approved_900",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 03:02 am",
+    "timestamp": "2026-08-11T21:32:58.436Z"
+  },
+  {
+    "event": "PAYMENT_APPROVED",
+    "category": "PAYMENTS",
+    "dedupKey": "HT0786_approved_90",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 03:02 am",
+    "timestamp": "2026-08-11T21:32:46.886Z"
+  },
+  {
+    "event": "PAYMENT_APPROVED",
+    "category": "PAYMENTS",
+    "dedupKey": "HT0786_approved_2500",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 03:02 am",
+    "timestamp": "2026-08-11T21:32:40.850Z"
+  },
+  {
+    "event": "PAYMENT_APPROVED",
+    "category": "PAYMENTS",
+    "dedupKey": "HT0786_approved_2000",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 03:02 am",
+    "timestamp": "2026-08-11T21:32:34.707Z"
+  },
+  {
+    "event": "SECURITY_EVENT",
+    "category": "ADMIN",
+    "dedupKey": "sec_ADMIN001_1786483915060",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 03:02 am",
+    "timestamp": "2026-08-11T21:32:08.077Z"
+  },
+  {
+    "event": "PAYMENT_APPROVED",
+    "category": "PAYMENTS",
+    "dedupKey": "HT0786_approved_5500",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 02:59 am",
+    "timestamp": "2026-08-11T21:29:15.292Z"
+  },
+  {
+    "event": "MEMBERSHIP_ACTIVATED",
+    "category": "MEMBERSHIP",
+    "dedupKey": "HT0786_activated_30",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 02:58 am",
+    "timestamp": "2026-08-11T21:28:12.819Z"
+  },
+  {
+    "event": "NEW_PAYMENT_REQUEST",
+    "category": "PAYMENTS",
+    "dedupKey": "bfggb",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 02:58 am",
+    "timestamp": "2026-08-11T21:28:05.929Z"
+  },
+  {
+    "event": "NEW_PAYMENT_REQUEST",
+    "category": "PAYMENTS",
+    "dedupKey": "88",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 02:57 am",
+    "timestamp": "2026-08-11T21:27:49.136Z"
+  },
+  {
+    "event": "NEW_PAYMENT_REQUEST",
+    "category": "PAYMENTS",
+    "dedupKey": "54",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 02:57 am",
+    "timestamp": "2026-08-11T21:27:34.605Z"
+  },
+  {
+    "event": "NEW_PAYMENT_REQUEST",
+    "category": "PAYMENTS",
+    "dedupKey": "554",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 02:57 am",
+    "timestamp": "2026-08-11T21:27:21.602Z"
+  },
+  {
+    "event": "NEW_PAYMENT_REQUEST",
+    "category": "PAYMENTS",
+    "dedupKey": "11",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 02:57 am",
+    "timestamp": "2026-08-11T21:27:10.909Z"
+  },
+  {
+    "event": "MEMBERSHIP_ACTIVATED",
+    "category": "MEMBERSHIP",
+    "dedupKey": "HT0786_activated_30",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 02:50 am",
+    "timestamp": "2026-08-11T21:20:27.406Z"
+  },
+  {
+    "event": "PAYMENT_APPROVED",
+    "category": "PAYMENTS",
+    "dedupKey": "HT9995_approved_900",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 02:50 am",
+    "timestamp": "2026-08-11T21:20:26.332Z"
+  },
+  {
+    "event": "MEMBERSHIP_ACTIVATED",
+    "category": "MEMBERSHIP",
+    "dedupKey": "HT0786_activated_30",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 02:49 am",
+    "timestamp": "2026-08-11T21:19:50.121Z"
+  },
+  {
+    "event": "MEMBERSHIP_ACTIVATED",
+    "category": "MEMBERSHIP",
+    "dedupKey": "HT99999_activated_30",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 02:49 am",
+    "timestamp": "2026-08-11T21:19:31.306Z"
+  },
+  {
+    "event": "MEMBERSHIP_ACTIVATED",
+    "category": "MEMBERSHIP",
+    "dedupKey": "HT99999_activated_30",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 02:48 am",
+    "timestamp": "2026-08-11T21:18:19.200Z"
+  },
+  {
+    "event": "MEMBERSHIP_ACTIVATED",
+    "category": "MEMBERSHIP",
+    "dedupKey": "HT99999_activated_30",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 02:47 am",
+    "timestamp": "2026-08-11T21:17:44.237Z"
+  },
+  {
+    "event": "SECURITY_EVENT",
+    "category": "ADMIN",
+    "dedupKey": "sec_HT0786_1786481169302",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 02:16 am",
+    "timestamp": "2026-08-11T20:46:20.240Z"
+  },
+  {
+    "event": "SECURITY_EVENT",
+    "category": "ADMIN",
+    "dedupKey": "sec_HT0786_1786481168913",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 02:16 am",
+    "timestamp": "2026-08-11T20:46:19.949Z"
+  },
+  {
+    "event": "MEMBERSHIP_ACTIVATED",
+    "category": "MEMBERSHIP",
+    "dedupKey": "HT0786_activated_30",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 02:15 am",
+    "timestamp": "2026-08-11T20:45:01.733Z"
+  },
+  {
+    "event": "MEMBERSHIP_ACTIVATED",
+    "category": "MEMBERSHIP",
+    "dedupKey": "HT9995_activated_30",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 02:14 am",
+    "timestamp": "2026-08-11T20:44:49.467Z"
+  },
+  {
+    "event": "PAYMENT_APPROVED",
+    "category": "PAYMENTS",
+    "dedupKey": "HT9995_approved_900",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 02:14 am",
+    "timestamp": "2026-08-11T20:44:49.057Z"
+  },
+  {
+    "event": "PAYMENT_REJECTED",
+    "category": "PAYMENTS",
+    "dedupKey": "HT9995_rejected_900",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 01:43 am",
+    "timestamp": "2026-08-11T20:13:41.723Z"
+  },
+  {
+    "event": "PAYMENT_APPROVED",
+    "category": "PAYMENTS",
+    "dedupKey": "HT9995_approved_900",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 01:43 am",
+    "timestamp": "2026-08-11T20:13:35.199Z"
+  },
+  {
+    "event": "MEMBERSHIP_ACTIVATED",
+    "category": "MEMBERSHIP",
+    "dedupKey": "HT9995_activated_30",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 01:06 am",
+    "timestamp": "2026-08-11T19:36:37.616Z"
+  },
+  {
+    "event": "PAYMENT_APPROVED",
+    "category": "PAYMENTS",
+    "dedupKey": "HT9995_approved_900",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 01:06 am",
+    "timestamp": "2026-08-11T19:36:36.334Z"
+  },
+  {
+    "event": "SECURITY_EVENT",
+    "category": "ADMIN",
+    "dedupKey": "sec_HT0787_1786475990450",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 12:50 am",
+    "timestamp": "2026-08-11T19:20:02.275Z"
+  },
+  {
+    "event": "SECURITY_EVENT",
+    "category": "ADMIN",
+    "dedupKey": "sec_HT0787_1786475945774",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 12:49 am",
+    "timestamp": "2026-08-11T19:19:17.347Z"
+  },
+  {
+    "event": "SECURITY_EVENT",
+    "category": "ADMIN",
+    "dedupKey": "sec_HT0787_1786475929204",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 12:49 am",
+    "timestamp": "2026-08-11T19:19:01.337Z"
+  },
+  {
+    "event": "MEMBERSHIP_ACTIVATED",
+    "category": "MEMBERSHIP",
+    "dedupKey": "HT0788_activated_30",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 12:34 am",
+    "timestamp": "2026-08-11T19:04:24.558Z"
+  },
+  {
+    "event": "PAYMENT_APPROVED",
+    "category": "PAYMENTS",
+    "dedupKey": "HT0788_approved_400",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 12:34 am",
+    "timestamp": "2026-08-11T19:04:24.165Z"
+  },
+  {
+    "event": "NEW_PAYMENT_REQUEST",
+    "category": "PAYMENTS",
+    "dedupKey": "4",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 12:33 am",
+    "timestamp": "2026-08-11T19:03:52.934Z"
+  },
+  {
+    "event": "PAYMENT_REJECTED",
+    "category": "PAYMENTS",
+    "dedupKey": "HT0787_rejected_100",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 12:22 am",
+    "timestamp": "2026-08-11T18:52:13.876Z"
+  },
+  {
+    "event": "MEMBERSHIP_ACTIVATED",
+    "category": "MEMBERSHIP",
+    "dedupKey": "HT0787_activated_30",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 12:22 am",
+    "timestamp": "2026-08-11T18:52:04.056Z"
+  },
+  {
+    "event": "PAYMENT_APPROVED",
+    "category": "PAYMENTS",
+    "dedupKey": "HT0787_approved_500",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 12:22 am",
+    "timestamp": "2026-08-11T18:52:03.131Z"
+  },
+  {
+    "event": "NEW_PAYMENT_REQUEST",
+    "category": "PAYMENTS",
+    "dedupKey": "549",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 12:19 am",
+    "timestamp": "2026-08-11T18:49:36.220Z"
+  },
+  {
+    "event": "NEW_PAYMENT_REQUEST",
+    "category": "PAYMENTS",
+    "dedupKey": "1",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 12:19 am",
+    "timestamp": "2026-08-11T18:49:15.335Z"
+  },
+  {
+    "event": "MEMBERSHIP_ACTIVATED",
+    "category": "MEMBERSHIP",
+    "dedupKey": "HT0786_activated_30",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 12:13 am",
+    "timestamp": "2026-08-11T18:43:59.955Z"
+  },
+  {
+    "event": "SECURITY_EVENT",
+    "category": "ADMIN",
+    "dedupKey": "sec_HT0787_1786473809131",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 12:13 am",
+    "timestamp": "2026-08-11T18:43:42.113Z"
+  },
+  {
+    "event": "SECURITY_EVENT",
+    "category": "ADMIN",
+    "dedupKey": "sec_HT0787_1786473797586",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 12:13 am",
+    "timestamp": "2026-08-11T18:43:29.967Z"
+  },
+  {
+    "event": "SECURITY_EVENT",
+    "category": "ADMIN",
+    "dedupKey": "sec_HT0787_1786473680402",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 12:11 am",
+    "timestamp": "2026-08-11T18:41:32.749Z"
+  },
+  {
+    "event": "SECURITY_EVENT",
+    "category": "ADMIN",
+    "dedupKey": "sec_HT0787_1786473680329",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 12:11 am",
+    "timestamp": "2026-08-11T18:41:32.348Z"
+  },
+  {
+    "event": "SECURITY_EVENT",
+    "category": "ADMIN",
+    "dedupKey": "sec_HT0787_1786473680610",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 12:11 am",
+    "timestamp": "2026-08-11T18:41:31.899Z"
+  },
+  {
+    "event": "SECURITY_EVENT",
+    "category": "ADMIN",
+    "dedupKey": "sec_HT0787_1786473680541",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 12:11 am",
+    "timestamp": "2026-08-11T18:41:31.811Z"
+  },
+  {
+    "event": "SECURITY_EVENT",
+    "category": "ADMIN",
+    "dedupKey": "sec_HT0787_1786473680171",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 12:11 am",
+    "timestamp": "2026-08-11T18:41:31.516Z"
+  },
+  {
+    "event": "SECURITY_EVENT",
+    "category": "ADMIN",
+    "dedupKey": "sec_HT0787_1786473680471",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 12:11 am",
+    "timestamp": "2026-08-11T18:41:31.506Z"
+  },
+  {
+    "event": "SECURITY_EVENT",
+    "category": "ADMIN",
+    "dedupKey": "sec_HT0787_1786473680257",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 12:11 am",
+    "timestamp": "2026-08-11T18:41:31.459Z"
+  },
+  {
+    "event": "PAYMENT_REJECTED",
+    "category": "PAYMENTS",
+    "dedupKey": "HT0786_rejected_500",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "12 Aug 2026, 12:02 am",
+    "timestamp": "2026-08-11T18:32:39.887Z"
+  },
+  {
+    "event": "MEMBERSHIP_ACTIVATED",
+    "category": "MEMBERSHIP",
+    "dedupKey": "HT0786_activated_30",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "11 Aug 2026, 11:31 pm",
+    "timestamp": "2026-08-11T18:01:18.741Z"
+  },
+  {
+    "event": "MEMBERSHIP_ACTIVATED",
+    "category": "MEMBERSHIP",
+    "dedupKey": "HT0786_activated_30",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "11 Aug 2026, 11:25 pm",
+    "timestamp": "2026-08-11T17:55:46.769Z"
+  },
+  {
+    "event": "NEW_PAYMENT_REQUEST",
+    "category": "PAYMENTS",
+    "dedupKey": "kfglg",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "11 Aug 2026, 11:24 pm",
+    "timestamp": "2026-08-11T17:54:36.953Z"
+  },
+  {
+    "event": "MEMBERSHIP_ACTIVATED",
+    "category": "MEMBERSHIP",
+    "dedupKey": "HT0786_activated_30",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "11 Aug 2026, 10:55 pm",
+    "timestamp": "2026-08-11T17:25:31.222Z"
+  },
+  {
+    "event": "PAYMENT_APPROVED",
+    "category": "PAYMENTS",
+    "dedupKey": "HT0786_approved_900",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "11 Aug 2026, 10:28 pm",
+    "timestamp": "2026-08-11T16:58:09.405Z"
+  },
+  {
+    "event": "NEW_PAYMENT_REQUEST",
+    "category": "PAYMENTS",
+    "dedupKey": "5",
+    "result": {
+      "success": false,
+      "raw": {
+        "ok": false,
+        "error_code": 404,
+        "description": "Not Found"
+      }
+    },
+    "ist": "11 Aug 2026, 10:25 pm",
+    "timestamp": "2026-08-11T16:55:25.132Z"
+  }
+]

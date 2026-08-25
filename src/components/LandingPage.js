@@ -30,6 +30,119 @@ import {
 } from 'lucide-react';
 import InstallPwaModal from './InstallPwaModal';
 
+// ─── FAQ Section Component ──────────────────────────────────────────────────
+// Provides visible Q&A content that backs the FAQPage structured data schema.
+// All answers are factually sourced from the existing Hello Trader website.
+// No invented claims. No financial guarantees.
+const FAQ_ITEMS = [
+  {
+    q: 'What is Hello Trader?',
+    a: 'Hello Trader is a stock market education institute and trading technology platform based in India. It offers structured courses in technical analysis, equity, commodity, and derivative trading — combined with a paper trading simulator, algo trading tools, copy trading, and AI-powered market analytics through the Hello Trader Pro platform.'
+  },
+  {
+    q: 'What stock market courses does Hello Trader offer?',
+    a: 'Hello Trader offers five structured programs: Technical Analysis Course (₹8,000 · 2 months), Equity Trading Course (₹12,000 · 2 months), Commodity Market Course (₹15,000 · 3 months), Derivative Trading Course (₹24,000 · 3 months), and the flagship CFMT Program — Certified Financial Market Trader (₹54,000 · 6 months) covering all asset classes including algo trading.'
+  },
+  {
+    q: 'Is a free demo class available?',
+    a: 'Yes. Hello Trader offers a free demo class before any enrollment decision. You can book it by filling the enquiry form on the website or by contacting the team directly on WhatsApp at +91 94773 04939.'
+  },
+  {
+    q: 'What is the CFMT Program?',
+    a: 'The CFMT Program (Certified Financial Market Trader) is Hello Trader\'s flagship 6-month comprehensive program. It covers equity, futures and options, MCX commodity trading, algo trading, live market practice, and professional trading tools — with 1-on-1 dedicated mentorship and lifetime community access. Course fee: ₹54,000.'
+  },
+  {
+    q: 'What is Hello Trader Pro?',
+    a: 'Hello Trader Pro is a trading technology platform available to enrolled students. It includes a paper trading simulator with real-time market data, AI-powered market tools, algo trading, copy trading, a live trading terminal, option chain analytics, market scanner, trader dashboard, and market intelligence tools — all in one place.'
+  },
+  {
+    q: 'What is paper trading and how does it help beginners?',
+    a: 'Paper trading is a risk-free simulation where you practice strategies using real market data without deploying real capital. Hello Trader Pro\'s paper trading environment allows students to test setups, build discipline, and understand market dynamics safely before trading with real money.'
+  },
+  {
+    q: 'Does Hello Trader teach algo trading?',
+    a: 'Yes. Algo trading is covered as part of the CFMT Program curriculum. The Hello Trader Pro platform also provides algo trading tools that allow students to formulate, backtest, and automate rule-based trading strategies.'
+  },
+  {
+    q: 'What is the teaching format at Hello Trader?',
+    a: 'Hello Trader follows a 1 batch · 1 student model — meaning each batch receives individual personalized guidance rather than large group sessions. Teaching includes live market charting, practical strategy sessions, and dedicated mentor support throughout the duration of the course.'
+  },
+  {
+    q: 'How do I contact Hello Trader?',
+    a: 'WhatsApp / Phone: +91 94773 04939 · Email: hellotraderinstitute@gmail.com · Telegram: @Hellotrader7272. You can also fill the enquiry form directly on the website to request a callback or book a free demo class.'
+  }
+];
+
+function FAQSection() {
+  const [openIndex, setOpenIndex] = useState(null);
+  const toggle = (i) => setOpenIndex(prev => prev === i ? null : i);
+
+  return (
+    <section id="faq" className="py-20 bg-[#0B0E14] border-t border-[#D4AF37]/20" aria-label="Frequently Asked Questions">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="text-center mb-12">
+          <span className="px-3.5 py-1.5 rounded-full bg-[#161B26] border border-[#D4AF37]/40 text-xs font-bold text-[#D4AF37]">
+            FAQ
+          </span>
+          <h2 className="text-3xl sm:text-4xl font-black text-white mt-4">
+            Frequently Asked Questions
+          </h2>
+          <p className="text-sm text-gray-400 mt-3">
+            Common questions about Hello Trader courses, platform, and enrollment.
+          </p>
+        </div>
+
+        <div className="space-y-3">
+          {FAQ_ITEMS.map((item, i) => (
+            <div
+              key={i}
+              className="bg-[#10131A] border border-[#D4AF37]/20 rounded-2xl overflow-hidden hover:border-[#D4AF37]/50 transition-colors"
+            >
+              <button
+                onClick={() => toggle(i)}
+                className="w-full flex items-center justify-between px-6 py-5 text-left gap-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37]/50 rounded-2xl"
+                aria-expanded={openIndex === i}
+              >
+                <span className="text-sm font-bold text-white leading-snug">{item.q}</span>
+                <span
+                  className={`shrink-0 w-6 h-6 rounded-full border border-[#D4AF37]/40 flex items-center justify-center text-[#D4AF37] transition-transform duration-300 ${openIndex === i ? 'rotate-45' : ''}`}
+                  aria-hidden="true"
+                >
+                  +
+                </span>
+              </button>
+              {openIndex === i && (
+                <div className="px-6 pb-5">
+                  <p className="text-sm text-gray-300 leading-relaxed border-t border-white/5 pt-4">
+                    {item.a}
+                  </p>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-10 text-center">
+          <p className="text-xs text-gray-500">
+            Have more questions?{' '}
+            <a
+              href="https://wa.me/919477304939?text=Hi%20Hello%20Trader,%20I%20have%20a%20question."
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[#D4AF37] hover:underline font-bold"
+            >
+              WhatsApp us directly →
+            </a>
+          </p>
+          <p className="text-[10px] text-gray-600 mt-2">
+            Disclaimer: Hello Trader provides stock market education and technology tools. Trading in financial markets involves risk. Educational content is for learning purposes only.
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function LandingPage({ onOpenLogin, onOpenSignup, isAuthenticated, onEnterTerminal }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
@@ -1114,6 +1227,10 @@ export default function LandingPage({ onOpenLogin, onOpenSignup, isAuthenticated
           </div>
         </div>
       )}
+
+      {/* ─── FAQ SECTION (AEO / ANSWER ENGINE OPTIMIZATION) ─── */}
+      {/* All answers are factually sourced from existing Hello Trader content only. */}
+      <FAQSection />
 
       {/* ─── CONTACT & COMMUNITY FOOTER ─── */}
       <footer id="contact" className="bg-[#070A10] border-t border-[#D4AF37]/30 pt-16 pb-12">

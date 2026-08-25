@@ -12,16 +12,18 @@ import {
   calculatePCR, calculateMaxPain, generateAIOptionSummary 
 } from '../utils/smdeOptionEngine';
 import AIDisclaimer from './AIDisclaimer';
+import apiClient from '../lib/axios';
+
 
 // ── Lot Size Registry ─────────────────────────────────────────────────
-const LOT_SIZES = { NIFTY: 75, BANKNIFTY: 15, FINNIFTY: 40, SENSEX: 10 };
+const LOT_SIZES = { NIFTY: 65, BANKNIFTY: 15, FINNIFTY: 40, SENSEX: 10 };
 const INDICES = ['NIFTY', 'BANKNIFTY', 'FINNIFTY', 'SENSEX'];
 
 import { Lock } from 'lucide-react';
 
 export default function OptionChain() {
   const { placeOrder, paperBalance, isExpiredTrial, openRechargeModal, authLoading } = useTrading();
-  const { tickers } = useMarketProvider();
+  const { tickers, updateOptionQuotes, resolvePrice } = useMarketProvider();
 
   useEffect(() => {
     if (!authLoading && isExpiredTrial) {
@@ -55,21 +57,21 @@ export default function OptionChain() {
 
   // Order modal state
   const [activeOrder, setActiveOrder] = useState(null);
+  const [orderType, setOrderType] = useState('MARKET'); // 'MARKET' | 'LIMIT'
+  const [limitPrice, setLimitPrice] = useState('');
   const [lots, setLots] = useState(1);
 
   // Auto-refresh timer ref
   const refreshTimerRef = useRef(null);
 
-  // ── Live Spot Price from SMDE Ticker ─────────────────────────────────
   const spotPrice = useMemo(() => {
+    if (chainMeta.spotPrice) return chainMeta.spotPrice;
     const found = tickers.find(t => t.symbol === selectedIndex || t.display === selectedIndex);
     if (found) return found.price;
-    // Use chain metadata spot if available
-    if (chainMeta.spotPrice) return chainMeta.spotPrice;
     return null;
   }, [tickers, selectedIndex, chainMeta.spotPrice]);
 
-  const lotSize = LOT_SIZES[selectedIndex] || 75;
+  const lotSize = LOT_SIZES[selectedIndex] || 65;
 
   // ── Fetch Expiry List from Backend ──────────────────────────────────
   useEffect(() => {
@@ -79,10 +81,10 @@ export default function OptionChain() {
     setExpiry('');
     setLiveContracts(null);
 
-    fetch(`/api/smde/option-chain/expiries?symbol=${encodeURIComponent(selectedIndex)}`)
-      .then(res => res.json())
-      .then(data => {
+    apiClient.get(`/trade/option-chain/expiries?symbol=${encodeURIComponent(selectedIndex)}`)
+      .then(res => {
         if (!isMounted) return;
+        const data = res.data;
         if (data.success && Array.isArray(data.expiries) && data.expiries.length > 0) {
           setExpiryList(data.expiries);
           setExpiry(data.expiries[0]); // Select nearest expiry
@@ -106,11 +108,12 @@ export default function OptionChain() {
     if (!expiry) return;
 
     setLoadingChain(true);
-    fetch(`/api/smde/option-chain?symbol=${encodeURIComponent(selectedIndex)}&expiry=${encodeURIComponent(expiry)}`)
-      .then(res => res.json())
-      .then(data => {
+    apiClient.get(`/trade/option-chain?symbol=${encodeURIComponent(selectedIndex)}&expiry=${encodeURIComponent(expiry)}`)
+      .then(res => {
+        const data = res.data;
         if (data.success && Array.isArray(data.contracts) && data.contracts.length > 0) {
           setLiveContracts(data.contracts);
+          updateOptionQuotes?.(data.contracts, selectedIndex, expiry);
           setChainMeta({
             dataTime: data.dataTime || null,
             lastUpdated: data.lastUpdated || null,
@@ -163,19 +166,19 @@ export default function OptionChain() {
     const sp = spotPrice || chainMeta.spotPrice || 0;
     if (sp === 0) return liveContracts.slice(0, strikeDepth * 2);
 
-    // Find ATM index
-    let atmIdx = 0;
-    let minDiff = Infinity;
-    liveContracts.forEach((c, i) => {
-      const diff = Math.abs(c.strike - sp);
-      if (diff < minDiff) { minDiff = diff; atmIdx = i; }
-    });
+    // Find ATM index using reduce
+    const nearestStrike = liveContracts.reduce((nearest, c) =>
+      Math.abs(c.strike - sp) < Math.abs(nearest.strike - sp)
+        ? c
+        : nearest
+    );
 
+    const atmIdx = liveContracts.findIndex(c => c.strike === nearestStrike.strike);
     const startIdx = Math.max(0, atmIdx - strikeDepth);
     const endIdx = Math.min(liveContracts.length, atmIdx + strikeDepth + 1);
     return liveContracts.slice(startIdx, endIdx).map(c => ({
       ...c,
-      isAtm: Math.abs(c.strike - sp) <= (c.strike * 0.002), // within 0.2%
+      isAtm: c.strike === nearestStrike.strike,
     }));
   }, [liveContracts, liveDataAvailable, spotPrice, chainMeta.spotPrice, strikeDepth]);
 
@@ -214,30 +217,41 @@ export default function OptionChain() {
   const handleOrderClick = (strikeObj, optionType, side) => {
     const ltp = optionType === 'CE' ? strikeObj.ceLtp : strikeObj.peLtp;
     if (!ltp || ltp === 0) return; // Don't allow orders on zero-price contracts
+    const sym = `${selectedIndex} ${strikeObj.strike} ${optionType}`;
+    const currentLiveLtp = resolvePrice ? resolvePrice(sym, ltp) : ltp;
+
     setActiveOrder({
-      symbol: `${selectedIndex} ${strikeObj.strike} ${optionType}`,
-      display: `${selectedIndex} ${strikeObj.strike} ${optionType}`,
+      symbol: sym,
+      display: sym,
       strike: strikeObj.strike,
       type: optionType,
       side,
-      price: ltp,
+      price: currentLiveLtp,
       lotSize,
     });
+    setOrderType('MARKET');
+    setLimitPrice(String(currentLiveLtp));
     setLots(1);
   };
 
   const handleConfirmOrder = () => {
     if (!activeOrder) return;
     const totalQty = lots * activeOrder.lotSize;
-    const totalCost = totalQty * activeOrder.price;
+    const currentLiveLtp = resolvePrice ? resolvePrice(activeOrder.symbol, activeOrder.price) : activeOrder.price;
+    const execPrice = orderType === 'LIMIT' ? (parseFloat(limitPrice) || currentLiveLtp) : currentLiveLtp;
+    const totalCost = totalQty * execPrice;
 
     placeOrder({
       symbol: activeOrder.symbol,
       display: activeOrder.display,
       side: activeOrder.side,
       quantity: totalQty,
-      entryPrice: activeOrder.price,
+      orderExecutionType: orderType,
+      limitPrice: orderType === 'LIMIT' ? execPrice : null,
+      price: execPrice,
+      entryPrice: execPrice,
       type: 'OPTION',
+      productType: 'INTRADAY',
       margin: totalCost,
     });
 
@@ -634,66 +648,161 @@ export default function OptionChain() {
       )}
 
       {/* ── ORDER EXECUTION MODAL ─────────────────────────────────────── */}
-      {activeOrder && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#161B22] p-5 rounded-2xl border border-white/20 max-w-sm w-full space-y-4">
-            <div className="flex justify-between items-center border-b border-white/10 pb-3">
-              <h3 className="font-bold text-sm text-white flex items-center gap-2">
-                <ShoppingCart className="w-4 h-4 text-[#00D4FF]" />
-                Execute Option Trade ({activeOrder.side})
-              </h3>
-              <button onClick={() => setActiveOrder(null)} className="text-gray-400 hover:text-white">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+      {activeOrder && (() => {
+        const livePrice = resolvePrice ? resolvePrice(activeOrder.symbol, activeOrder.price) : activeOrder.price;
+        const effectivePrice = orderType === 'LIMIT' ? (parseFloat(limitPrice) || livePrice) : livePrice;
+        const totalQty = lots * activeOrder.lotSize;
+        const totalMargin = totalQty * effectivePrice;
 
-            <div className="space-y-2 text-xs font-mono">
-              <div className="flex justify-between p-2 bg-[#0B0E14] rounded">
-                <span className="text-gray-400">Contract:</span>
-                <span className="font-bold text-white">{activeOrder.display}</span>
+        return (
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-[#161B22] p-5 rounded-2xl border border-white/20 max-w-sm w-full space-y-4 shadow-2xl">
+              <div className="flex justify-between items-center border-b border-white/10 pb-3">
+                <h3 className="font-bold text-sm text-white flex items-center gap-2">
+                  <ShoppingCart className="w-4 h-4 text-[#00D4FF]" />
+                  Execute Option Trade
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-black ${activeOrder.side === 'BUY' ? 'bg-[#00FF41]/20 text-[#00FF41] border border-[#00FF41]/40' : 'bg-[#FF3B30]/20 text-[#FF3B30] border border-[#FF3B30]/40'}`}>
+                    {activeOrder.side}
+                  </span>
+                </h3>
+                <button onClick={() => setActiveOrder(null)} className="text-gray-400 hover:text-white transition-colors">
+                  <X className="w-4 h-4" />
+                </button>
               </div>
-              <div className="flex justify-between p-2 bg-[#0B0E14] rounded">
-                <span className="text-gray-400">LTP Premium:</span>
-                <span className="font-bold text-[#00FF41]">₹{activeOrder.price}</span>
-              </div>
-              <div className="flex justify-between p-2 bg-[#0B0E14] rounded items-center">
-                <span className="text-gray-400">Lots ({activeOrder.lotSize} Qty/Lot):</span>
-                <input 
-                  type="number" 
-                  min="1" 
-                  max="100" 
-                  value={lots} 
-                  onChange={(e) => setLots(Math.max(1, parseInt(e.target.value) || 1))}
-                  className="w-16 bg-[#161B22] border border-white/20 rounded text-center py-1 text-white text-xs font-bold"
-                />
-              </div>
-              <div className="flex justify-between p-2 bg-[#0B0E14] rounded">
-                <span className="text-gray-400">Total Quantity:</span>
-                <span className="font-bold text-cyan-300">{lots * activeOrder.lotSize} Qty</span>
-              </div>
-              <div className="flex justify-between p-2 bg-purple-500/10 border border-purple-500/30 rounded">
-                <span className="text-gray-300 font-bold">Total Premium Margin:</span>
-                <span className="font-black text-purple-300">₹{(lots * activeOrder.lotSize * activeOrder.price).toLocaleString()}</span>
-              </div>
-            </div>
 
-            <div className="flex gap-2 pt-2">
-              <button 
-                onClick={() => setActiveOrder(null)}
-                className="flex-1 py-2 bg-gray-700 hover:bg-gray-600 text-white font-bold text-xs rounded-lg transition-colors"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={handleConfirmOrder}
-                className="flex-1 py-2 bg-[#00FF41] hover:bg-[#00cc34] text-black font-black text-xs rounded-lg transition-colors"
-              >
-                Confirm Order
-              </button>
+              <div className="space-y-2.5 text-xs font-mono">
+                {/* Contract */}
+                <div className="flex justify-between p-2 bg-[#0B0E14] rounded border border-white/5">
+                  <span className="text-gray-400">Contract:</span>
+                  <span className="font-bold text-white">{activeOrder.display}</span>
+                </div>
+
+                {/* ORDER TYPE TOGGLE (MARKET / LIMIT) */}
+                <div className="flex justify-between items-center p-2 bg-[#0B0E14] rounded border border-white/5">
+                  <span className="text-gray-400">Order Type:</span>
+                  <div className="flex bg-[#161B22] p-0.5 rounded border border-white/10">
+                    {['MARKET', 'LIMIT'].map((t) => (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => {
+                          setOrderType(t);
+                          if (t === 'LIMIT' && !limitPrice) {
+                            setLimitPrice(String(livePrice));
+                          }
+                        }}
+                        className={`px-3 py-1 rounded text-[10px] font-extrabold transition-all ${
+                          orderType === t
+                            ? 'bg-[#00D4FF] text-black shadow-[0_0_10px_rgba(0,212,255,0.4)]'
+                            : 'text-gray-400 hover:text-white'
+                        }`}
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Live Current Market LTP */}
+                <div className="flex justify-between items-center p-2 bg-[#0B0E14] rounded border border-white/5">
+                  <span className="text-gray-400 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-[#00FF41] animate-pulse"></span>
+                    Current Market LTP:
+                  </span>
+                  <span className="font-bold text-[#00FF41]">₹{livePrice.toFixed(2)}</span>
+                </div>
+
+                {/* Limit Price Input (when LIMIT selected) */}
+                {orderType === 'LIMIT' && (
+                  <div className="flex justify-between items-center p-2 bg-[#0B0E14] rounded border border-[#00D4FF]/30">
+                    <span className="text-cyan-300 font-bold">Limit Price (₹):</span>
+                    <input
+                      type="number"
+                      step="0.05"
+                      min="0.05"
+                      value={limitPrice}
+                      onChange={(e) => setLimitPrice(e.target.value)}
+                      className="w-24 bg-[#161B22] border border-[#00D4FF]/50 rounded text-right py-1 px-2 text-[#00D4FF] text-xs font-bold focus:outline-none focus:ring-1 focus:ring-[#00D4FF]"
+                      placeholder={String(livePrice)}
+                    />
+                  </div>
+                )}
+
+                {/* Lots */}
+                <div className="flex justify-between p-2 bg-[#0B0E14] rounded border border-white/5 items-center">
+                  <span className="text-gray-400">Lots ({activeOrder.lotSize} Qty/Lot):</span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setLots((l) => Math.max(1, l - 1))}
+                      className="w-6 h-6 bg-[#161B22] border border-white/10 rounded flex items-center justify-center text-white hover:bg-white/10"
+                    >
+                      -
+                    </button>
+                    <input
+                      type="number"
+                      min="1"
+                      max="100"
+                      value={lots}
+                      onChange={(e) => setLots(Math.max(1, parseInt(e.target.value) || 1))}
+                      className="w-12 bg-[#161B22] border border-white/20 rounded text-center py-1 text-white text-xs font-bold"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setLots((l) => l + 1)}
+                      className="w-6 h-6 bg-[#161B22] border border-white/10 rounded flex items-center justify-center text-white hover:bg-white/10"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+
+                {/* Total Quantity */}
+                <div className="flex justify-between p-2 bg-[#0B0E14] rounded border border-white/5">
+                  <span className="text-gray-400">Total Quantity:</span>
+                  <span className="font-bold text-cyan-300">{totalQty} Qty</span>
+                </div>
+
+                {/* Required Premium Margin (100% upfront / 1x LEV) */}
+                <div className="p-2.5 bg-purple-500/10 border border-purple-500/30 rounded space-y-1">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-300 font-bold">Required Margin:</span>
+                    <span className="font-black text-purple-300 text-sm">
+                      ₹{totalMargin.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-[10px] text-purple-400/80">
+                    <span>Option Premium (1x LEV)</span>
+                    <span>Available: ₹{(paperBalance || 0).toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setActiveOrder(null)}
+                  className="flex-1 py-2.5 bg-gray-700 hover:bg-gray-600 text-white font-bold text-xs rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmOrder}
+                  className={`flex-1 py-2.5 font-black text-xs rounded-lg transition-all shadow-lg active:scale-95 ${
+                    activeOrder.side === 'BUY'
+                      ? 'bg-[#00FF41] hover:bg-[#00cc34] text-black shadow-[0_0_15px_rgba(0,255,65,0.3)]'
+                      : 'bg-[#FF3B30] hover:bg-[#d32f2f] text-white shadow-[0_0_15px_rgba(255,59,48,0.3)]'
+                  }`}
+                >
+                  Confirm {orderType} {activeOrder.side}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
     </div>
   );

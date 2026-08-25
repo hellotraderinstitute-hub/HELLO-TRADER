@@ -1,0 +1,798 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────────────────────
+// CORE PLATFORM MODELS
+// ─────────────────────────────────────────────────────────────
+
+model SystemSettings {
+  id                 String    @id @default("CONFIG")
+  trialDays          Int       @default(4)
+  monthlyCost        Float     @default(900)
+  tokenPrice         Float     @default(1)
+  welcomeBonus       Float     @default(0)
+  referralReward     Float     @default(0)
+  autoRenewal        Boolean   @default(true)
+  minWithdrawal      Float     @default(500)
+  maxWithdrawal      Float     @default(100000)
+  membershipDuration Int       @default(30)
+  paperBalance       Float     @default(5000000)
+  dhanClientId       String?
+  dhanAccessToken    String?
+  globalKillSwitch   Boolean   @default(false)
+  globalKillReason   String?
+  globalKillAt       DateTime?
+
+  // Admin Payment Manager Settings
+  upiEnabled         Boolean   @default(true)
+  upiId              String    @default("7665977937@ybl")
+  upiHolderName      String    @default("Hello Trader Institute")
+
+  qrEnabled          Boolean   @default(true)
+  qrImageUrl         String    @default("/images/payment_qr.png")
+
+  bankEnabled        Boolean   @default(true)
+  bankName           String    @default("Bank of Baroda")
+  bankAccountName    String    @default("Hello Trader Institute")
+  bankAccountNumber  String    @default("28668100005444")
+  bankIfsc           String    @default("BARB0SHIVBS")
+  bankBranch         String?   @default("Main Branch")
+}
+
+model PaymentAuditLog {
+  id           String   @id @default(uuid())
+  adminId      String
+  adminName    String
+  changedField String
+  oldValue     String?
+  newValue     String?
+  timestamp    DateTime @default(now())
+}
+
+model User {
+  id               String    @id @default(uuid())
+  studentId        String    @unique
+  name             String
+  email            String    @unique
+  phone            String    @unique
+  password         String
+  role             String    @default("USER")
+  referralCode     String    @unique
+  referredBy       String?
+  status           String    @default("ACTIVE")
+  trialStartedAt   DateTime  @default(now())
+  // Per-user trial override — if null, global SystemSettings.trialDays applies (default 4)
+  trialDaysOverride Int?
+  // Admin note for override reason
+  trialOverrideNote String?
+  trialOverrideAt   DateTime?
+  createdAt        DateTime  @default(now())
+
+  wallets           Wallet[]
+  trades            Trade[]
+  memberships       Membership[]
+  paymentRequests   PaymentRequest[]
+  ledger            Ledger[]
+  referralsMade     Referral[]           @relation("Referrer")
+  referredByLink    Referral?            @relation("Referred")
+  bonusClaims       ReferralBonusClaim[]
+  brokerConnections AlgoBrokerConnection[]
+  auditLogs         AuditLog[]
+  algoPositions     AlgoPosition[]
+  copyMaster        CopyMaster?
+  copyFollowing     CopyFollower[]
+
+  // CRM Relations
+  convertedLead     Lead?                @relation("LeadToUser")
+  employeeRecord    Employee?
+  admissions        Admission[]          @relation("UserAdmissions")
+  refunds           Refund[]
+  terminalCustomer  TerminalCustomer?
+}
+
+model Wallet {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+  type   String
+}
+
+model Ledger {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  walletType String
+  amount     Float
+  type       String
+  reason     String
+  timestamp  DateTime @default(now())
+}
+
+model Membership {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  status    String   @default("ACTIVE")
+  autoRenew Boolean  @default(false)
+  startedAt DateTime @default(now())
+  expiresAt DateTime
+}
+
+model MembershipPlan {
+  id           String   @id @default(uuid())
+  name         String
+  durationDays Int
+  price        Float
+  description  String?
+  createdAt    DateTime @default(now())
+}
+
+model PaymentRequest {
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+  amount        Float
+  method        String
+  utr           String?  @unique
+  screenshotUrl String?
+  actualAmount  Float?
+  bonusApplied  Float?
+  reason        String?
+  adminId       String?
+  status        String   @default("PENDING")
+  timestamp     DateTime @default(now())
+
+  coursePayments    CoursePayment[]
+  terminalRecharges TerminalRecharge[]
+}
+
+model BonusRule {
+  id           String @id @default(uuid())
+  minAmount    Float  @unique
+  bonusPercent Float
+}
+
+model Trade {
+  id          String    @id @default(uuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  symbol      String
+  productType String
+  orderType   String
+  quantity    Int
+  entryPrice  Float
+  exitPrice   Float?
+  status      String
+  pnl         Float?
+  openedAt    DateTime  @default(now())
+  closedAt    DateTime?
+}
+
+model SignupRequest {
+  id           String   @id @default(uuid())
+  name         String
+  email        String
+  phone        String
+  referralCode String?
+  ipAddress    String?
+  status       String   @default("PENDING")
+  createdAt    DateTime @default(now())
+}
+
+model Referral {
+  id           String    @id @default(uuid())
+  referrerId   String
+  referrer     User      @relation("Referrer", fields: [referrerId], references: [id])
+  referredId   String?   @unique
+  referred     User?     @relation("Referred", fields: [referredId], references: [id])
+  signupEmail  String?
+  status       String    @default("PENDING")
+  ipAddress    String?
+  bonusClaimed Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  successAt    DateTime?
+}
+
+model ReferralBonusClaim {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  rewardType  String
+  referralIds String
+  claimedAt   DateTime @default(now())
+}
+
+// ─────────────────────────────────────────────────────────────
+// ALGO TRADING ENGINE
+// ─────────────────────────────────────────────────────────────
+
+model AlgoBrokerConnection {
+  id          String  @id @default(uuid())
+  userId      String
+  user        User    @relation(fields: [userId], references: [id])
+  broker      String  // DHAN | ANGELONE | UPSTOX | SHOONYA | FYERS | GOPOCKET
+  displayName String?
+
+  // Credentials — AES-256 encrypted at rest. Passwords NEVER stored.
+  apiKey       String?
+  apiSecret    String?
+  clientId     String?
+  accessToken  String? // Encrypted
+  totpSecret   String? // Encrypted — only for TOTP-based brokers
+  vendorCode   String?
+  refreshToken String?
+  redirectUri  String?
+  imei         String?
+
+  // Webhook
+  webhookToken String @unique // Cryptographically random secret
+
+  // Connection status
+  isActive     Boolean   @default(false)
+  lastTestedAt DateTime?
+  testStatus   String?   // SUCCESS | FAILED
+  testMessage  String?
+
+  // COMPLIANCE: Explicit consent — MANDATORY before any order
+  consentAccepted Boolean   @default(false)
+  consentAt       DateTime?
+  consentIp       String?
+  consentVersion  String    @default("v1.0")
+  consentText     String?   // Exact consent text shown to user (snapshot)
+
+  // Risk Controls — user configurable
+  maxOpenTrades     Int?
+  maxDailyLoss      Float?
+  maxPositionSize   Float?
+  allowedProducts   String? // CSV: "MIS,NRML"
+  tradingHoursStart String? // "09:15"
+  tradingHoursEnd   String? // "15:30"
+
+  // Kill Switch
+  killSwitchActive Boolean   @default(false)
+  killSwitchAt     DateTime?
+  killSwitchReason String?
+
+  connectedAt DateTime @default(now())
+
+  webhookLogs AlgoWebhookLog[]
+  positions   AlgoPosition[]
+}
+
+model AlgoWebhookLog {
+  id           String               @id @default(uuid())
+  userId       String
+  connectionId String
+  connection   AlgoBrokerConnection @relation(fields: [connectionId], references: [id])
+
+  rawPayload      String  // Immutable — full JSON from TradingView
+  idempotencyKey  String? // Dedup: symbol+action+token+5s window
+
+  parsedSymbol    String?
+  parsedAction    String? // BUY | SELL | EXIT
+  parsedQty       Int?
+  parsedSL        Float?
+  parsedTarget    Float?
+  parsedProduct   String?
+  parsedOrderType String?
+
+  executionStatus String  @default("PENDING") // PENDING|EXECUTED|FAILED|SKIPPED|RISK_REJECTED
+  brokerOrderId   String?
+  errorMessage    String?
+  riskReason      String?
+
+  receivedAt  DateTime  @default(now())
+  executedAt  DateTime?
+}
+
+model AlgoPosition {
+  id           String               @id @default(uuid())
+  userId       String
+  user         User                 @relation(fields: [userId], references: [id])
+  connectionId String
+  connection   AlgoBrokerConnection @relation(fields: [connectionId], references: [id])
+
+  symbol      String
+  exchange    String @default("NSE")
+  side        String // BUY | SELL
+  quantity    Int
+  entryPrice  Float
+  productType String @default("MIS")
+
+  slPrice     Float?
+  targetPrice Float?
+  trailSL     Boolean @default(false)
+  trailOffset Float?
+  currentSL   Float?
+
+  status        String    @default("OPEN") // OPEN|CLOSED|SL_HIT|TARGET_HIT|MANUALLY_CLOSED
+  brokerOrderId String?
+  exitOrderId   String?
+  exitPrice     Float?
+  pnl           Float?
+
+  openedAt DateTime  @default(now())
+  closedAt DateTime?
+}
+
+// ─────────────────────────────────────────────────────────────
+// IMMUTABLE AUDIT LOG
+// ─────────────────────────────────────────────────────────────
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  category  String   // BROKER|ALGO|WEBHOOK|RISK|ORDER|POSITION|COPY|KILL_SWITCH|AUTH|CONSENT|SYSTEM
+  action    String
+  detail    String?
+  meta      String?  // JSON — broker response, risk reason, order details, etc.
+  ipAddress String?
+  timestamp DateTime @default(now())
+
+  @@index([userId, timestamp])
+  @@index([category, timestamp])
+}
+
+// ─────────────────────────────────────────────────────────────
+// COPY TRADING ENGINE
+// ─────────────────────────────────────────────────────────────
+
+model CopyMaster {
+  id             String   @id @default(uuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id])
+  connectionId   String
+  displayName    String
+  description    String?
+  riskLevel      String   @default("MEDIUM") // LOW|MEDIUM|HIGH
+  isPublic       Boolean  @default(false)
+  isActive       Boolean  @default(false)
+  killSwitch     Boolean  @default(false)
+  performanceRoi Float    @default(0)
+  totalTrades    Int      @default(0)
+  winRate        Float    @default(0)
+  maxFollowers   Int      @default(10)
+  createdAt      DateTime @default(now())
+
+  followers CopyFollower[]
+  tradeLogs CopyTradeLog[]
+}
+
+model CopyFollower {
+  id           String     @id @default(uuid())
+  masterId     String
+  master       CopyMaster @relation(fields: [masterId], references: [id])
+  userId       String
+  user         User       @relation(fields: [userId], references: [id])
+  connectionId String
+
+  allocationType  String // FIXED_QTY|MULTIPLIER|PERCENTAGE
+  allocationValue Float
+
+  maxDailyLoss    Float   @default(5000)
+  maxOpenTrades   Int     @default(5)
+  maxPositionSize Float?
+  allowedProducts String?
+  emergencyStop   Boolean @default(false)
+
+  killSwitchActive Boolean   @default(false)
+  killSwitchAt     DateTime?
+
+  // COMPLIANCE: Explicit consent before activation
+  consentAccepted Boolean   @default(false)
+  consentAt       DateTime?
+  consentIp       String?
+
+  isActive Boolean  @default(true)
+  joinedAt DateTime @default(now())
+
+  tradeLogs CopyTradeLog[]
+}
+
+model CopyTradeLog {
+  id         String       @id @default(uuid())
+  masterId   String
+  master     CopyMaster   @relation(fields: [masterId], references: [id])
+  followerId String
+  follower   CopyFollower @relation(fields: [followerId], references: [id])
+
+  masterOrderId   String?
+  followerOrderId String?
+  symbol          String
+  side            String
+  quantity        Int
+  price           Float
+
+  status       String @default("QUEUED") // QUEUED|EXECUTED|FAILED|SKIPPED|RISK_REJECTED
+  retryCount   Int    @default(0)
+  errorMessage String?
+  riskReason   String?
+
+  executedAt DateTime?
+  createdAt  DateTime  @default(now())
+}
+
+// ─────────────────────────────────────────────────────────────
+// GUARDIAN INCIDENT MONITOR MODEL
+// ─────────────────────────────────────────────────────────────
+
+model GuardianIncident {
+  id              String   @id @default(uuid())
+  component       String   // FRONTEND, BACKEND, DATABASE, REDIS, BROKER, WEBHOOK, QUEUE, LOGIN, WALLET, MEMBERSHIP
+  severity        String   // INFO, WARNING, CRITICAL
+  message         String
+  error           String?
+  autoActionTaken String?  // e.g. "RESTARTED_STREAM", "ALERTED_ADMIN", "NO_ACTION"
+  timestamp       DateTime @default(now())
+
+  @@index([component, timestamp])
+}
+
+// ─────────────────────────────────────────────────────────────
+// CRM & BUSINESS MANAGEMENT MODULE (PHASE 1 & PHASE 2)
+// ─────────────────────────────────────────────────────────────
+
+model MarketingSource {
+  id          String   @id @default(uuid())
+  name        String   @unique // Justdial | Instagram | Facebook | Website | Referral | Offline | Google Ads
+  channelType String   @default("DIGITAL") // DIGITAL | OFFLINE | INFLUENCER | DIRECT
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  leads     Lead[]
+  campaigns CampaignCost[]
+}
+
+model CampaignCost {
+  id           String          @id @default(uuid())
+  sourceId     String
+  source       MarketingSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  campaignName String
+  startDate    DateTime
+  endDate      DateTime?
+  budgetSpent  Float           @default(0)
+  createdAt    DateTime        @default(now())
+
+  leads    Lead[]
+  expenses Expense[]
+}
+
+model Employee {
+  id             String   @id @default(uuid())
+  employeeCode   String   @unique // e.g. EMP001
+  userId         String?  @unique
+  user           User?    @relation(fields: [userId], references: [id])
+  name           String
+  email          String   @unique
+  phone          String   @unique
+  designation    String   @default("SALES_EXEC") // TELECALLER | SALES_EXEC | SENIOR_COUNSELOR | FACULTY | MANAGER | ACCOUNTANT
+  department     String   @default("SALES") // SALES | ACADEMICS | FINANCE | MARKETING
+  baseSalary     Float    @default(0)
+  commissionRate Float    @default(0) // Percentage
+  status         String   @default("ACTIVE") // ACTIVE | INACTIVE | ON_LEAVE
+  crmAccess      Boolean  @default(true) // CRM Access toggle (ON / OFF)
+  hireDate       DateTime @default(now())
+  createdAt      DateTime @default(now())
+
+  assignedLeads             Lead[]               @relation("AssignedLeads")
+  createdLeads              Lead[]               @relation("CreatedLeads")
+  followUps                 LeadFollowUp[]
+  conductedDemos            DemoClass[]          @relation("InstructorDemos")
+  admissionsHandled         Admission[]          @relation("CounselorAdmissions")
+  admissionsConverted       Admission[]          @relation("ConvertedByAdmissions")
+  collectedPayments         CoursePayment[]      @relation("CollectedCoursePayments")
+  processedRefunds          Refund[]             @relation("ProcessedRefunds")
+  terminalSales             TerminalRecharge[]   @relation("TerminalSales")
+  assignedTerminalCustomers TerminalCustomer[]   @relation("AssignedTerminalCustomers")
+  commissions               EmployeeCommission[] @relation("EmployeeCommissions")
+  salaries                  SalaryPayment[]      @relation("EmployeeSalaries")
+}
+
+model Lead {
+  id                 String           @id @default(uuid())
+  leadNumber         String           @unique // e.g. HT-LD-2026-0001
+  name               String
+  email              String?
+  phone              String           @unique
+  city               String?
+  sourceId           String?
+  source             MarketingSource? @relation(fields: [sourceId], references: [id])
+  campaignId         String?
+  campaign           CampaignCost?    @relation(fields: [campaignId], references: [id])
+  
+  createdById        String?
+  createdBy          Employee?        @relation("CreatedLeads", fields: [createdById], references: [id])
+  assignedEmployeeId String?
+  assignedEmployee   Employee?        @relation("AssignedLeads", fields: [assignedEmployeeId], references: [id])
+
+  status            String  @default("NEW") // NEW | CONTACTED | FOLLOW_UP | DEMO_SCHEDULED | DEMO_ATTENDED | ADMISSION_PENDING | ADMITTED | LOST | JUNK
+  callStatus        String  @default("NOT_CALLED") // NOT_CALLED | CONNECTED | NO_ANSWER | BUSY | WRONG_NUMBER | CALLBACK_REQUESTED
+  priority          String  @default("MEDIUM") // LOW | MEDIUM | HIGH | URGENT
+  tradingExperience String? // BEGINNER | INTERMEDIATE | EXPERIENCED
+  budget            Float?
+  notes             String?
+
+  convertedUserId String?   @unique
+  convertedUser   User?     @relation("LeadToUser", fields: [convertedUserId], references: [id])
+  convertedAt     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  followUps      LeadFollowUp[]
+  demoAttendee   DemoAttendee[]
+  admissions     Admission[]
+  crmActivities  CrmActivityTimeline[]
+
+  @@index([status, assignedEmployeeId])
+  @@index([phone, email])
+}
+
+model LeadFollowUp {
+  id          String    @id @default(uuid())
+  leadId      String
+  lead        Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  employeeId  String
+  employee    Employee  @relation(fields: [employeeId], references: [id])
+  scheduledAt DateTime
+  completedAt DateTime?
+  status      String    @default("PENDING") // PENDING | COMPLETED | CANCELLED | MISSED
+  channel     String    @default("CALL") // CALL | WHATSAPP | TELEGRAM | EMAIL | IN_PERSON
+  summary     String
+  nextAction  String?
+  createdAt   DateTime  @default(now())
+
+  @@index([scheduledAt, status])
+}
+
+model DemoClass {
+  id              String   @id @default(uuid())
+  title           String
+  topic           String
+  scheduledAt     DateTime
+  durationMinutes Int      @default(60)
+  meetingUrl      String?
+  instructorId    String
+  instructor      Employee @relation("InstructorDemos", fields: [instructorId], references: [id])
+  status          String   @default("SCHEDULED") // SCHEDULED | LIVE | COMPLETED | CANCELLED
+  recordingUrl    String?
+  createdAt       DateTime @default(now())
+
+  attendees DemoAttendee[]
+}
+
+model DemoAttendee {
+  id       String    @id @default(uuid())
+  demoId   String
+  demo     DemoClass @relation(fields: [demoId], references: [id], onDelete: Cascade)
+  leadId   String
+  lead     Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  attended Boolean   @default(false)
+  joinedAt DateTime?
+  leftAt   DateTime?
+  feedback String?
+
+  @@unique([demoId, leadId])
+}
+
+model CrmActivityTimeline {
+  id          String   @id @default(uuid())
+  leadId      String?
+  lead        Lead?    @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  admissionId String?
+  admission   Admission? @relation(fields: [admissionId], references: [id], onDelete: Cascade)
+  actorName   String   // Staff / System name
+  actorRole   String   // SALES_EXEC, SYSTEM, ADMIN
+  eventType   String   // LEAD_CREATED | CALL_LOGGED | STATUS_CHANGED | FOLLOWUP_SCHEDULED | DEMO_BOOKED | DEMO_ATTENDED | ADMISSION_DONE
+  title       String
+  description String?
+  metadata    String?  // JSON snapshot
+  timestamp   DateTime @default(now())
+
+  @@index([leadId, timestamp])
+  @@index([admissionId, timestamp])
+}
+
+// ─────────────────────────────────────────────────────────────
+// CRM COURSES, TERMINAL PLANS, ADMISSIONS & PNL MODELS
+// ─────────────────────────────────────────────────────────────
+
+model Course {
+  id           String   @id @default(uuid())
+  name         String   @unique
+  code         String   @unique // e.g. HT-CRS-01
+  fee          Float
+  durationDays Int
+  description  String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  admissions   Admission[]
+}
+
+model TerminalPlan {
+  id           String   @id @default(uuid())
+  name         String   @unique // e.g. "PRO", "VIP", "ALGO_ELITE"
+  price        Float
+  validityDays Int
+  maxBrokers   Int      @default(2)
+  description  String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  recharges    TerminalRecharge[]
+}
+
+model Admission {
+  id               String          @id @default(uuid())
+  admissionNumber  String          @unique // e.g. HT-ADM-2026-0001
+  leadId           String?
+  lead             Lead?           @relation(fields: [leadId], references: [id])
+  userId           String
+  user             User            @relation("UserAdmissions", fields: [userId], references: [id])
+  courseId         String?
+  course           Course?         @relation(fields: [courseId], references: [id])
+  courseName       String          // Fee snapshot
+  batchName        String?
+  totalFee         Float
+  discountAmount   Float           @default(0)
+  netFee           Float           // totalFee - discountAmount
+  paidAmount       Float           @default(0)
+  pendingAmount    Float           // netFee - paidAmount
+  admissionDate    DateTime        @default(now())
+  status           String          @default("ACTIVE") // ACTIVE | COMPLETED | CANCELLED | REFUNDED
+  
+  counselorId      String?
+  counselor        Employee?       @relation("CounselorAdmissions", fields: [counselorId], references: [id])
+  convertedById    String?
+  convertedBy      Employee?       @relation("ConvertedByAdmissions", fields: [convertedById], references: [id])
+  
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  coursePayments   CoursePayment[]
+  refunds          Refund[]
+  commissions      EmployeeCommission[]
+  timelines        CrmActivityTimeline[]
+}
+
+model CoursePayment {
+  id               String        @id @default(uuid())
+  receiptNumber    String        @unique // HT-REC-2026-0001
+  admissionId      String
+  admission        Admission     @relation(fields: [admissionId], references: [id])
+  amount           Float
+  paymentMethod    String        @default("UPI") // UPI | BANK | WALLET | CASH
+  transactionRef   String?       @unique
+  paymentDate      DateTime      @default(now())
+  status           String        @default("SUCCESS")
+  paymentRequestId String?
+  paymentRequest   PaymentRequest? @relation(fields: [paymentRequestId], references: [id])
+  collectedById    String?
+  collectedBy      Employee?     @relation("CollectedCoursePayments", fields: [collectedById], references: [id])
+  createdAt        DateTime      @default(now())
+}
+
+model Refund {
+  id               String        @id @default(uuid())
+  refundNumber     String        @unique // HT-RFD-2026-0001
+  admissionId      String?
+  admission        Admission?    @relation(fields: [admissionId], references: [id])
+  userId           String
+  user             User          @relation(fields: [userId], references: [id])
+  amountRequested  Float
+  amountApproved   Float?
+  reason           String
+  status           String        @default("PENDING") // PENDING | APPROVED | REJECTED | PROCESSED
+  requestedAt      DateTime      @default(now())
+  processedAt      DateTime?
+  processedById    String?
+  processedBy      Employee?     @relation("ProcessedRefunds", fields: [processedById], references: [id])
+  transactionRef   String?
+  createdAt        DateTime      @default(now())
+}
+
+model TerminalCustomer {
+  id                 String          @id @default(uuid())
+  userId             String          @unique
+  user               User            @relation(fields: [userId], references: [id])
+  terminalKey        String          @unique
+  planTier           String          @default("STANDARD")
+  maxBrokers         Int             @default(2)
+  isActive           Boolean         @default(true)
+  totalRecharged     Float           @default(0)
+  lastRechargeAt     DateTime?
+  expiresAt          DateTime?
+  assignedEmployeeId String?
+  assignedEmployee   Employee?       @relation("AssignedTerminalCustomers", fields: [assignedEmployeeId], references: [id])
+  createdAt          DateTime        @default(now())
+
+  recharges          TerminalRecharge[]
+}
+
+model TerminalRecharge {
+  id                 String           @id @default(uuid())
+  rechargeNumber     String           @unique // HT-TR-2026-0001
+  terminalCustomerId String
+  terminalCustomer   TerminalCustomer @relation(fields: [terminalCustomerId], references: [id])
+  planId             String?
+  plan               TerminalPlan?    @relation(fields: [planId], references: [id])
+  amount             Float            // Historical protection snapshot
+  creditsAdded       Float            @default(0)
+  validityDays       Int
+  paymentMethod      String           @default("WALLET")
+  status             String           @default("SUCCESS")
+  rechargedAt        DateTime         @default(now())
+  paymentRequestId   String?
+  paymentRequest     PaymentRequest?  @relation(fields: [paymentRequestId], references: [id])
+  soldById           String?
+  soldBy             Employee?        @relation("TerminalSales", fields: [soldById], references: [id])
+
+  commissions        EmployeeCommission[]
+}
+
+model EmployeeCommission {
+  id               String           @id @default(uuid())
+  employeeId       String
+  employee         Employee         @relation("EmployeeCommissions", fields: [employeeId], references: [id])
+  admissionId      String?
+  admission        Admission?       @relation(fields: [admissionId], references: [id])
+  rechargeId       String?
+  recharge         TerminalRecharge? @relation(fields: [rechargeId], references: [id])
+  sourceType       String           @default("ADMISSION") // ADMISSION | TERMINAL_RECHARGE
+  saleAmount       Float
+  ratePercent      Float
+  commissionAmount Float
+  status           String           @default("PENDING") // PENDING | APPROVED | PAID | CANCELLED
+  periodMonth      Int
+  periodYear       Int
+  createdAt        DateTime         @default(now())
+}
+
+model SalaryPayment {
+  id               String        @id @default(uuid())
+  payrollNumber    String        @unique // HT-PAY-2026-08-001
+  employeeId       String
+  employee         Employee      @relation("EmployeeSalaries", fields: [employeeId], references: [id])
+  month            Int
+  year             Int
+  baseSalary       Float
+  commissionEarned Float         @default(0)
+  bonus            Float         @default(0)
+  deductions       Float         @default(0)
+  netSalary        Float
+  paymentDate      DateTime?
+  status           String        @default("DRAFT") // DRAFT | APPROVED | PAID | HELD
+  paymentRef       String?
+  notes            String?
+  createdAt        DateTime      @default(now())
+}
+
+model Expense {
+  id               String        @id @default(uuid())
+  voucherNumber    String        @unique // HT-EXP-2026-0001
+  title            String
+  category         String        @default("MARKETING") // MARKETING | SALARIES | INFRASTRUCTURE | SOFTWARE | MISC
+  amount           Float
+  expenseDate      DateTime
+  campaignCostId   String?
+  campaignCost     CampaignCost? @relation(fields: [campaignCostId], references: [id])
+  paidTo           String?
+  description      String?
+  receiptUrl       String?
+  approvedBy       String?
+  status           String        @default("SUCCESS")
+  createdAt        DateTime      @default(now())
+}
+
+
+

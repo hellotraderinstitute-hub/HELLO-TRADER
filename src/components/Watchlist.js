@@ -148,16 +148,7 @@ export default function Watchlist() {
 
       {/* Ticker list */}
       <div className="flex-1 overflow-y-auto divide-y divide-white/[0.04]">
-        {activeStatus !== 'LIVE' && activeStatus !== 'STREAMING' ? (
-          <div className="p-6 text-center text-amber-400 text-[10px] space-y-2 bg-amber-500/5 m-2 rounded border border-amber-500/20">
-            <p className="font-extrabold uppercase tracking-wide flex items-center justify-center gap-1">
-              ⚠️ LIVE DATA UNAVAILABLE
-            </p>
-            <p className="text-[9px] text-gray-400 leading-snug">
-              Exchange WebSocket stream disconnected. Connect live trading account in Admin Settings.
-            </p>
-          </div>
-        ) : filteredTickers.length === 0 ? (
+        {filteredTickers.length === 0 ? (
           <div className="p-6 text-center text-gray-500 text-[10px] space-y-1">
             <p className="font-bold text-gray-400">No assets found</p>
             <p className="text-[9px]">Try searching for "NIFTY", "BANKNIFTY", "GOLD", "TCS", or "RELIANCE"</p>

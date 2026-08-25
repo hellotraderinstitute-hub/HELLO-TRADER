@@ -1,26 +1,21 @@
 const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const path = require('path');
+const defaultPrisma = new PrismaClient({
+  datasources: { db: { url: 'file:' + path.resolve(__dirname, '../prisma/backend.db') } }
+});
 const { N } = require('./notifier');
 
-/**
- * Atomic & Idempotent Auto-Billing Engine:
- * Checks user's token balance against current SystemSettings.monthlyCost.
- * If balance >= monthlyCost AND (membership expired OR inactive),
- * automatically deducts exact monthlyCost ONCE, activates premium for 30 days,
- * and unlocks all premium features seamlessly.
- */
-async function autoBillUserIfEligible(userId) {
+async function autoBillUserIfEligible(userId, customPrisma = null) {
   if (!userId) return { billed: false, reason: 'NO_USER_ID' };
+  const prisma = customPrisma || defaultPrisma;
 
   try {
-    // 1. Fetch system configuration (Dynamic Single Source of Truth for monthly cost)
     let settings = await prisma.systemSettings.findUnique({ where: { id: 'CONFIG' } });
     if (!settings) {
       settings = await prisma.systemSettings.create({ data: { id: 'CONFIG' } });
     }
     const monthlyCost = Number(settings?.monthlyCost || 900);
 
-    // 2. Fetch User & latest membership
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) return { billed: false, reason: 'USER_NOT_FOUND' };
 
