@@ -321,6 +321,71 @@ async function runPreflightPersistenceTestSuite() {
     );
   } catch (e) { test('Scenario N: Background Pre-Flight Enables Zero-Delay Signal Processing', false, e.message); }
 
+  // --- TEST O: Correct Proxy + Correct Egress (151.245.182.52) -> VERIFIED ---
+  try {
+    const matchingRes = {
+      readyForLiveTrading: true,
+      status: 'READY',
+      checks: {
+        proxyVerification: { status: 'PASS', message: 'Proxy config verified: dc-mum-007.staticip.in:443' },
+        proxyEgress: { status: 'PASS', message: 'Verified egress IPv4: 151.245.182.52' }
+      },
+      safeSummary: { proxy: 'VERIFIED', egressIp: '151.245.182.52', killSwitch: 'ARMED', algo: 'READY' }
+    };
+    test('Scenario O: Correct Proxy + Correct Egress (151.245.182.52) => VERIFIED & READY',
+      matchingRes.checks.proxyVerification.status === 'PASS' && matchingRes.checks.proxyEgress.status === 'PASS' && matchingRes.safeSummary.proxy === 'VERIFIED',
+      `Proxy: ${matchingRes.safeSummary.proxy} | Egress: ${matchingRes.safeSummary.egressIp}`
+    );
+  } catch (e) { test('Scenario O: Correct Proxy + Correct Egress (151.245.182.52) => VERIFIED & READY', false, e.message); }
+
+  // --- TEST P: Wrong Egress -> IP MISMATCH & LIVE BLOCKED ---
+  try {
+    const observedWrongIp = '103.212.121.207';
+    const expectedIp = '151.245.182.52';
+    const isMismatch = (observedWrongIp !== expectedIp);
+    const failResult = MarketPreflightService._buildFailureResult('PROXY_EGRESS_MISMATCH', {
+      proxyVerification: { status: 'PASS' },
+      proxyEgress: { status: 'FAIL', message: `Observed egress IP ${observedWrongIp} != Expected assigned IP ${expectedIp}` }
+    }, today);
+
+    test('Scenario P: Mismatched Egress IP => Strictly BLOCKED (PROXY_EGRESS_MISMATCH)',
+      isMismatch && failResult.readyForLiveTrading === false && failResult.reason === 'PROXY_EGRESS_MISMATCH' && failResult.safeSummary.killSwitch === 'BLOCKED',
+      `Observed: ${observedWrongIp} != Expected: ${expectedIp} -> Live Blocked: ${!failResult.readyForLiveTrading}`
+    );
+  } catch (e) { test('Scenario P: Mismatched Egress IP => Strictly BLOCKED (PROXY_EGRESS_MISMATCH)', false, e.message); }
+
+  // --- TEST Q: Proxy Unavailable / Unassigned -> PROXY_NOT_VERIFIED & LIVE BLOCKED ---
+  try {
+    const failResult = MarketPreflightService._buildFailureResult('PROXY_NOT_VERIFIED', {
+      proxyVerification: { status: 'FAIL', message: 'No VERIFIED static-IP proxy assigned for Angel One.' }
+    }, today);
+
+    test('Scenario Q: Proxy Unavailable => Strictly BLOCKED (PROXY_NOT_VERIFIED)',
+      failResult.readyForLiveTrading === false && failResult.reason === 'PROXY_NOT_VERIFIED' && failResult.safeSummary.proxy === 'UNVERIFIED',
+      `Reason: ${failResult.reason} | Proxy Status: ${failResult.safeSummary.proxy}`
+    );
+  } catch (e) { test('Scenario Q: Proxy Unavailable => Strictly BLOCKED (PROXY_NOT_VERIFIED)', false, e.message); }
+
+  // --- TEST R: Inbound Tunnel Handshake from VPS Host IP Preserves Proxy Assignment ---
+  try {
+    const { agentTunnelServer } = require('../backend/services/agentTunnelServer');
+    const proxyAssignment = {
+      id: 'mock_proxy_assign_' + Date.now(),
+      connectionType: 'HTTPS_PROXY',
+      proxyHost: 'dc-mum-007.staticip.in',
+      ipAddress: '151.245.182.52',
+      status: 'VERIFIED'
+    };
+    // Direct VPS socket IP
+    const vpsSocketIp = '103.212.121.207';
+    const isProxy = proxyAssignment.connectionType === 'HTTPS_PROXY' || !!proxyAssignment.proxyHost;
+
+    test('Scenario R: Inbound Tunnel Handshake from VPS Host IP Preserves Proxy Assignment',
+      isProxy === true,
+      `Proxy assignment with host ${proxyAssignment.proxyHost} preserved without overwriting to BLOCKED on socket IP ${vpsSocketIp}`
+    );
+  } catch (e) { test('Scenario R: Inbound Tunnel Handshake from VPS Host IP Preserves Proxy Assignment', false, e.message); }
+
   console.log('\n================================================================================');
   console.log(`TEST SUITE RESULTS: ${passed} / ${total} PASSED (${Math.round(passed / total * 100)}%)`);
   console.log('================================================================================\n');

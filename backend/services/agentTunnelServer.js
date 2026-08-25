@@ -474,6 +474,17 @@ class AgentTunnelServer {
         },
       });
       if (assignment) {
+        // If this assignment uses a Proxy (HTTPS_PROXY / HTTP_PROXY / SOCKS5 / has proxyHost),
+        // the dedicated static IP is the proxy egress IP, verified through outbound proxy probes.
+        // It must NOT be marked BLOCKED simply because the tunnel websocket originates from the server/VPS host IP.
+        const isProxy = assignment.connectionType === 'HTTPS_PROXY' ||
+                        assignment.connectionType === 'HTTP_PROXY' ||
+                        assignment.connectionType === 'SOCKS5' ||
+                        !!assignment.proxyHost;
+        if (isProxy) {
+          return;
+        }
+
         const isMatch = (assignment.ipAddress === agentIp);
         const newStatus = isMatch ? 'VERIFIED' : 'BLOCKED';
         await prisma.clientStaticIpAssignment.update({

@@ -226,7 +226,7 @@ class MarketPreflightService {
   /**
    * Persist a completed pre-flight result to the database.
    */
-  static async persistPreflightResult(userId, result, prismaClient) {
+  static async persistPreflightResult(userId, result, prismaClient, force = false) {
     const today = getISTDateString();
     let prisma = prismaClient;
     if (!prisma) {
@@ -242,6 +242,24 @@ class MarketPreflightService {
       await this.ensureTableExists(prisma);
       const isReady = !!result.readyForLiveTrading;
       const status = result.status || (isReady ? 'READY' : 'FAILED');
+
+      // Preserve today's verified READY session: do not overwrite with a non-forced failure
+      if (!isReady && !force) {
+        const cached = this.getCachedPreflight(userId);
+        if (cached && cached.passed) {
+          return;
+        }
+        let existingRec = null;
+        if (prisma.marketPreflightRecord) {
+          existingRec = await prisma.marketPreflightRecord.findUnique({
+            where: { userId_tradingDate: { userId, tradingDate: today } }
+          }).catch(() => null);
+        }
+        if (existingRec && (existingRec.readyForLiveTrading === 1 || existingRec.readyForLiveTrading === true || existingRec.status === 'READY')) {
+          return;
+        }
+      }
+
       const checksJson = JSON.stringify(result.checks || {});
       const safeSummaryJson = JSON.stringify(result.safeSummary || {});
       const reason = result.reason || null;
@@ -570,6 +588,13 @@ class MarketPreflightService {
           cachedAt: cached.timestamp,
         };
       }
+      const dbRec = await this.getPersistentPreflightToday(userId, options.prismaClient);
+      if (dbRec && dbRec.readyForLiveTrading) {
+        return {
+          ...dbRec,
+          isPersistentDb: true,
+        };
+      }
     }
 
     const {
@@ -668,10 +693,10 @@ class MarketPreflightService {
       const staticIpModel = prisma.clientStaticIpAssignment || prisma.ClientStaticIpAssignment;
       assignment = staticIpModel ? (
         await staticIpModel.findFirst({
-          where: { userId, broker: { in: ['ANGELONE', 'ANGEL_ONE', 'ALL'] }, status: { in: ['VERIFIED', 'ASSIGNED', 'VERIFYING'] } },
+          where: { userId, broker: { in: ['ANGELONE', 'ANGEL_ONE', 'ALL'] }, status: { in: ['VERIFIED', 'ASSIGNED', 'VERIFYING', 'BLOCKED'] } },
           orderBy: { updatedAt: 'desc' }
         }) || await staticIpModel.findFirst({
-          where: { userId, status: { in: ['VERIFIED', 'ASSIGNED', 'VERIFYING'] } },
+          where: { userId, status: { in: ['VERIFIED', 'ASSIGNED', 'VERIFYING', 'BLOCKED'] } },
           orderBy: { updatedAt: 'desc' }
         })
       ) : null;
