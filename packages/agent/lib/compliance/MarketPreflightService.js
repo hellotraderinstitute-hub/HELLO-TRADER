@@ -27,6 +27,7 @@
 'use strict';
 
 const axios = require('axios');
+const crypto = require('crypto');
 let ProxyTransportFactory;
 try {
   const ptfModule = require('../network/ProxyTransportFactory');
