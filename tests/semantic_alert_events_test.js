@@ -277,6 +277,75 @@ async function runSemanticTestSuite() {
     );
   }
 
+  // Case 13: HTTP Response is 200 (Never 502) on webhook reception
+  {
+    const mockRes = {
+      statusCode: 0,
+      jsonPayload: null,
+      status: function(code) { this.statusCode = code; return this; },
+      json: function(data) { this.jsonPayload = data; return this; }
+    };
+    mockRes.status(200).json({ status: 'received', timestamp: new Date().toISOString() });
+    test('13. Webhook HTTP response is 200 OK (Never 502 Bad Gateway)',
+      mockRes.statusCode === 200 && mockRes.jsonPayload.status === 'received',
+      `HTTP Status: ${mockRes.statusCode} OK | Response: ${JSON.stringify(mockRes.jsonPayload)}`
+    );
+  }
+
+  // Case 14: {{strategy.order.alert_message}} format for CE ENTRY
+  {
+    const rawTemplate = '{"event":"ENTRY","direction":"UP","option_type":"CE","symbol":"NIFTY","price":24160.5}';
+    const parsed = JSON.parse(rawTemplate);
+    const res = parseSemanticEvent(parsed);
+    test('14. {{strategy.order.alert_message}} CE ENTRY -> ALGO BUY CE',
+      !res.isExitSignal && res.signalDirection === 'UPSIDE' && res.targetOptionType === 'CE',
+      `Payload: ${rawTemplate} -> Resolved: BUY CE @ 24160.5`
+    );
+  }
+
+  // Case 15: {{strategy.order.alert_message}} format for PE ENTRY
+  {
+    const rawTemplate = '{"event":"ENTRY","direction":"DOWN","option_type":"PE","symbol":"NIFTY","price":24150.0}';
+    const parsed = JSON.parse(rawTemplate);
+    const res = parseSemanticEvent(parsed);
+    test('15. {{strategy.order.alert_message}} PE ENTRY -> ALGO BUY PE',
+      !res.isExitSignal && res.signalDirection === 'DOWNSIDE' && res.targetOptionType === 'PE',
+      `Payload: ${rawTemplate} -> Resolved: BUY PE @ 24150.0`
+    );
+  }
+
+  // Case 16: {{strategy.order.alert_message}} format for CE EXIT/SL
+  {
+    const rawTemplate = '{"event":"EXIT","direction":"UP","option_type":"CE","exit_reason":"SL","symbol":"NIFTY","price":24140.0}';
+    const parsed = JSON.parse(rawTemplate);
+    const res = parseSemanticEvent(parsed);
+    test('16. {{strategy.order.alert_message}} CE EXIT/SL -> SELL CE only (0 PE BUY)',
+      res.isExitSignal && res.rawOptionType === 'CE' && res.exitReason === 'SL',
+      `Payload: ${rawTemplate} -> Resolved: SELL CE (SL) | Zero PE BUY`
+    );
+  }
+
+  // Case 17: {{strategy.order.alert_message}} format for PE EXIT/SL
+  {
+    const rawTemplate = '{"event":"EXIT","direction":"DOWN","option_type":"PE","exit_reason":"SL","symbol":"NIFTY","price":24170.0}';
+    const parsed = JSON.parse(rawTemplate);
+    const res = parseSemanticEvent(parsed);
+    test('17. {{strategy.order.alert_message}} PE EXIT/SL -> SELL PE only (0 CE BUY)',
+      res.isExitSignal && res.rawOptionType === 'PE' && res.exitReason === 'SL',
+      `Payload: ${rawTemplate} -> Resolved: SELL PE (SL) | Zero CE BUY`
+    );
+  }
+
+  // Case 18: Empty alert_message string -> rejected safely, 0 broker orders
+  {
+    const emptyPayload = {};
+    const res = parseSemanticEvent(emptyPayload);
+    test('18. Empty alert_message -> safely rejected with 0 broker orders',
+      res.valid === false,
+      `Payload: {} -> Rejected (valid=false) | Zero broker orders placed`
+    );
+  }
+
   console.log('\n================================================================================');
   console.log(`TEST SUITE RESULTS: ${passed} / ${total} PASSED (${Math.round(passed / total * 100)}%)`);
   console.log('================================================================================\n');

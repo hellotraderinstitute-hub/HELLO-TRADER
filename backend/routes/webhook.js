@@ -286,144 +286,133 @@ router.post('/tv/:webhookToken', async (req, res) => {
           emitUpdate('algo_webhook', { id: webhookLog.id, status: 'SKIPPED', reason: 'NO_ALGO_POSITION_TO_EXIT', message: noPosReason });
           return;
         }
-          const AngelScripMaster = require('../services/angelScripMaster');
-          for (const openPos of openPositions) {
-            const exitSide = openPos.side === 'BUY' ? 'SELL' : 'BUY';
-            let exitToken = openPos.symbolToken || openPos.securityId;
-            if (!AngelScripMaster.isValidToken(exitToken)) {
-              exitToken = AngelScripMaster.resolveTokenFromSymbol(openPos.symbol);
-            }
 
-            if (!exitToken && (openPos.exchange === 'NFO' || openPos.exchange === 'BFO')) {
-              await updateLog(webhookLog.id, 'FAILED', null, `EXIT_BLOCKED_MISSING_TOKEN: Could not resolve valid symbolToken for ${openPos.symbol}. Aborting square-off.`);
-              await AuditLogger.log({
-                userId, category: CATEGORIES.POSITION, action: 'EXIT_BLOCKED_NO_TOKEN',
-                detail: `Strategy EXIT (${exitReason}) blocked: Missing symbolToken for ${openPos.symbol}`,
-                meta: { positionId: openPos.id, symbol: openPos.symbol }
-              });
-              continue;
-            }
-
-            const closeQty = (qty > 0 && qty < openPos.quantity) ? qty : openPos.quantity;
-            const isPartial = closeQty < openPos.quantity;
-
-            const exitOrder = {
-              symbol: openPos.symbol,
-              securityId: exitToken || '',
-              symbolToken: exitToken || '',
-              exchange: openPos.exchange || 'NFO',
-              side: exitSide,
-              quantity: closeQty,
-              orderType: 'MARKET',
-              productType: openPos.productType || 'INTRADAY',
-            };
-
-            const exitResult = await BrokerGateway.executeOrder(exitOrder, connection);
-            if (exitResult.success) {
-              const exitFillPrice = parseFloat(exitResult.fillPrice || exitResult.price || body.price || openPos.currentPrice || 0) || null;
-              let realizedPnl = null;
-              if (exitFillPrice && openPos.entryPrice) {
-                realizedPnl = openPos.side === 'BUY'
-                  ? (exitFillPrice - openPos.entryPrice) * closeQty
-                  : (openPos.entryPrice - exitFillPrice) * closeQty;
-              }
-
-              if (isPartial) {
-                await prisma.algoPosition.update({
-                  where: { id: openPos.id },
-                  data: {
-                    quantity: openPos.quantity - closeQty,
-                    pnl: realizedPnl != null ? Math.round(((openPos.pnl || 0) + realizedPnl) * 100) / 100 : openPos.pnl,
-                  }
-                }).catch(() => {});
-              } else {
-                await prisma.algoPosition.update({
-                  where: { id: openPos.id },
-                  data: {
-                    status: 'CLOSED',
-                    exitOrderId: exitResult.orderId,
-                    exitPrice: exitFillPrice,
-                    pnl: realizedPnl != null ? Math.round(realizedPnl * 100) / 100 : null,
-                    closedAt: new Date()
-                  }
-                }).catch(() => {});
-              }
-
-              await AuditLogger.log({
-                userId,
-                category: CATEGORIES.POSITION,
-                action: 'STRATEGY_EXIT',
-                detail: `Strategy EXIT (${exitReason}): Squared off open position ${openPos.symbol} (OrderID: ${exitResult.orderId || 'N/A'}, ExitPrice: ₹${exitFillPrice || 'MKT'}, PnL: ${realizedPnl != null ? (realizedPnl >= 0 ? '+' : '') + '₹' + realizedPnl.toFixed(2) : 'N/A'})`,
-                meta: {
-                  positionId: openPos.id,
-                  symbol: openPos.symbol,
-                  quantity: openPos.quantity,
-                  exitOrderId: exitResult.orderId,
-                  exitReason,
-                  exitFillPrice,
-                  realizedPnl,
-                  isStrategyGenerated: true
-                },
-                req,
-              });
-
-              // Telegram Notification (Non-blocking)
-              try {
-                const student = await prisma.user.findUnique({ where: { id: userId }, select: { name: true, studentId: true } });
-                const posLots = openPos.lots || Math.max(1, Math.round((openPos.quantity || 65) / (openPos.symbol.includes('BANKNIFTY') ? 15 : 65)));
-                N.algoExitExecuted({
-                  studentName: student?.name || 'Student',
-                  studentId: student?.studentId || userId,
-                  symbol: openPos.symbol,
-                  lots: posLots,
-                  quantity: openPos.quantity,
-                  price: exitFillPrice,
-                  orderId: exitResult.orderId || 'STRATEGY_EXIT',
-                  exitReason: `Strategy ${exitReason}`,
-                  realizedPnl: realizedPnl
-                });
-              } catch (_) {}
-
-              emitUpdate('algo_position', {
-                type: 'CLOSED',
-                position: {
-                  id: openPos.id,
-                  symbol: openPos.symbol,
-                  status: 'CLOSED',
-                  exitPrice: exitFillPrice,
-                  pnl: realizedPnl,
-                  exitOrderId: exitResult.orderId
-                }
-              });
-            } else {
-              // Broker execution failed — DO NOT falsely mark position as CLOSED in DB!
-              await updateLog(webhookLog.id, 'FAILED', null, `EXIT_EXECUTION_FAILED: ${exitResult.error || exitResult.message || 'Broker rejection'}`);
-              await AuditLogger.log({
-                userId,
-                category: CATEGORIES.POSITION,
-                action: 'EXIT_EXECUTION_FAILED',
-                detail: `Strategy EXIT (${exitReason}) FAILED at broker for ${openPos.symbol}: ${exitResult.error || exitResult.message}`,
-                meta: { positionId: openPos.id, symbol: openPos.symbol, error: exitResult.error || exitResult.message },
-                req,
-              });
-            }
+        const AngelScripMaster = require('../services/angelScripMaster');
+        for (const openPos of openPositions) {
+          const exitSide = openPos.side === 'BUY' ? 'SELL' : 'BUY';
+          let exitToken = openPos.symbolToken || openPos.securityId;
+          if (!AngelScripMaster.isValidToken(exitToken)) {
+            exitToken = AngelScripMaster.resolveTokenFromSymbol(openPos.symbol);
           }
 
-          await updateLog(webhookLog.id, 'EXECUTED', null, `STRATEGY_EXIT_PROCESSED: ${exitReason}`);
-          emitUpdate('algo_execution', { action: 'EXIT', status: 'EXECUTED', exitReason });
-        } else {
-          // Idempotent: If no open position exists, skip cleanly without placing orders or mutating data
-          await updateLog(webhookLog.id, 'SKIPPED', null, 'NO_OPEN_ALGO_POSITION_TO_EXIT');
-          await AuditLogger.log({
-            userId,
-            category: CATEGORIES.POSITION,
-            action: 'EXIT_SIGNAL_SKIPPED',
-            detail: `Strategy EXIT (${exitReason}) received, but no open position was found. Zero broker orders placed.`,
-            meta: { connectionId: connection.id, exitReason },
-            req,
-          });
-          emitUpdate('algo_webhook', { id: webhookLog.id, status: 'SKIPPED', reason: 'NO_OPEN_POSITION' });
+          if (!exitToken && (openPos.exchange === 'NFO' || openPos.exchange === 'BFO')) {
+            await updateLog(webhookLog.id, 'FAILED', null, `EXIT_BLOCKED_MISSING_TOKEN: Could not resolve valid symbolToken for ${openPos.symbol}. Aborting square-off.`);
+            await AuditLogger.log({
+              userId, category: CATEGORIES.POSITION, action: 'EXIT_BLOCKED_NO_TOKEN',
+              detail: `Strategy EXIT (${exitReason}) blocked: Missing symbolToken for ${openPos.symbol}`,
+              meta: { positionId: openPos.id, symbol: openPos.symbol }
+            });
+            continue;
+          }
+
+          const closeQty = (qty > 0 && qty < openPos.quantity) ? qty : openPos.quantity;
+          const isPartial = closeQty < openPos.quantity;
+
+          const exitOrder = {
+            symbol: openPos.symbol,
+            securityId: exitToken || '',
+            symbolToken: exitToken || '',
+            exchange: openPos.exchange || 'NFO',
+            side: exitSide,
+            quantity: closeQty,
+            orderType: 'MARKET',
+            productType: openPos.productType || 'INTRADAY',
+          };
+
+          const exitResult = await BrokerGateway.executeOrder(exitOrder, connection);
+          if (exitResult.success) {
+            const exitFillPrice = parseFloat(exitResult.fillPrice || exitResult.price || body.price || openPos.currentPrice || 0) || null;
+            let realizedPnl = null;
+            if (exitFillPrice && openPos.entryPrice) {
+              realizedPnl = openPos.side === 'BUY'
+                ? (exitFillPrice - openPos.entryPrice) * closeQty
+                : (openPos.entryPrice - exitFillPrice) * closeQty;
+            }
+
+            if (isPartial) {
+              await prisma.algoPosition.update({
+                where: { id: openPos.id },
+                data: {
+                  quantity: openPos.quantity - closeQty,
+                  pnl: realizedPnl != null ? Math.round(((openPos.pnl || 0) + realizedPnl) * 100) / 100 : openPos.pnl,
+                }
+              }).catch(() => {});
+            } else {
+              await prisma.algoPosition.update({
+                where: { id: openPos.id },
+                data: {
+                  status: 'CLOSED',
+                  exitOrderId: exitResult.orderId,
+                  exitPrice: exitFillPrice,
+                  pnl: realizedPnl != null ? Math.round(realizedPnl * 100) / 100 : null,
+                  closedAt: new Date()
+                }
+              }).catch(() => {});
+            }
+
+            await AuditLogger.log({
+              userId,
+              category: CATEGORIES.POSITION,
+              action: 'STRATEGY_EXIT',
+              detail: `Strategy EXIT (${exitReason}): Squared off open position ${openPos.symbol} (OrderID: ${exitResult.orderId || 'N/A'}, ExitPrice: ₹${exitFillPrice || 'MKT'}, PnL: ${realizedPnl != null ? (realizedPnl >= 0 ? '+' : '') + '₹' + realizedPnl.toFixed(2) : 'N/A'})`,
+              meta: {
+                positionId: openPos.id,
+                symbol: openPos.symbol,
+                quantity: closeQty,
+                exitOrderId: exitResult.orderId,
+                exitReason,
+                exitFillPrice,
+                realizedPnl,
+                isStrategyGenerated: true
+              },
+              req,
+            });
+
+            // Telegram Notification (Non-blocking)
+            try {
+              const student = await prisma.user.findUnique({ where: { id: userId }, select: { name: true, studentId: true } });
+              const posLots = openPos.lots || Math.max(1, Math.round((openPos.quantity || 65) / (openPos.symbol.includes('BANKNIFTY') ? 15 : 65)));
+              N.algoExitExecuted({
+                studentName: student?.name || 'Student',
+                studentId: student?.studentId || userId,
+                symbol: openPos.symbol,
+                lots: posLots,
+                quantity: closeQty,
+                price: exitFillPrice,
+                orderId: exitResult.orderId || 'STRATEGY_EXIT',
+                exitReason: `Strategy ${exitReason}`,
+                realizedPnl: realizedPnl
+              });
+            } catch (_) {}
+
+            emitUpdate('algo_position', {
+              type: isPartial ? 'UPDATED' : 'CLOSED',
+              position: {
+                id: openPos.id,
+                symbol: openPos.symbol,
+                status: isPartial ? 'OPEN' : 'CLOSED',
+                quantity: openPos.quantity - closeQty,
+                exitPrice: exitFillPrice,
+                pnl: realizedPnl,
+                exitOrderId: exitResult.orderId
+              }
+            });
+          } else {
+            // Broker execution failed — DO NOT falsely mark position as CLOSED in DB!
+            await updateLog(webhookLog.id, 'FAILED', null, `EXIT_EXECUTION_FAILED: ${exitResult.error || exitResult.message || 'Broker rejection'}`);
+            await AuditLogger.log({
+              userId,
+              category: CATEGORIES.POSITION,
+              action: 'EXIT_EXECUTION_FAILED',
+              detail: `Strategy EXIT (${exitReason}) FAILED at broker for ${openPos.symbol}: ${exitResult.error || exitResult.message}`,
+              meta: { positionId: openPos.id, symbol: openPos.symbol, error: exitResult.error || exitResult.message },
+              req,
+            });
+          }
         }
+
+        await updateLog(webhookLog.id, 'EXECUTED', null, `STRATEGY_EXIT_PROCESSED: ${exitReason}`);
+        emitUpdate('algo_execution', { action: 'EXIT', status: 'EXECUTED', exitReason });
         return; // CRITICAL: Stop processing! Never resolve contracts or create new entries!
       }
 
