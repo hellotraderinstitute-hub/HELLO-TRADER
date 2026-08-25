@@ -199,8 +199,8 @@ async function runBackup(options = {}) {
   ];
   const existingEntries = candidateEntries.filter(e => fs.existsSync(path.join(APP_DIR, e))).join(' ');
 
-  // Exclude node_modules, .next, .git, and tmp files from application archive
-  execSync(`tar --exclude='node_modules' --exclude='.next' --exclude='.git' --exclude='*.log' -czf "${appArchiveTar}" -C "${APP_DIR}" ${existingEntries}`, { timeout: 60000 });
+  // Exclude node_modules, .next, .git, active database files, and tmp files from application archive
+  execSync(`tar --exclude='node_modules' --exclude='.next' --exclude='.git' --exclude='*.log' --exclude='*.db*' --exclude='*.sqlite*' -czf "${appArchiveTar}" -C "${APP_DIR}" ${existingEntries}`, { timeout: 60000 });
 
   const appArchiveSizeKb = (fs.statSync(appArchiveTar).size / 1024).toFixed(2);
   console.log(`✔ Application archive created: ${appArchiveSizeKb} KB`);
