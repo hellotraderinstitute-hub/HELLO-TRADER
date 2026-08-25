@@ -916,6 +916,10 @@ export default function AlgoTrading({ user, onBack }) {
                   {log.resolvedContract && <div className="text-purple-300 text-[10px]">Resolved Contract: {log.resolvedContract}</div>}
                   {log.actualFillPrice ? (
                     <div className="text-green-400 text-[10px]">Execution Fill Price: ₹{log.actualFillPrice}</div>
+                  ) : (log.executionStatus === 'LIVE_EXECUTED' || log.executionStatus === 'EXECUTED') ? (
+                    <div className="text-green-400 text-[10px]">
+                      Execution Price: <span className="text-green-300 font-semibold">EXECUTED @ MARKET</span> {log.brokerOrderId ? `(Order: ${log.brokerOrderId})` : ''}
+                    </div>
                   ) : (
                     log.executionStatus !== 'PENDING' && (
                       <div className="space-y-1 pt-0.5">

@@ -740,7 +740,7 @@ router.post('/tv/:webhookToken', async (req, res) => {
         const execResult = await BrokerGateway.executeOrder(candidateOrder, connection);
 
         const actualFillPrice = execResult.success
-          ? (parseFloat(execResult.rawResponse?.averageTradedPrice || execResult.rawResponse?.price || execResult.rawResponse?.fillPrice || 0) || null)
+          ? (parseFloat(execResult.fillPrice || execResult.rawResponse?.data?.averageprice || execResult.rawResponse?.averageprice || execResult.rawResponse?.averageTradedPrice || execResult.rawResponse?.price || execResult.rawResponse?.fillPrice || 0) || null)
           : null;
 
         const normalizedError = !execResult.success ? normalizeBrokerRejectionReason(execResult.message || execResult.error) : null;
@@ -995,7 +995,7 @@ router.post('/tv/:webhookToken', async (req, res) => {
       }
 
       const actualFillPrice = execResult.success
-        ? (parseFloat(execResult.rawResponse?.averageTradedPrice || execResult.rawResponse?.price || execResult.rawResponse?.fillPrice || 0) || null)
+        ? (parseFloat(execResult.fillPrice || execResult.rawResponse?.data?.averageprice || execResult.rawResponse?.averageprice || execResult.rawResponse?.averageTradedPrice || execResult.rawResponse?.price || execResult.rawResponse?.fillPrice || 0) || null)
         : null;
 
       const normalizedError = !execResult.success ? normalizeBrokerRejectionReason(execResult.message || execResult.error) : null;

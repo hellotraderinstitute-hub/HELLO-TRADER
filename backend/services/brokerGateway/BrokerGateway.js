@@ -182,7 +182,19 @@ class BrokerGateway {
         return await adapter.placeOrder(order);
       }, 3, 500);
 
-      return { ...result, attempts };
+      let fillPrice = parseFloat(result.fillPrice || result.rawResponse?.data?.averageprice || result.rawResponse?.averageprice || result.rawResponse?.averageTradedPrice || result.rawResponse?.price || 0) || null;
+
+      // If broker accepted order but fillPrice was not returned in initial placeOrder response, query order details
+      if (!fillPrice && result.success && result.orderId && typeof adapter.getOrderStatus === 'function') {
+        try {
+          const statusRes = await adapter.getOrderStatus(result.orderId);
+          if (statusRes && statusRes.avgPrice > 0) {
+            fillPrice = statusRes.avgPrice;
+          }
+        } catch (_) {}
+      }
+
+      return { ...result, fillPrice, attempts };
     } catch (err) {
       return { success: false, orderId: null, message: err.message, rawResponse: {}, attempts: 1 };
     }
