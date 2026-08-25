@@ -348,6 +348,8 @@ model AlgoPosition {
   connection   AlgoBrokerConnection @relation(fields: [connectionId], references: [id])
 
   symbol      String
+  symbolToken String?
+  securityId  String?
   exchange    String @default("NSE")
   side        String // BUY | SELL
   quantity    Int

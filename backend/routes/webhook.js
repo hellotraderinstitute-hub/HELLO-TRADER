@@ -204,11 +204,25 @@ router.post('/tv/:webhookToken', async (req, res) => {
           const AngelScripMaster = require('../services/angelScripMaster');
           for (const openPos of openPositions) {
             const exitSide = openPos.side === 'BUY' ? 'SELL' : 'BUY';
-            const exitToken = openPos.symbolToken || openPos.securityId || AngelScripMaster.resolveToken(openPos.symbol, '', 0, 'CE');
+            let exitToken = openPos.symbolToken || openPos.securityId;
+            if (!AngelScripMaster.isValidToken(exitToken)) {
+              exitToken = AngelScripMaster.resolveTokenFromSymbol(openPos.symbol);
+            }
+
+            if (!exitToken && (openPos.exchange === 'NFO' || openPos.exchange === 'BFO')) {
+              await updateLog(webhookLog.id, 'FAILED', null, `EXIT_BLOCKED_MISSING_TOKEN: Could not resolve valid symbolToken for ${openPos.symbol}. Aborting square-off.`);
+              await AuditLogger.log({
+                userId, category: CATEGORIES.POSITION, action: 'EXIT_BLOCKED_NO_TOKEN',
+                detail: `Strategy EXIT (${exitReason}) blocked: Missing symbolToken for ${openPos.symbol}`,
+                meta: { positionId: openPos.id, symbol: openPos.symbol }
+              });
+              continue;
+            }
+
             const exitOrder = {
               symbol: openPos.symbol,
-              securityId: exitToken,
-              symbolToken: exitToken,
+              securityId: exitToken || '',
+              symbolToken: exitToken || '',
               exchange: openPos.exchange || 'NFO',
               side: exitSide,
               quantity: openPos.quantity,
@@ -358,11 +372,28 @@ router.post('/tv/:webhookToken', async (req, res) => {
                 req,
               });
 
+              const AngelScripMaster = require('../services/angelScripMaster');
               const oppExitSide = oppPos.side === 'BUY' ? 'SELL' : 'BUY';
+              let oppExitToken = oppPos.symbolToken || oppPos.securityId;
+              if (!AngelScripMaster.isValidToken(oppExitToken)) {
+                oppExitToken = AngelScripMaster.resolveTokenFromSymbol(oppPos.symbol);
+              }
+
+              if (!oppExitToken && (oppPos.exchange === 'NFO' || oppPos.exchange === 'BFO')) {
+                const failReason = `REVERSAL_BLOCKED: Could not resolve valid symbolToken for existing open position ${oppPos.symbol}. Aborting new opposite entry.`;
+                await updateLog(webhookLog.id, 'FAILED', null, failReason);
+                await AuditLogger.log({
+                  userId, category: CATEGORIES.POSITION, action: 'OPPOSITE_EXIT_FAILED',
+                  detail: failReason, meta: { positionId: oppPos.id, symbol: oppPos.symbol }
+                });
+                emitUpdate('algo_webhook', { id: webhookLog.id, status: 'FAILED', reason: 'REVERSAL_EXIT_FAILED' });
+                return;
+              }
+
               const oppExitOrder = {
                 symbol: oppPos.symbol,
-                securityId: oppPos.securityId || oppPos.symbolToken || '',
-                symbolToken: oppPos.symbolToken || oppPos.securityId || '',
+                securityId: oppExitToken || '',
+                symbolToken: oppExitToken || '',
                 exchange: oppPos.exchange || 'NFO',
                 side: oppExitSide,
                 quantity: oppPos.quantity,
@@ -693,11 +724,14 @@ router.post('/tv/:webhookToken', async (req, res) => {
 
         // Create confirmed open position for live executed order
         if (execResult.success && orderAction !== 'EXIT') {
+          const posToken = candidateOrder.symbolToken || candidateOrder.securityId || resolved?.symbolToken || resolved?.securityId || securityId || '';
           const position = await prisma.algoPosition.create({
             data: {
               userId,
               connectionId: connection.id,
               symbol: finalSymbol,
+              symbolToken: posToken,
+              securityId: posToken,
               exchange,
               side: orderAction,
               quantity: qty,

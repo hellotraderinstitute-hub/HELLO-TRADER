@@ -101,6 +101,58 @@ class AngelScripMaster {
   }
 
   /**
+   * Resolve authoritative Angel One symbolToken directly from full trading symbol
+   * e.g. 'NIFTY25AUG2624150CE' -> '61623'
+   *      'NIFTY25AUG2624100CE' -> '61610'
+   * @param {string} tradingSymbol
+   * @returns {string|null}
+   */
+  static resolveTokenFromSymbol(tradingSymbol) {
+    if (!tradingSymbol) return null;
+    const sym = String(tradingSymbol).trim().toUpperCase();
+    const cache = this.loadCache();
+
+    // 1. Direct exact symbol match in cache
+    if (cache[sym] && cache[sym].token) {
+      return String(cache[sym].token);
+    }
+
+    // 2. Case-insensitive key search in cache
+    for (const key of Object.keys(cache)) {
+      if (key.toUpperCase() === sym && cache[key]?.token) {
+        return String(cache[key].token);
+      }
+    }
+
+    // 3. Regex parse standard Indian derivative symbol (e.g. NIFTY25AUG2624150CE or NIFTY24150CE)
+    const match = sym.match(/^([A-Z]+?)(\d{2}[A-Z]{3}\d{2})?(\d+)(CE|PE)$/i);
+    if (match) {
+      const underlying = match[1];
+      const expiryStr = match[2] || '';
+      const strikeNum = parseInt(match[3], 10);
+      const optionType = match[4].toUpperCase();
+
+      // Search cache items by parsed strike and option type
+      for (const key of Object.keys(cache)) {
+        const item = cache[key];
+        if (
+          key.startsWith(underlying) &&
+          key.endsWith(optionType) &&
+          (item.strike === strikeNum || key.includes(String(strikeNum))) &&
+          item.token
+        ) {
+          return String(item.token);
+        }
+      }
+
+      // Dynamic formula fallback using parsed strike
+      return this.resolveToken(underlying, expiryStr, strikeNum, optionType);
+    }
+
+    return null;
+  }
+
+  /**
    * Get complete contract metadata
    */
   static getContractMeta(symbol, expiryDateStr, strike, optionType) {
