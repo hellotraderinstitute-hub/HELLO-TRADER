@@ -31,6 +31,48 @@ const { N } = require('../services/notifier');
 
 const prisma = new PrismaClient();
 
+/**
+ * Normalize raw broker rejection message into a standardized reason code and readable detail.
+ * @param {string} rawMessage
+ * @returns {{ normalizedReason: string, formattedErrorMessage: string, rawDetail: string }}
+ */
+function normalizeBrokerRejectionReason(rawMessage) {
+  if (!rawMessage) {
+    return {
+      normalizedReason: 'BROKER_ORDER_REJECTED',
+      formattedErrorMessage: 'Reason: BROKER_ORDER_REJECTED\nBroker Rejection: Order rejected by broker.',
+      rawDetail: 'Order rejected by broker'
+    };
+  }
+  const rawStr = String(rawMessage).trim();
+  const upper = rawStr.toUpperCase();
+
+  const isInsufficientFunds =
+    upper.includes('INSUFFICIENT') ||
+    upper.includes('MARGIN') ||
+    upper.includes('FUNDS') ||
+    upper.includes('BALANCE') ||
+    upper.includes('SHORTFALL') ||
+    upper.includes('AB1004') ||
+    upper.includes('RMS') ||
+    upper.includes('LIMIT EXCEEDED') ||
+    upper.includes('NOT ENOUGH');
+
+  if (isInsufficientFunds) {
+    return {
+      normalizedReason: 'INSUFFICIENT_BALANCE',
+      formattedErrorMessage: `Reason: INSUFFICIENT_BALANCE\nBroker Rejection: ${rawStr}`,
+      rawDetail: rawStr
+    };
+  }
+
+  return {
+    normalizedReason: 'BROKER_ORDER_REJECTED',
+    formattedErrorMessage: `Reason: BROKER_ORDER_REJECTED\nBroker Rejection: ${rawStr}`,
+    rawDetail: rawStr
+  };
+}
+
 // ─── POST /webhook/tv/:webhookToken ──────────────────────────
 router.post('/tv/:webhookToken', async (req, res) => {
   const { webhookToken } = req.params;
@@ -701,13 +743,16 @@ router.post('/tv/:webhookToken', async (req, res) => {
           ? (parseFloat(execResult.rawResponse?.averageTradedPrice || execResult.rawResponse?.price || execResult.rawResponse?.fillPrice || 0) || null)
           : null;
 
+        const normalizedError = !execResult.success ? normalizeBrokerRejectionReason(execResult.message || execResult.error) : null;
+        const finalErrorMessage = execResult.success ? null : normalizedError.formattedErrorMessage;
+
         await AuditLogger.log({
           userId, category: CATEGORIES.ORDER,
           action: execResult.success ? 'LIVE_ORDER_ACCEPTED' : 'LIVE_ORDER_REJECTED',
           detail: execResult.success
             ? `Live Execution: Broker ${connection.broker} accepted order ${execResult.orderId} via Proxy ${preTradeGate.egressIp}`
-            : `Live Execution: Broker ${connection.broker} rejected order: ${execResult.message}`,
-          meta: { execResult, preTradeGate, webhookLogId: webhookLog.id },
+            : `Live Execution: Broker ${connection.broker} rejected order (${normalizedError.normalizedReason}): ${normalizedError.rawDetail}`,
+          meta: { execResult, preTradeGate, webhookLogId: webhookLog.id, reason: normalizedError?.normalizedReason },
           req,
         });
 
@@ -716,7 +761,8 @@ router.post('/tv/:webhookToken', async (req, res) => {
           data: {
             executionStatus: execResult.success ? 'LIVE_EXECUTED' : 'FAILED',
             brokerOrderId: execResult.orderId || null,
-            errorMessage: execResult.success ? null : execResult.message,
+            errorMessage: finalErrorMessage,
+            riskReason: execResult.success ? null : normalizedError.normalizedReason,
             actualFillPrice,
             executedAt: new Date(),
           }
@@ -825,6 +871,8 @@ router.post('/tv/:webhookToken', async (req, res) => {
           isLive: true,
           egressIp: preTradeGate.egressIp,
           fillPrice: actualFillPrice,
+          reason: execResult.success ? null : normalizedError.normalizedReason,
+          errorMessage: finalErrorMessage,
         });
 
         return; // Live execution complete
@@ -950,13 +998,16 @@ router.post('/tv/:webhookToken', async (req, res) => {
         ? (parseFloat(execResult.rawResponse?.averageTradedPrice || execResult.rawResponse?.price || execResult.rawResponse?.fillPrice || 0) || null)
         : null;
 
+      const normalizedError = !execResult.success ? normalizeBrokerRejectionReason(execResult.message || execResult.error) : null;
+      const finalErrorMessage = execResult.success ? null : normalizedError.formattedErrorMessage;
+
       await AuditLogger.log({
         userId, category: CATEGORIES.ORDER,
         action: execResult.success ? 'ORDER_ACCEPTED' : 'ORDER_REJECTED',
         detail: execResult.success
           ? `Broker ${connection.broker} accepted order. OrderID: ${execResult.orderId}`
-          : `Broker ${connection.broker} rejected order: ${execResult.message}`,
-        meta: { execResult, webhookLogId: webhookLog.id }
+          : `Broker ${connection.broker} rejected order (${normalizedError.normalizedReason}): ${normalizedError.rawDetail}`,
+        meta: { execResult, webhookLogId: webhookLog.id, reason: normalizedError?.normalizedReason }
       });
 
       await prisma.algoWebhookLog.update({
@@ -964,7 +1015,8 @@ router.post('/tv/:webhookToken', async (req, res) => {
         data: {
           executionStatus: execResult.success ? 'EXECUTED' : 'FAILED',
           brokerOrderId: execResult.orderId || null,
-          errorMessage: execResult.success ? null : execResult.message,
+          errorMessage: finalErrorMessage,
+          riskReason: execResult.success ? null : normalizedError.normalizedReason,
           actualFillPrice,
           executedAt: new Date(),
         }
@@ -975,7 +1027,9 @@ router.post('/tv/:webhookToken', async (req, res) => {
         status: execResult.success ? 'EXECUTED' : 'FAILED',
         orderId: execResult.orderId,
         broker: connection.broker,
-        message: execResult.message,
+        message: finalErrorMessage,
+        reason: execResult.success ? null : normalizedError.normalizedReason,
+        errorMessage: finalErrorMessage,
       });
 
       // 10. Create position record if executed

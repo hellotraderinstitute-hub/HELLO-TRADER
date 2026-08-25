@@ -918,11 +918,22 @@ export default function AlgoTrading({ user, onBack }) {
                     <div className="text-green-400 text-[10px]">Execution Fill Price: ₹{log.actualFillPrice}</div>
                   ) : (
                     log.executionStatus !== 'PENDING' && (
-                      <div className="text-gray-500 text-[10px]">Execution Price: NOT EXECUTED</div>
+                      <div className="space-y-1 pt-0.5">
+                        <div className="text-gray-400 text-[10px]">Execution Price: <span className="text-red-400 font-bold">NOT EXECUTED</span></div>
+                        {log.errorMessage ? (
+                          <div className="bg-red-500/10 border border-red-500/20 rounded p-2 mt-1 space-y-1">
+                            {log.errorMessage.split('\n').map((line, idx) => (
+                              <div key={idx} className={idx === 0 ? "text-red-400 font-black text-[10px]" : "text-gray-300 text-[9px] font-mono"}>
+                                {line}
+                              </div>
+                            ))}
+                          </div>
+                        ) : log.riskReason ? (
+                          <div className="text-amber-400 text-[10px] font-bold">Reason: {log.riskReason}</div>
+                        ) : null}
+                      </div>
                     )
                   )}
-                  {log.errorMessage && <div className="text-red-400 text-[10px]">{log.errorMessage}</div>}
-                  {log.riskReason && <div className="text-amber-400 text-[10px]">Risk: {log.riskReason}</div>}
                 </div>
               ))
             )}
