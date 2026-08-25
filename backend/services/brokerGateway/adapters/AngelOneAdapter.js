@@ -14,6 +14,10 @@ const IBrokerAdapter = require('../IBrokerAdapter');
 
 const ANGEL_BASE_URL = 'https://apiconnect.angelbroking.com';
 
+// Shared Session Token Cache across adapter instances (keyed by clientCode)
+const sessionCache = new Map();
+const SESSION_MAX_AGE_MS = 18 * 60 * 60 * 1000; // 18 Hours (Angel One tokens are valid 24h)
+
 class AngelOneAdapter extends IBrokerAdapter {
   constructor(credentials, options = {}) {
     super(credentials);
@@ -27,6 +31,16 @@ class AngelOneAdapter extends IBrokerAdapter {
     this.feedToken = null;
     this.httpsAgent = options.httpsAgent || null;
     this.publicIp = options.publicIp || '151.245.182.52';
+
+    // Restore cached session if valid and not explicitly provided
+    if (!this.jwtToken && this.clientCode && sessionCache.has(this.clientCode)) {
+      const cached = sessionCache.get(this.clientCode);
+      if (cached && (Date.now() - cached.authTime < SESSION_MAX_AGE_MS)) {
+        this.jwtToken = cached.jwtToken;
+        this.refreshToken = cached.refreshToken;
+        this.feedToken = cached.feedToken;
+      }
+    }
   }
 
   _generateTOTP() {
@@ -91,7 +105,18 @@ class AngelOneAdapter extends IBrokerAdapter {
     return opts;
   }
 
-  async authenticate() {
+  async authenticate(forceFresh = false) {
+    // Reuse valid cached session unless force fresh requested
+    if (!forceFresh && this.jwtToken && this.clientCode && sessionCache.has(this.clientCode)) {
+      const cached = sessionCache.get(this.clientCode);
+      if (cached && (Date.now() - cached.authTime < SESSION_MAX_AGE_MS)) {
+        this.jwtToken = cached.jwtToken;
+        this.refreshToken = cached.refreshToken;
+        this.feedToken = cached.feedToken;
+        return { success: true, message: 'Angel One session active (cached)', jwtToken: this.jwtToken };
+      }
+    }
+
     try {
       const totp = this._generateTOTP();
       const res = await axios.post(
@@ -103,6 +128,17 @@ class AngelOneAdapter extends IBrokerAdapter {
         this.jwtToken = res.data.data?.jwtToken;
         this.refreshToken = res.data.data?.refreshToken;
         this.feedToken = res.data.data?.feedToken;
+
+        // Persist to session cache
+        if (this.clientCode) {
+          sessionCache.set(this.clientCode, {
+            jwtToken: this.jwtToken,
+            refreshToken: this.refreshToken,
+            feedToken: this.feedToken,
+            authTime: Date.now()
+          });
+        }
+
         return { success: true, message: 'Angel One authenticated successfully', jwtToken: this.jwtToken };
       }
       return { success: false, message: res.data?.message || 'Angel One authentication failed' };
@@ -110,6 +146,44 @@ class AngelOneAdapter extends IBrokerAdapter {
       const msg = err.response?.data?.message || err.message;
       return { success: false, message: `Angel One auth error: ${msg}` };
     }
+  }
+
+  /**
+   * Renew session via refreshToken or fresh password+TOTP login if expired/403
+   */
+  async renewSession() {
+    // 1. Try refreshToken flow
+    if (this.refreshToken) {
+      try {
+        const h = { ...this._headers(false), 'Authorization': `Bearer ${this.jwtToken}` };
+        const res = await axios.post(
+          `${ANGEL_BASE_URL}/rest/auth/angelbroking/jwt/v1/generateTokens`,
+          { refreshToken: this.refreshToken },
+          this._axiosOpts({ headers: h, timeout: 10000 })
+        );
+        if (res.data?.status === true && res.data.data?.jwtToken) {
+          this.jwtToken = res.data.data.jwtToken;
+          if (res.data.data.refreshToken) this.refreshToken = res.data.data.refreshToken;
+          if (res.data.data.feedToken) this.feedToken = res.data.data.feedToken;
+          if (this.clientCode) {
+            sessionCache.set(this.clientCode, {
+              jwtToken: this.jwtToken,
+              refreshToken: this.refreshToken,
+              feedToken: this.feedToken,
+              authTime: Date.now()
+            });
+          }
+          return { success: true, message: 'Angel One token refreshed successfully', jwtToken: this.jwtToken };
+        }
+      } catch (_) {
+        // Fallback to fresh authenticate
+      }
+    }
+
+    // 2. Clear cache and perform fresh TOTP login
+    if (this.clientCode) sessionCache.delete(this.clientCode);
+    this.jwtToken = null;
+    return await this.authenticate(true);
   }
 
   async testConnection() {
@@ -175,16 +249,49 @@ class AngelOneAdapter extends IBrokerAdapter {
         triggerprice: order.triggerPrice ? String(order.triggerPrice) : '0',
       };
 
-      const res = await axios.post(
-        `${ANGEL_BASE_URL}/rest/secure/angelbroking/order/v1/placeOrder`,
-        body,
-        this._axiosOpts({ headers: this._headers(), timeout: 10000 })
-      );
+      const sendPlaceOrder = async () => {
+        return await axios.post(
+          `${ANGEL_BASE_URL}/rest/secure/angelbroking/order/v1/placeOrder`,
+          body,
+          this._axiosOpts({ headers: this._headers(), timeout: 10000 })
+        );
+      };
+
+      let res;
+      try {
+        res = await sendPlaceOrder();
+      } catch (err) {
+        const status = err.response?.status;
+        const errCode = err.response?.data?.errorcode || '';
+        const errMsg = (err.response?.data?.message || err.message || '').toLowerCase();
+        const isAuthError = status === 401 || status === 403 || errCode === 'AG8001' || errCode === 'AG8002' || errMsg.includes('token') || errMsg.includes('unauthorized') || errMsg.includes('auth');
+
+        if (isAuthError) {
+          console.warn(`[AngelOneAdapter] Auth error (${status || errCode}) on placeOrder, renewing session...`);
+          const renewed = await this.renewSession();
+          if (renewed.success) {
+            res = await sendPlaceOrder();
+          } else {
+            throw new Error(`Session renewal failed: ${renewed.message}`);
+          }
+        } else {
+          throw err;
+        }
+      }
+
+      // Check if SmartAPI returned status=false with auth error code in body
+      if (res.data?.status === false && (res.data?.errorcode === 'AG8001' || res.data?.errorcode === 'AG8002' || (res.data?.message || '').toLowerCase().includes('token'))) {
+        console.warn(`[AngelOneAdapter] SmartAPI status=false (${res.data?.errorcode}) on placeOrder, renewing session...`);
+        const renewed = await this.renewSession();
+        if (renewed.success) {
+          res = await sendPlaceOrder();
+        }
+      }
 
       return {
         success: res.data?.status === true,
         orderId: res.data?.data?.orderid || null,
-        message: res.data?.message || 'Order placed on Angel One',
+        message: res.data?.message || (res.data?.status === true ? 'Order placed on Angel One' : 'Order failed'),
         rawResponse: res.data,
       };
     } catch (err) {
