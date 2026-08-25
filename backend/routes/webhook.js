@@ -430,14 +430,18 @@ router.post('/tv/:webhookToken', async (req, res) => {
                   req,
                 });
               } else {
+                const failReason = `REVERSAL_BLOCKED: Could not square off existing open position ${oppPos.symbol} at broker (${oppExec.error || oppExec.message}). Aborting new opposite entry.`;
+                await updateLog(webhookLog.id, 'FAILED', null, failReason);
                 await AuditLogger.log({
                   userId,
                   category: CATEGORIES.POSITION,
                   action: 'OPPOSITE_EXIT_FAILED',
-                  detail: `Opposite position ${oppPos.symbol} square-off failed at broker: ${oppExec.error || oppExec.message}`,
+                  detail: failReason,
                   meta: { positionId: oppPos.id, symbol: oppPos.symbol, error: oppExec.error || oppExec.message },
                   req,
                 });
+                emitUpdate('algo_webhook', { id: webhookLog.id, status: 'FAILED', reason: 'REVERSAL_EXIT_FAILED' });
+                return; // Strictly abort new entry if opposite exit failed!
               }
             }
           }
@@ -614,14 +618,22 @@ router.post('/tv/:webhookToken', async (req, res) => {
         }
 
         // ─── 8.1. EXECUTE LIVE ORDER ON CONNECTED BROKER (TERMINAL LIVE ON) ─────
-        // Enforce Market Pre-Flight Gate (MANDATORY for live trading session)
-        const isPreflightPassed = MarketPreflightService.isPreflightPassedToday(userId);
-        if (!isPreflightPassed) {
-          const preflightBlockReason = 'PREFLIGHT_NOT_PASSED: Market-open pre-flight check has not passed for today\'s trading session. Live order blocked.';
+        // Enforce Market Pre-Flight Gate (Persistent Session & Zero Unnecessary Delay)
+        // 1. If today's pre-flight is already READY (in memory cache or DB): executes immediately with 0 delay.
+        // 2. If new trading day and pre-flight hasn't run yet: auto-runs pre-flight safely and CONTINUES THE SAME SIGNAL upon PASS.
+        // 3. If pre-flight fails: strictly blocks live order and logs actual failure reason.
+        const preflightGate = await MarketPreflightService.ensurePreflightPassed(userId, {
+          prismaClient: prisma,
+          brokerConnectionId: connection.id
+        });
+
+        if (!preflightGate.allowed) {
+          const actualReason = preflightGate.reason || preflightGate.result?.message || 'Pre-flight check failed';
+          const preflightBlockReason = `PREFLIGHT_NOT_PASSED: ${actualReason}. Live order blocked.`;
           await AuditLogger.log({
             userId, category: CATEGORIES.ORDER, action: 'LIVE_ORDER_BLOCKED_NO_PREFLIGHT',
             detail: `Live Order Blocked: ${finalSymbol} ${orderAction} — ${preflightBlockReason}`,
-            meta: { candidateOrder, preTradeGate, webhookLogId: webhookLog.id },
+            meta: { candidateOrder, preTradeGate, preflightResult: preflightGate.result, webhookLogId: webhookLog.id },
             req,
           });
 

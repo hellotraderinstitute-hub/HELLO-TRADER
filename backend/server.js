@@ -151,6 +151,16 @@ function initializeBackgroundServices() {
       masterOrderPoller.startAll(io).catch(err =>
         console.error('[Server] Failed to start master pollers:', err.message)
       );
+
+      // Restore today's persistent Market Pre-Flight session records into memory
+      try {
+        const { MarketPreflightService } = require('./services/compliance/MarketPreflightService');
+        MarketPreflightService.initPersistentPreflight(prisma)
+          .then(count => console.log(`[Server] Restored ${count} persistent pre-flight record(s) on startup.`))
+          .catch(err => console.warn('[Server] Notice restoring persistent preflight:', err.message));
+      } catch (pfInitErr) {
+        console.warn('[Server] Notice loading preflight service:', pfInitErr.message);
+      }
     })
     .catch(err => console.error('[Server] Failed to fetch settings for Dhan stream:', err.message));
 }

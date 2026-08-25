@@ -1406,4 +1406,27 @@ model ClientStaticIpAssignment {
   @@index([connectionType])
 }
 
+// ─────────────────────────────────────────────────────────────
+// ✈️ MARKET-OPEN PRE-FLIGHT AUDIT & SESSION PERSISTENCE
+// ─────────────────────────────────────────────────────────────
+
+model MarketPreflightRecord {
+  id                  String    @id @default(uuid())
+  userId              String
+  tradingDate         String    // e.g. "2026-08-25" (IST date)
+  status              String    @default("READY") // READY | FAILED
+  readyForLiveTrading Boolean   @default(true)
+  broker              String    @default("ANGELONE")
+  checksJson          String?   // JSON representation of check statuses
+  safeSummaryJson     String?   // JSON representation of safeSummary
+  reason              String?   // If failed, error reason code
+  message             String?   // Human-readable summary
+  lastRunAt           DateTime  @default(now())
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@unique([userId, tradingDate])
+  @@index([userId, tradingDate, status])
+}
+
 
