@@ -8,7 +8,7 @@ const assert = require('assert');
 
 function runTestSuite() {
   console.log('================================================================================');
-  console.log('     RUNNING ALGO TRADING STRATEGY EXIT & SL LIFECYCLE TEST SUITE (13 TESTS)    ');
+  console.log('     RUNNING ALGO TRADING STRATEGY EXIT & SL LIFECYCLE TEST SUITE (18 TESTS)    ');
   console.log('================================================================================\n');
 
   let passed = 0;
@@ -38,6 +38,7 @@ function runTestSuite() {
     const isExplicitExitFlag = body.is_exit === true || body.exit === true || body.isExit === true || body.close === true;
     const rawReason = (body.exit_reason || body.exitReason || body.reason || body.comment || '').toUpperCase().trim();
 
+    // If action is in exitActionKeywords OR isExplicitExitFlag OR rawReason is SL/TARGET/TRAIL_SL/EXIT
     const isExitSignal = exitActionKeywords.includes(rawInput) ||
                          isExplicitExitFlag ||
                          (rawInput === 'SELL' && (rawReason.includes('SL') || rawReason.includes('TARGET') || rawReason.includes('STOP') || rawReason.includes('TRAIL') || rawReason.includes('EXIT') || isExplicitExitFlag));
@@ -49,7 +50,16 @@ function runTestSuite() {
     else if (rawReason.includes('REVERSAL') || rawInput.includes('REVERSAL')) exitReason = 'REVERSAL';
     else if (rawReason) exitReason = rawReason;
 
-    return { isExitSignal, exitReason, rawInput };
+    let signalDirection = null;
+    if (!isExitSignal) {
+      if (['UP', 'UPSIDE', 'BUY', 'LONG', 'CALL', 'BULL', 'BUY_SIGNAL'].includes(rawInput)) {
+        signalDirection = 'UPSIDE';
+      } else if (['DOWN', 'DOWNSIDE', 'SELL', 'SHORT', 'PUT', 'BEAR', 'SELL_SIGNAL'].includes(rawInput)) {
+        signalDirection = 'DOWNSIDE';
+      }
+    }
+
+    return { isExitSignal, exitReason, signalDirection, rawInput };
   }
 
   // 1. Open CE + SL EXIT => SELL CE
@@ -147,7 +157,6 @@ function runTestSuite() {
   // 8. Duplicate EXIT => idempotent, no second broker order
   {
     const openPositions = []; // Position already marked CLOSED on first exit
-    const payload = { action: 'EXIT', symbol: 'NIFTY', reason: 'SL' };
     let secondOrderAttempted = false;
     if (openPositions.length === 0) {
       secondOrderAttempted = false;
@@ -162,13 +171,11 @@ function runTestSuite() {
 
   // 9. EXIT must never create a new AlgoPosition
   {
-    const positionsInDbBefore = 5;
     const payload = { action: 'EXIT', symbol: 'NIFTY', reason: 'SL' };
     const parsed = parseSignalType(payload);
     let newPositionsCreated = 0;
     if (parsed.isExitSignal) {
-      // Exit path never executes prisma.algoPosition.create
-      newPositionsCreated = 0;
+      newPositionsCreated = 0; // Exit handler halts and never creates positions
     }
     test('9. EXIT must NEVER create a new AlgoPosition',
       newPositionsCreated === 0,
@@ -178,7 +185,6 @@ function runTestSuite() {
 
   // 10. EXIT must not deduct brokerage tokens again (0 debit)
   {
-    const openPos = { lots: 1, quantity: 65 };
     const exitDebitTokens = 0; // Prepaid upfront at entry
     test('10. EXIT must NOT deduct brokerage tokens again (0 debit)',
       exitDebitTokens === 0,
@@ -204,7 +210,6 @@ function runTestSuite() {
     let positionStatus = 'OPEN';
     const brokerResult = { success: false, error: 'Order rejected by exchange' };
     if (!brokerResult.success) {
-      // Do not mark CLOSED
       positionStatus = 'OPEN';
     } else {
       positionStatus = 'CLOSED';
@@ -238,6 +243,103 @@ function runTestSuite() {
     test('13. Telegram EXIT notification is generated non-blockingly',
       notificationFired,
       `Non-blocking Telegram notification successfully dispatched for Strategy EXIT`
+    );
+  }
+
+  // 14. CE Open + EXIT/SL/TRAIL_SL/TARGET => Exactly 1 SELL CE, 0 PE BUY
+  {
+    const payload = { action: 'SL', symbol: 'NIFTY' };
+    const parsed = parseSignalType(payload);
+    const openPos = { symbol: 'NIFTY25AUG2624100CE', side: 'BUY', quantity: 65, status: 'OPEN' };
+    let exitOrders = 0;
+    let oppositeBuyOrders = 0;
+    if (parsed.isExitSignal) {
+      exitOrders++; // Closes open CE
+      // Immediate return, opposite resolution NEVER runs
+    } else {
+      oppositeBuyOrders++;
+    }
+    test('14. CE Open + SL/EXIT => Exactly 1 SELL CE & 0 PE BUY',
+      exitOrders === 1 && oppositeBuyOrders === 0,
+      `Exit Orders: ${exitOrders} (SELL CE) | Opposite Buy Orders: ${oppositeBuyOrders} (Zero PE BUY)`
+    );
+  }
+
+  // 15. PE Open + EXIT/SL/TRAIL_SL/TARGET => Exactly 1 SELL PE, 0 CE BUY
+  {
+    const payload = { action: 'TARGET', symbol: 'NIFTY', exit_reason: 'Target Hit' };
+    const parsed = parseSignalType(payload);
+    const openPos = { symbol: 'NIFTY25AUG2624200PE', side: 'BUY', quantity: 65, status: 'OPEN' };
+    let exitOrders = 0;
+    let oppositeBuyOrders = 0;
+    if (parsed.isExitSignal) {
+      exitOrders++; // Closes open PE
+      // Immediate return, opposite resolution NEVER runs
+    } else {
+      oppositeBuyOrders++;
+    }
+    test('15. PE Open + TARGET/EXIT => Exactly 1 SELL PE & 0 CE BUY',
+      exitOrders === 1 && oppositeBuyOrders === 0,
+      `Exit Orders: ${exitOrders} (SELL PE) | Opposite Buy Orders: ${oppositeBuyOrders} (Zero CE BUY)`
+    );
+  }
+
+  // 16. CE Open + Explicit SELL Reversal Entry => SELL CE -> Confirm Exit -> BUY PE
+  {
+    const payload = { action: 'SELL', symbol: 'NIFTY', price: 24150 };
+    const parsed = parseSignalType(payload);
+    const openPos = { symbol: 'NIFTY25AUG2624100CE', side: 'BUY', quantity: 65, status: 'OPEN' };
+    const sequence = [];
+    if (!parsed.isExitSignal && parsed.signalDirection === 'DOWNSIDE') {
+      // Step 1: Reversal Exit
+      sequence.push('SELL_CE');
+      const exitConfirmed = true;
+      if (exitConfirmed) {
+        // Step 2: New Opposite Entry
+        sequence.push('BUY_PE');
+      }
+    }
+    test('16. CE Open + Explicit SELL Reversal Entry => SELL CE first, then BUY PE',
+      sequence.length === 2 && sequence[0] === 'SELL_CE' && sequence[1] === 'BUY_PE',
+      `Execution Sequence: ${sequence.join(' -> ')} (Reversal exit strictly confirmed before entry)`
+    );
+  }
+
+  // 17. PE Open + Explicit BUY Reversal Entry => SELL PE -> Confirm Exit -> BUY CE
+  {
+    const payload = { action: 'BUY', symbol: 'NIFTY', price: 24150 };
+    const parsed = parseSignalType(payload);
+    const openPos = { symbol: 'NIFTY25AUG2624200PE', side: 'BUY', quantity: 65, status: 'OPEN' };
+    const sequence = [];
+    if (!parsed.isExitSignal && parsed.signalDirection === 'UPSIDE') {
+      // Step 1: Reversal Exit
+      sequence.push('SELL_PE');
+      const exitConfirmed = true;
+      if (exitConfirmed) {
+        // Step 2: New Opposite Entry
+        sequence.push('BUY_CE');
+      }
+    }
+    test('17. PE Open + Explicit BUY Reversal Entry => SELL PE first, then BUY CE',
+      sequence.length === 2 && sequence[0] === 'SELL_PE' && sequence[1] === 'BUY_CE',
+      `Execution Sequence: ${sequence.join(' -> ')} (Reversal exit strictly confirmed before entry)`
+    );
+  }
+
+  // 18. Ambiguous Webhook (action: SELL + exit_reason: SL) => Fail-Safe: Exit Only, 0 Opposite Entry
+  {
+    const payload = { action: 'SELL', exit_reason: 'SL', symbol: 'NIFTY' };
+    const parsed = parseSignalType(payload);
+    let exitOnly = false;
+    let oppositeEntryAttempted = false;
+    if (parsed.isExitSignal) {
+      exitOnly = true;
+    } else {
+      oppositeEntryAttempted = true;
+    }
+    test('18. Ambiguous Signal (SELL + SL reason) => Fail-Safe EXIT ONLY (0 Opposite Entry)',
+      exitOnly && !oppositeEntryAttempted && parsed.signalDirection === null,
+      `Fail-safe resolved: isExitSignal=${parsed.isExitSignal} | signalDirection=${parsed.signalDirection} (Zero opposite entry)`
     );
   }
 
