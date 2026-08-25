@@ -175,8 +175,26 @@ async function runBackup(options = {}) {
   const dbSnapshotRaw = path.join(targetBackupDir, 'backend.db');
   const dbDumpSql = path.join(targetBackupDir, 'database.sql');
 
-  // Use SQLite online backup API to ensure 0-lock ACID consistency
-  execSync(`sqlite3 "${DB_PATH}" ".backup '${dbSnapshotRaw}'"`, { timeout: 30000 });
+  // Use SQLite online backup API to ensure 0-lock ACID consistency with busy-retry
+  let backupSuccess = false;
+  let lastErr = null;
+  for (let attempt = 1; attempt <= 5; attempt++) {
+    try {
+      execSync(`sqlite3 "${DB_PATH}" ".timeout 5000" ".backup '${dbSnapshotRaw}'"`, { timeout: 30000 });
+      backupSuccess = true;
+      break;
+    } catch (err) {
+      lastErr = err;
+      if (attempt < 5) {
+        const sleepUntil = Date.now() + 300;
+        while (Date.now() < sleepUntil) {}
+      }
+    }
+  }
+  if (!backupSuccess) {
+    throw new Error(`Failed to create database snapshot after 5 attempts: ${lastErr?.message}`);
+  }
+
   execSync(`sqlite3 "${dbSnapshotRaw}" ".dump" > "${dbDumpSql}"`, { timeout: 30000 });
 
   // Compress database files

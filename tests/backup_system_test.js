@@ -125,6 +125,7 @@ async function runBackupTestSuite() {
 
   // --- TEST 6: Weekly Backup Creation & Verification ---
   try {
+    await new Promise(r => setTimeout(r, 300));
     const weeklyResult = await runBackup({ type: 'weekly' });
     const manifestPath = path.join(weeklyResult.targetBackupDir, 'manifest.json');
     const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
@@ -139,6 +140,7 @@ async function runBackupTestSuite() {
 
   // --- TEST 7: Monthly Backup Creation & Verification ---
   try {
+    await new Promise(r => setTimeout(r, 300));
     const monthlyResult = await runBackup({ type: 'monthly' });
     const manifestPath = path.join(monthlyResult.targetBackupDir, 'manifest.json');
     const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
