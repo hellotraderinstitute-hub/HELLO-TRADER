@@ -59,11 +59,14 @@ class AngelScripMaster {
   /**
    * Resolve authoritative Angel One symbolToken for a given index option contract.
    *
+   * STRICT EXACT-MATCH ONLY. No cross-expiry fallback. No formula synthesis.
+   * If the exact contract does not exist in the authoritative scrip master, returns null.
+   *
    * @param {string} symbol - e.g. 'NIFTY'
    * @param {string} expiryDateStr - e.g. '2026-08-25'
    * @param {number} strike - e.g. 24150
    * @param {string} optionType - 'CE' | 'PE'
-   * @returns {string} symbolToken numeric string
+   * @returns {string|null} symbolToken numeric string, or null if not found
    */
   static resolveToken(symbol, expiryDateStr, strike, optionType) {
     const symUpper = (symbol || 'NIFTY').toUpperCase();
@@ -73,37 +76,24 @@ class AngelScripMaster {
 
     const cache = this.loadCache();
 
-    // 1. Direct exact symbol match
+    // EXACT match only — tradingsymbol must match the authoritative scrip master record exactly.
+    // Cross-expiry fallback and formula-synthesized tokens are strictly prohibited.
     if (cache[formatted] && cache[formatted].token) {
       return String(cache[formatted].token);
     }
 
-    // 2. Normalized search matching symbol + strike + optionType
-    const keys = Object.keys(cache);
-    for (const key of keys) {
-      const item = cache[key];
-      if (
-        key.startsWith(symUpper) &&
-        key.endsWith(optUpper) &&
-        (item.strike === strikeNum || key.includes(String(strikeNum)))
-      ) {
-        return String(item.token);
-      }
-    }
-
-    // 3. Dynamic Strike Formula Fallback (Anchor 24200: CE=61647, PE=61670, step=50)
-    // In Angel One NFO 25AUG2026 registry, token offset around 24200 is continuous
-    const offset = Math.round((strikeNum - 24200) / 50);
-    const baseToken = optUpper === 'CE' ? 61647 : 61670;
-    const dynamicToken = baseToken + offset * (optUpper === 'CE' ? 24 : 14);
-
-    return String(Math.max(10000, dynamicToken));
+    // No exact authoritative record found — return null. Never borrow from another expiry.
+    return null;
   }
 
   /**
-   * Resolve authoritative Angel One symbolToken directly from full trading symbol
+   * Resolve authoritative Angel One symbolToken directly from full trading symbol.
    * e.g. 'NIFTY25AUG2624150CE' -> '61623'
-   *      'NIFTY25AUG2624100CE' -> '61610'
+   *      'NIFTY26AUG2624350CE' -> null  (no record — rejected, not borrowed)
+   *
+   * STRICT EXACT-MATCH ONLY. No regex-based expiry-ignoring fallback.
+   * If the exact symbol does not exist in the authoritative scrip master, returns null.
+   *
    * @param {string} tradingSymbol
    * @returns {string|null}
    */
@@ -117,38 +107,15 @@ class AngelScripMaster {
       return String(cache[sym].token);
     }
 
-    // 2. Case-insensitive key search in cache
+    // 2. Case-insensitive exact key search in cache
     for (const key of Object.keys(cache)) {
       if (key.toUpperCase() === sym && cache[key]?.token) {
         return String(cache[key].token);
       }
     }
 
-    // 3. Regex parse standard Indian derivative symbol (e.g. NIFTY25AUG2624150CE or NIFTY24150CE)
-    const match = sym.match(/^([A-Z]+?)(\d{2}[A-Z]{3}\d{2})?(\d+)(CE|PE)$/i);
-    if (match) {
-      const underlying = match[1];
-      const expiryStr = match[2] || '';
-      const strikeNum = parseInt(match[3], 10);
-      const optionType = match[4].toUpperCase();
-
-      // Search cache items by parsed strike and option type
-      for (const key of Object.keys(cache)) {
-        const item = cache[key];
-        if (
-          key.startsWith(underlying) &&
-          key.endsWith(optionType) &&
-          (item.strike === strikeNum || key.includes(String(strikeNum))) &&
-          item.token
-        ) {
-          return String(item.token);
-        }
-      }
-
-      // Dynamic formula fallback using parsed strike
-      return this.resolveToken(underlying, expiryStr, strikeNum, optionType);
-    }
-
+    // No exact authoritative record found — return null.
+    // Cross-expiry regex fallback is strictly prohibited to prevent token borrowing.
     return null;
   }
 
